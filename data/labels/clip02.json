@@ -1,0 +1,22 @@
+{
+ "id": "clip02",
+ "targets": [
+  {
+   "name": "alani-can",
+   "prompt": "drink can",
+   "product": "a slim teal Alani Nu energy drink can with a peach graphic and pink 'Alani' script logo",
+   "brandTerms": [
+    "Alani",
+    "Alani Nu"
+   ],
+   "ranges": [
+    [
+     0,
+     179
+    ]
+   ],
+   "notes": "both passes agree"
+  }
+ ],
+ "method": "Drafted by two independent Claude vision passes over 5 fps frame grids; a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames."
+}

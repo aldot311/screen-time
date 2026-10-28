@@ -1,0 +1,23 @@
+{
+ "id": "stock/stock06",
+ "targets": [
+  {
+   "name": "coffee-cup",
+   "prompt": "coffee cup",
+   "product": "a plain white coffee cup",
+   "brandTerms": [],
+   "ranges": [
+    [
+     0,
+     68
+    ],
+    [
+     99,
+     149
+    ]
+   ],
+   "notes": ""
+  }
+ ],
+ "method": "Drafted by two independent Claude vision passes over 5 fps frame grids; a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames."
+}

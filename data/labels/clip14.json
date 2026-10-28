@@ -1,0 +1,41 @@
+{
+ "id": "clip14",
+ "targets": [
+  {
+   "name": "alani-can",
+   "prompt": "drink can",
+   "product": "a slim teal Alani Nu energy drink can with a peach graphic and pink 'Alani' script logo",
+   "brandTerms": [
+    "Alani",
+    "Alani Nu"
+   ],
+   "ranges": [
+    [
+     84,
+     131
+    ]
+   ],
+   "notes": "can only (pass A mixed in the tumbler)"
+  },
+  {
+   "name": "stanley-tumbler",
+   "prompt": "tumbler",
+   "product": "a large pastel pink or cream Stanley Quencher tumbler with a handle, lid and straw",
+   "brandTerms": [
+    "Stanley"
+   ],
+   "ranges": [
+    [
+     45,
+     80
+    ],
+    [
+     159,
+     176
+    ]
+   ],
+   "notes": "from pass A, tumbler part"
+  }
+ ],
+ "method": "Drafted by two independent Claude vision passes over 5 fps frame grids; a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames."
+}

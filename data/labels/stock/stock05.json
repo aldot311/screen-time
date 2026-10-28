@@ -1,0 +1,19 @@
+{
+ "id": "stock/stock05",
+ "targets": [
+  {
+   "name": "water-bottle",
+   "prompt": "water bottle",
+   "product": "a translucent green plastic water bottle",
+   "brandTerms": [],
+   "ranges": [
+    [
+     0,
+     173
+    ]
+   ],
+   "notes": ""
+  }
+ ],
+ "method": "Drafted by two independent Claude vision passes over 5 fps frame grids; a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames."
+}

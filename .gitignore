@@ -28,3 +28,4 @@ yarn-debug.log*
 yarn-error.log*
 data/sheets/
 .playwright-mcp/
+.remember/

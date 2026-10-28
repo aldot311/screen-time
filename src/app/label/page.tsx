@@ -7,12 +7,31 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const FPS = 15;
 type Range = [number, number];
 
+interface Target {
+  name: string;
+  prompt: string;
+  product: string;
+  brandTerms: string[];
+  ranges: Range[];
+  notes: string;
+}
+
+interface LabelDoc {
+  id: string;
+  method: string;
+  checkedBy: string;
+  targets: Target[];
+}
+
+function newTarget(): Target {
+  return { name: "product", prompt: "", product: "", brandTerms: [], ranges: [], notes: "" };
+}
+
 export default function LabelPage() {
   const [ids, setIds] = useState<string[]>([]);
   const [id, setId] = useState("");
-  const [product, setProduct] = useState("");
-  const [notes, setNotes] = useState("");
-  const [ranges, setRanges] = useState<Range[]>([]);
+  const [doc, setDoc] = useState<LabelDoc | null>(null);
+  const [targetIdx, setTargetIdx] = useState(0);
   const [markIn, setMarkIn] = useState<number | null>(null);
   const [frame, setFrame] = useState(0);
   const [frames, setFrames] = useState(0);
@@ -35,26 +54,48 @@ export default function LabelPage() {
     loaded.current = false;
     fetch(`/api/dev/labels?id=${encodeURIComponent(id)}`)
       .then((r) => r.json())
-      .then((l) => {
-        setProduct(l.product ?? "");
-        setNotes(l.notes ?? "");
-        setRanges(l.ranges ?? []);
+      .then((l: LabelDoc) => {
+        if (!l.targets.length) l.targets = [newTarget()];
+        setDoc(l);
+        setTargetIdx(0);
         loaded.current = true;
       });
   }, [id]);
 
   // Autosave after every change once the clip's labels have loaded.
   useEffect(() => {
-    if (!id || !loaded.current) return;
+    if (!id || !doc || !loaded.current) return;
     const t = setTimeout(() => {
       fetch("/api/dev/labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, product, notes, ranges }),
+        body: JSON.stringify(doc),
       }).then((r) => setSaved(r.ok ? `Saved ${new Date().toLocaleTimeString()}` : "Save failed"));
     }, 400);
     return () => clearTimeout(t);
-  }, [id, product, notes, ranges]);
+  }, [id, doc]);
+
+  const target = doc?.targets[targetIdx];
+  const ranges = target?.ranges ?? [];
+  const updateTarget = useCallback(
+    (patch: Partial<Target>) =>
+      setDoc((d) => (d ? { ...d, targets: d.targets.map((t, i) => (i === targetIdx ? { ...t, ...patch } : t)) } : d)),
+    [targetIdx],
+  );
+  const setRanges = useCallback(
+    (next: Range[] | ((rs: Range[]) => Range[])) =>
+      setDoc((d) =>
+        d
+          ? {
+              ...d,
+              targets: d.targets.map((t, i) =>
+                i === targetIdx ? { ...t, ranges: typeof next === "function" ? next(t.ranges) : next } : t,
+              ),
+            }
+          : d,
+      ),
+    [targetIdx],
+  );
 
   const seekFrame = useCallback((f: number) => {
     const v = video.current;
@@ -71,7 +112,7 @@ export default function LabelPage() {
       setRanges((rs) => mergeRanges([...rs, r]));
       setMarkIn(null);
     },
-    [markIn],
+    [markIn, setRanges],
   );
 
   useEffect(() => {
@@ -143,15 +184,38 @@ export default function LabelPage() {
           <span className="text-zinc-500">{saved}</span>
         </div>
 
+        {doc && doc.targets.length > 1 && (
+          <label className="block">
+            Product in this clip{" "}
+            <select value={targetIdx} onChange={(e) => setTargetIdx(Number(e.target.value))} className="rounded border px-2 py-1">
+              {doc.targets.map((t, i) => (
+                <option key={t.name} value={i}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="block">
-          Product you are labelling
+          What you are labelling
           <input
-            value={product}
-            onChange={(e) => setProduct(e.target.value)}
+            value={target?.product ?? ""}
+            onChange={(e) => updateTarget({ product: e.target.value })}
             placeholder="teal energy drink can"
             className="mt-1 block w-full rounded border px-2 py-1"
           />
         </label>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            className="rounded border border-emerald-600 px-3 py-1 text-emerald-700 dark:text-emerald-400"
+            onClick={() => setDoc((d) => (d ? { ...d, checkedBy: `human, ${new Date().toISOString().slice(0, 10)}` } : d))}
+          >
+            Looks right, mark as checked
+          </button>
+          <span className="text-zinc-500">{doc?.checkedBy ? `Checked by ${doc.checkedBy}` : "Not checked by a human yet"}</span>
+        </div>
 
         <p className="font-mono">
           Frame {frame} / {frames} · {(frame / FPS).toFixed(2)} s · marked in at {markIn ?? "—"} · visible{" "}
@@ -191,8 +255,8 @@ export default function LabelPage() {
         <label className="block">
           Notes
           <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={target?.notes ?? ""}
+            onChange={(e) => updateTarget({ notes: e.target.value })}
             rows={3}
             className="mt-1 block w-full rounded border px-2 py-1"
           />

@@ -1,0 +1,21 @@
+{
+ "id": "clip06",
+ "targets": [
+  {
+   "name": "stanley-tumbler",
+   "prompt": "tumbler",
+   "product": "a large pastel pink or cream Stanley Quencher tumbler with a handle, lid and straw",
+   "brandTerms": [
+    "Stanley"
+   ],
+   "ranges": [
+    [
+     6,
+     176
+    ]
+   ],
+   "notes": ""
+  }
+ ],
+ "method": "Drafted by two independent Claude vision passes over 5 fps frame grids; a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames."
+}

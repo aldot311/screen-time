@@ -1,0 +1,21 @@
+{
+ "id": "stock/stock04",
+ "targets": [
+  {
+   "name": "singaraja-can",
+   "prompt": "beer can",
+   "product": "a red and white Singaraja pilsner beer can with a lion emblem",
+   "brandTerms": [
+    "Singaraja"
+   ],
+   "ranges": [
+    [
+     0,
+     134
+    ]
+   ],
+   "notes": ""
+  }
+ ],
+ "method": "Drafted by two independent Claude vision passes over 5 fps frame grids; a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames."
+}

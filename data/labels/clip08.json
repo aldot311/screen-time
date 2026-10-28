@@ -1,0 +1,21 @@
+{
+ "id": "clip08",
+ "targets": [
+  {
+   "name": "new-balance-sneaker",
+   "prompt": "sneaker",
+   "product": "a white and grey New Balance sneaker with a black N logo",
+   "brandTerms": [
+    "New Balance"
+   ],
+   "ranges": [
+    [
+     75,
+     98
+    ]
+   ],
+   "notes": "sneaker held up; slippers 0-66 are not the target"
+  }
+ ],
+ "method": "Drafted by two independent Claude vision passes over 5 fps frame grids; a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames."
+}

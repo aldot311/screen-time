@@ -1,4 +1,4 @@
-// Compare pipeline reports (data/out/<id>/report.json) with hand labels (data/labels/<id>.json), frame by frame.
+// Compare pipeline reports (data/out/<target>/<clip>/report.json) with labels (data/labels/<id>.json), frame by frame.
 // Usage: pnpm accuracy [data/out]
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -7,12 +7,17 @@ import { FPS, type VideoReport } from "@/lib/types";
 const outDir = process.argv[2] ?? "data/out";
 const labelsDir = "data/labels";
 
-interface Labels {
-  id: string;
+interface Target {
+  name: string;
   ranges: [number, number][];
 }
 
-function labelFrames(l: Labels): Set<number> {
+interface Labels {
+  id: string;
+  targets: Target[];
+}
+
+function labelFrames(l: Target): Set<number> {
   const s = new Set<number>();
   for (const [a, b] of l.ranges) for (let f = a; f <= b; f++) s.add(f);
   return s;
@@ -32,26 +37,29 @@ let tp = 0, fp = 0, fn = 0;
 const rows: string[] = [];
 for (const file of labelFiles) {
   const labels: Labels = JSON.parse(await readFile(join(labelsDir, file), "utf8"));
-  const name = labels.id.split("/").at(-1)!;
-  let report: VideoReport;
-  try {
-    report = JSON.parse(await readFile(join(outDir, name, "report.json"), "utf8"));
-  } catch {
-    rows.push(`${labels.id.padEnd(16)} no report yet`);
-    continue;
+  const clip = labels.id.split("/").at(-1)!;
+  for (const target of labels.targets) {
+    const name = `${labels.id}:${target.name}`;
+    let report: VideoReport;
+    try {
+      report = JSON.parse(await readFile(join(outDir, target.name, clip, "report.json"), "utf8"));
+    } catch {
+      rows.push(`${name.padEnd(36)} no report yet`);
+      continue;
+    }
+    const truth = labelFrames(target);
+    const pred = reportFrames(report);
+    const t = [...pred].filter((f) => truth.has(f)).length;
+    const p = pred.size - t;
+    const n = [...truth].filter((f) => !pred.has(f)).length;
+    tp += t; fp += p; fn += n;
+    const prec = pred.size ? t / pred.size : truth.size ? 0 : 1;
+    const rec = truth.size ? t / truth.size : 1;
+    rows.push(
+      `${name.padEnd(36)} truth ${(truth.size / FPS).toFixed(1).padStart(5)} s  predicted ${(pred.size / FPS).toFixed(1).padStart(5)} s  ` +
+        `precision ${(prec * 100).toFixed(0).padStart(3)}%  recall ${(rec * 100).toFixed(0).padStart(3)}%`,
+    );
   }
-  const truth = labelFrames(labels);
-  const pred = reportFrames(report);
-  const t = [...pred].filter((f) => truth.has(f)).length;
-  const p = pred.size - t;
-  const n = [...truth].filter((f) => !pred.has(f)).length;
-  tp += t; fp += p; fn += n;
-  const prec = pred.size ? t / pred.size : truth.size ? 0 : 1;
-  const rec = truth.size ? t / truth.size : 1;
-  rows.push(
-    `${labels.id.padEnd(16)} truth ${(truth.size / FPS).toFixed(1).padStart(5)} s  predicted ${(pred.size / FPS).toFixed(1).padStart(5)} s  ` +
-      `precision ${(prec * 100).toFixed(0).padStart(3)}%  recall ${(rec * 100).toFixed(0).padStart(3)}%`,
-  );
 }
 console.log(rows.join("\n"));
 if (tp + fp + fn === 0) {
