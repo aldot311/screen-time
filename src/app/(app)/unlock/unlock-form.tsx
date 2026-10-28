@@ -50,7 +50,9 @@ export function UnlockForm() {
 function sameOriginPath(next: string): string {
   try {
     const u = new URL(next, window.location.origin);
-    return u.origin === window.location.origin ? u.pathname + u.search + u.hash : "/campaigns";
+    const path = u.pathname + u.search + u.hash;
+    // The router treats "//host" and "/\\host" as other sites, so those never pass.
+    return u.origin === window.location.origin && !/^\/[\/\\]/.test(path) ? path : "/campaigns";
   } catch {
     return "/campaigns";
   }
