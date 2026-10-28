@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const password = accessPassword();
   if (!password) return Response.json({ error: "No demo password is set on this deployment." }, { status: 503 });
   // Vercel sets x-real-ip itself; the leftmost X-Forwarded-For entry is client-supplied and spoofable.
-  const ip = (req.headers.get("x-real-ip") ?? "unknown").slice(0, 64);
+  const ip = clientKey(req.headers.get("x-real-ip") ?? "unknown");
   if (!allowAttempt(ip)) {
     return Response.json({ error: "Too many tries. Wait 15 minutes and try again." }, { status: 429 });
   }
@@ -43,7 +43,14 @@ function allowAttempt(ip: string, now = Date.now()): boolean {
   for (const [k, ts] of attempts) if (ts.every((t) => now - t >= WINDOW_MS)) attempts.delete(k);
   const mine = (attempts.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
   if (mine.length >= 10) return false;
-  if (!attempts.has(ip) && attempts.size >= MAX_TRACKED) return true; // full: stay open rather than grow
+  if (!attempts.has(ip) && attempts.size >= MAX_TRACKED) attempts.delete(attempts.keys().next().value!); // evict oldest
+  attempts.delete(ip); // re-insert so map order stays oldest-first
   attempts.set(ip, [...mine, now]);
   return true;
+}
+
+// One IPv6 holder usually controls a whole /64, so count those together.
+function clientKey(ip: string): string {
+  const v = ip.slice(0, 64).toLowerCase();
+  return v.includes(":") ? v.split(":").slice(0, 4).join(":") + "::/64" : v;
 }
