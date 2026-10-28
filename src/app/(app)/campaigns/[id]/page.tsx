@@ -7,7 +7,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { ScreenTimeStrip } from "@/components/screen-time-strip";
 import { UploadVideos } from "@/components/upload-videos";
 import { VideoStatus } from "@/components/video-status";
-import { seconds, termCounts, timecode, verdictOf } from "@/components/format";
+import { friendlyError, seconds, termCounts, timecode, verdictOf } from "@/components/format";
 
 export const dynamic = "force-dynamic";
 
@@ -73,8 +73,13 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                         <span className="block truncate font-medium">{v.creator}</span>
                         <span className="block truncate text-[12px] text-ink-3">{v.title}</span>
                       </span>
-                      <VideoStatus video={v} />
+                      <span className="shrink-0">
+                        <VideoStatus video={v} showReason={false} />
+                      </span>
                     </span>
+                    {v.status === "failed" && v.error && (
+                      <span className="mt-1.5 block text-[12px] leading-4 text-ink-3">{friendlyError(v.error)}</span>
+                    )}
                     {r && (
                       <span className="mt-2 flex items-center gap-3">
                         <ScreenTimeStrip durationSec={r.info.durationSec} segments={r.metrics.segments} mentions={r.metrics.mentions} size="mini" />

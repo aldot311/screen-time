@@ -38,7 +38,7 @@ export function ReportView({ report, videoUrl, synthetic }: Props) {
   );
 
   return (
-    <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
+    <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[300px_1fr]">
       <div className="order-2 lg:order-none">
         <div className="mx-auto max-w-[360px] lg:max-w-none">
           <VideoOverlayPlayer

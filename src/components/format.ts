@@ -52,3 +52,20 @@ export function termWindow(rule: ContractRule | null): Segment | null {
   if (rule.kind === "mentioned" && rule.withinFirstSec) return { startSec: 0, endSec: rule.withinFirstSec };
   return null;
 }
+
+/**
+ * A run error in a manager's words: what happened and who acts. Unknown errors pass through unchanged
+ * so nothing is hidden.
+ */
+export function friendlyError(error: string | undefined): string | undefined {
+  if (!error) return error;
+  const rules: [RegExp, string][] = [
+    [/\b402\b|credit|billing/i, "The Meta API account is out of credits. Aetrai needs to add credits; then run it again. Nothing was charged for this attempt."],
+    [/\b401\b|invalid_api_key|not configured|META_MODEL_API_KEY/i, "Screen-Time's Meta API key is missing or no longer valid. Aetrai needs to fix the key; then run it again."],
+    [/\b429\b|rate.?limit/i, "Meta's API is busy right now. Wait a minute and run it again."],
+    [/cap of \$|CostLimit|would exceed/i, "This video would go over the spending limit set for Screen-Time. Aetrai can raise the limit; then run it again."],
+    [/over 200 MB|413|too big/i, "The video is too large (over 200 MB). Upload a shorter or smaller copy."],
+    [/\b5\d\d\b|unavailable|overloaded|timed? ?out/i, "Meta's API had a temporary problem. Run it again in a few minutes."],
+  ];
+  return rules.find(([re]) => re.test(error))?.[1] ?? error;
+}
