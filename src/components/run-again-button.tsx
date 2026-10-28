@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
+import { ApiError } from "@/components/api-error";
 
 export function RunAgainButton({ campaignId, videoId }: { campaignId: string; videoId: string }) {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function RunAgainButton({ campaignId, videoId }: { campaignId: string; vi
       >
         <RotateCcw className="size-4" aria-hidden /> {busy ? "Starting…" : "Run again"}
       </button>
-      {error && <span className="text-fail">{error}</span>}
+      {error && <ApiError message={error} />}
     </div>
   );
 }

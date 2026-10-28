@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { ApiError } from "@/components/api-error";
 
 const EXAMPLE_TERMS = [
   "On screen at least 3 seconds in total",
@@ -99,7 +100,11 @@ export function NewCampaignForm() {
         </span>
       </label>
 
-      {error && <p className="rounded-[8px] bg-fail-soft px-3 py-2 text-fail">{error}</p>}
+      {error && (
+        <p className="rounded-[8px] bg-fail-soft px-3 py-2">
+          <ApiError message={error} />
+        </p>
+      )}
 
       <div className="flex items-center gap-3">
         <button

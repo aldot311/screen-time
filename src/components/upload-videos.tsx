@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
+import { ApiError } from "@/components/api-error";
 
 interface Props {
   campaignId: string;
@@ -100,7 +101,7 @@ export function UploadVideos({ campaignId, mode }: Props) {
                 {it.state === "uploading" && "Uploading…"}
                 {it.state === "starting" && "Starting analysis…"}
                 {it.state === "running" && "Analysing, see the table below"}
-                {it.state === "failed" && it.error}
+                {it.state === "failed" && it.error && <ApiError message={it.error} />}
               </span>
             </li>
           ))}
