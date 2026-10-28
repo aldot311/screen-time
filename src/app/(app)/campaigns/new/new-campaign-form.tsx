@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 const EXAMPLE_TERMS = [
   "On screen at least 3 seconds in total",
@@ -90,9 +91,9 @@ export function NewCampaignForm() {
               key={t}
               type="button"
               onClick={() => setTerms((s) => (s.trim() ? `${s.trim()}\n${t}` : t))}
-              className="rounded-full border border-line px-2.5 py-0.5 text-[12px] text-ink-2 hover:border-line-strong hover:text-ink"
+              className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-0.5 text-[12px] text-ink-2 hover:border-line-strong hover:text-ink"
             >
-              + {t}
+              <Plus className="size-3" aria-hidden /> {t}
             </button>
           ))}
         </span>

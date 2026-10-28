@@ -1,0 +1,527 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T20:07:00+00:00",
+  "title": "Design System: Screen-Time",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Cool Paper",
+        "canonical": "#f7f8fa",
+        "tonalRamp": [
+          "#1d232f",
+          "#333d52",
+          "#495774",
+          "#5e7197",
+          "#7e8eaf",
+          "#a1adc4",
+          "#cad0de",
+          "#eff1f5"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "sunken": {
+        "role": "neutral",
+        "displayName": "Sunken",
+        "canonical": "#eef0f3",
+        "tonalRamp": [
+          "#20252d",
+          "#37404e",
+          "#4e5b6f",
+          "#657690",
+          "#8493a8",
+          "#a5b0c0",
+          "#ccd2db",
+          "#f0f2f4"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0e1116",
+        "tonalRamp": [
+          "#1e242f",
+          "#343f51",
+          "#495973",
+          "#5f7496",
+          "#7f91ae",
+          "#a2aec3",
+          "#cad1dd",
+          "#eff2f5"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#444b57",
+        "tonalRamp": [
+          "#22252b",
+          "#3a404a",
+          "#535b6a",
+          "#6b7689",
+          "#8a93a3",
+          "#a9b0bc",
+          "#ced2d9",
+          "#f1f2f4"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "#69707d",
+        "tonalRamp": [
+          "#23252a",
+          "#3d4148",
+          "#565c67",
+          "#707785",
+          "#8d94a0",
+          "#acb1b9",
+          "#d0d3d7",
+          "#f1f2f3"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e3e6eb",
+        "tonalRamp": [
+          "#20252d",
+          "#37404d",
+          "#4f5a6e",
+          "#66758f",
+          "#8592a8",
+          "#a6afbf",
+          "#ccd2db",
+          "#f0f2f4"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#cfd4db",
+        "tonalRamp": [
+          "#21252c",
+          "#39414c",
+          "#515c6c",
+          "#69778c",
+          "#8894a5",
+          "#a8b1bd",
+          "#cdd3da",
+          "#f0f2f4"
+        ]
+      },
+      "lime": {
+        "role": "primary",
+        "displayName": "Highlighter Lime",
+        "canonical": "#c8f031",
+        "tonalRamp": [
+          "#394705",
+          "#647c09",
+          "#8eb00d",
+          "#b8e411",
+          "#cbf13c",
+          "#d9f570",
+          "#e9f9ae",
+          "#f9fde7"
+        ]
+      },
+      "lime-ink": {
+        "role": "primary",
+        "displayName": "Lime Ink",
+        "canonical": "#2f3a00",
+        "tonalRamp": [
+          "#3e4c00",
+          "#6b8500",
+          "#99bd00",
+          "#c6f500",
+          "#d7ff2e",
+          "#e2ff66",
+          "#efffa8",
+          "#faffe5"
+        ]
+      },
+      "violet": {
+        "role": "secondary",
+        "displayName": "Spoken Violet",
+        "canonical": "#6e56cf",
+        "tonalRamp": [
+          "#19113c",
+          "#2c1d67",
+          "#3f2a93",
+          "#5136bf",
+          "#735cd1",
+          "#9988dd",
+          "#c5bbec",
+          "#eeebf9"
+        ]
+      },
+      "violet-soft": {
+        "role": "secondary",
+        "displayName": "Violet Wash",
+        "canonical": "#ece8fb",
+        "tonalRamp": [
+          "#170b41",
+          "#271471",
+          "#381ca1",
+          "#4924d1",
+          "#6c4de0",
+          "#937de8",
+          "#c2b5f2",
+          "#ede9fb"
+        ]
+      },
+      "pass": {
+        "role": "tertiary",
+        "displayName": "Pass Green",
+        "canonical": "#127a4b",
+        "tonalRamp": [
+          "#0a4329",
+          "#117447",
+          "#18a465",
+          "#1fd583",
+          "#49e49e",
+          "#7aebb8",
+          "#b3f4d7",
+          "#e9fcf3"
+        ]
+      },
+      "pass-soft": {
+        "role": "tertiary",
+        "displayName": "Pass Wash",
+        "canonical": "#e3f3ea",
+        "tonalRamp": [
+          "#173624",
+          "#285d3f",
+          "#39845a",
+          "#49ab74",
+          "#6dc091",
+          "#94d1af",
+          "#c2e5d1",
+          "#edf7f2"
+        ]
+      },
+      "fail": {
+        "role": "tertiary",
+        "displayName": "Fail Red",
+        "canonical": "#c2362f",
+        "tonalRamp": [
+          "#3e110f",
+          "#6b1e1a",
+          "#982a25",
+          "#c53730",
+          "#d65d57",
+          "#e18884",
+          "#eebcb9",
+          "#faebea"
+        ]
+      },
+      "fail-soft": {
+        "role": "tertiary",
+        "displayName": "Fail Wash",
+        "canonical": "#fbe7e5",
+        "tonalRamp": [
+          "#420f0a",
+          "#731b12",
+          "#a42619",
+          "#d43121",
+          "#e3584a",
+          "#eb857a",
+          "#f3bab4",
+          "#fcebe9"
+        ]
+      },
+      "unsure": {
+        "role": "tertiary",
+        "displayName": "Unsure Amber",
+        "canonical": "#9a6b00",
+        "tonalRamp": [
+          "#4c3500",
+          "#855c00",
+          "#bd8300",
+          "#f5aa00",
+          "#ffbf2e",
+          "#ffd066",
+          "#ffe5a8",
+          "#fff7e5"
+        ]
+      },
+      "unsure-soft": {
+        "role": "tertiary",
+        "displayName": "Unsure Wash",
+        "canonical": "#fbf1d9",
+        "tonalRamp": [
+          "#453307",
+          "#78580d",
+          "#ab7e12",
+          "#dda317",
+          "#ebb942",
+          "#f0cc75",
+          "#f7e2b1",
+          "#fdf6e8"
+        ]
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Focus Blue",
+        "canonical": "#3b5bdb",
+        "tonalRamp": [
+          "#0c1641",
+          "#152770",
+          "#1d379f",
+          "#2648cf",
+          "#4e6bdf",
+          "#7e93e7",
+          "#b6c2f2",
+          "#e9edfb"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "One page title per screen."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Roll-up verdict counts, tabular."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Run-page section heads and the large verdict badge."
+      },
+      "section-label": {
+        "displayName": "Section label",
+        "purpose": "Sidebar and report sub-heads."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, table cells, forms."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Breadcrumbs, field hints, secondary report lines."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers, badges, legends, captions, jump actions."
+      },
+      "timecode": {
+        "displayName": "Timecode",
+        "purpose": "Geist Mono m:ss.s positions: live readout, mention times, first-seen."
+      },
+      "ruler": {
+        "displayName": "Ruler",
+        "purpose": "Geist Mono labels under the screen-time strip."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-1",
+        "value": "0 1px 2px rgb(14 17 22 / 0.06), 0 1px 1px rgb(14 17 22 / 0.03)",
+        "purpose": "Resting lift for cards, tables, the term checklist and buttons."
+      },
+      {
+        "name": "shadow-2",
+        "value": "0 8px 24px -8px rgb(14 17 22 / 0.18), 0 2px 6px rgb(14 17 22 / 0.06)",
+        "purpose": "The 9:16 video player only."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid #3b5bdb; outline-offset: 2px",
+        "purpose": "Global :focus-visible treatment."
+      },
+      {
+        "name": "header-glass",
+        "value": "background: rgb(255 255 255 / 0.9); backdrop-filter: blur(4px)",
+        "purpose": "Sticky header only."
+      },
+      {
+        "name": "evidence-outline",
+        "value": "inset 0 0 0 2px #0e1116",
+        "purpose": "A focused term's evidence stretch on the strip."
+      }
+    ],
+    "motion": [
+      {
+        "name": "row-hover",
+        "value": "background-color 150ms",
+        "purpose": "Contract term row hover/focus fill."
+      },
+      {
+        "name": "spinner",
+        "value": "spin, linear, infinite",
+        "purpose": "Loader icon in the active pipeline step and progress pill."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "All animation and transition durations collapse under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Stacked list cards become tables; side padding 20px to 32px; header credit appears."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Tracker findings and mentions go two-up."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Report goes 300px player + checklist; roll-up gains the 320px sidebar."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink action button for the one main action on a screen (New campaign, Add videos, Create campaign, Run again).",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"M12 5v14\"/></svg>New campaign</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); font-size: 14px; font-weight: 500; line-height: 1.5; color: #fff; background: var(--ink, #0e1116); border: 0; border-radius: 8px; padding: 8px 14px; box-shadow: var(--shadow-1, 0 1px 2px rgb(14 17 22 / 0.06), 0 1px 1px rgb(14 17 22 / 0.03)); cursor: pointer; } .ds-btn-primary:hover { background: rgb(14 17 22 / 0.9); } .ds-btn-primary:focus-visible { outline: 2px solid var(--focus, #3b5bdb); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.6; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "White bordered button for secondary actions such as Export CSV.",
+      "html": "<button class=\"ds-btn-secondary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 15V3\"/><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10 5 5 5-5\"/></svg>Export CSV</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--ink, #0e1116); background: var(--surface, #fff); border: 1px solid var(--line, #e3e6eb); border-radius: 8px; padding: 8px 12px; box-shadow: var(--shadow-1, 0 1px 2px rgb(14 17 22 / 0.06)); cursor: pointer; } .ds-btn-secondary:hover { border-color: var(--line-strong, #cfd4db); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--focus, #3b5bdb); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled input with an optional ink-3 hint.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">What to track</span><span class=\"ds-field-hint\">A short noun for the kind of object.</span><input class=\"ds-input\" placeholder=\"drink can\"></label>",
+      "css": ".ds-field { display: block; font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); font-size: 14px; line-height: 1.5; color: var(--ink, #0e1116); } .ds-field-label { font-weight: 500; } .ds-field-hint { display: block; font-size: 13px; color: var(--ink-3, #69707d); } .ds-input { margin-top: 8px; display: block; width: 100%; box-sizing: border-box; font: inherit; color: inherit; background: var(--surface, #fff); border: 1px solid var(--line, #e3e6eb); border-radius: 8px; padding: 8px 12px; caret-color: var(--focus, #3b5bdb); } .ds-input::placeholder { color: var(--ink-3, #69707d); } .ds-input:hover { border-color: var(--line-strong, #cfd4db); } .ds-input:focus-visible { outline: 2px solid var(--focus, #3b5bdb); outline-offset: 2px; }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Sticky translucent header with the strip wordmark and text links.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-wordmark\"><svg width=\"22\" height=\"14\" viewBox=\"0 0 22 14\" aria-hidden=\"true\"><rect x=\"0.5\" y=\"0.5\" width=\"21\" height=\"13\" rx=\"3\" fill=\"#eef0f3\" stroke=\"#cfd4db\"/><rect x=\"6\" y=\"1\" width=\"9\" height=\"12\" fill=\"#c8f031\"/><rect x=\"17\" y=\"7\" width=\"1.5\" height=\"6\" fill=\"#6e56cf\"/></svg>Screen-Time</span><a class=\"ds-nav-link\" href=\"#\">Campaigns</a><span class=\"ds-nav-credit\">Built on Meta SAM 3.1, Muse Spark and Muse Voice Transcribe · by Aetrai</span></header>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 32px; height: 52px; padding: 0 32px; font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); font-size: 14px; background: rgb(255 255 255 / 0.9); backdrop-filter: blur(4px); border-bottom: 1px solid var(--line, #e3e6eb); } .ds-wordmark { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink, #0e1116); } .ds-nav-link { color: var(--ink-2, #444b57); text-decoration: none; padding: 6px 10px; border-radius: 6px; } .ds-nav-link:hover { background: var(--sunken, #eef0f3); color: var(--ink, #0e1116); } .ds-nav-link:focus-visible { outline: 2px solid var(--focus, #3b5bdb); outline-offset: 2px; } .ds-nav-credit { margin-left: auto; font-size: 12px; color: var(--ink-3, #69707d); }"
+    },
+    {
+      "name": "Verdict Badges",
+      "kind": "chip",
+      "refersTo": "verdict-delivered",
+      "description": "Pill verdicts: Delivered, Fell short, Needs review, plus the neutral in-progress pill.",
+      "html": "<span class=\"ds-verdicts\"><span class=\"ds-badge ds-pass\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Delivered</span><span class=\"ds-badge ds-fail\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/></svg>Fell short</span><span class=\"ds-badge ds-unsure\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"/><path d=\"M12 17h.01\"/></svg>Needs review</span><span class=\"ds-badge ds-progress\">Track product (SAM 3.1)</span></span>",
+      "css": ".ds-verdicts { display: flex; flex-wrap: wrap; gap: 8px; } .ds-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); font-size: 12px; font-weight: 600; line-height: 1.5; white-space: nowrap; border-radius: 9999px; padding: 2px 8px; } .ds-pass { background: var(--pass-soft, #e3f3ea); color: var(--pass, #127a4b); } .ds-fail { background: var(--fail-soft, #fbe7e5); color: var(--fail, #c2362f); } .ds-unsure { background: var(--unsure-soft, #fbf1d9); color: var(--unsure, #9a6b00); } .ds-progress { background: var(--sunken, #eef0f3); color: var(--ink-2, #444b57); font-weight: 500; }"
+    },
+    {
+      "name": "Suggestion Chip",
+      "kind": "chip",
+      "refersTo": "chip-suggestion",
+      "description": "Hairline pill that appends an example contract term.",
+      "html": "<button class=\"ds-chip\">One continuous shot of at least 2 seconds</button>",
+      "css": ".ds-chip { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); font-size: 12px; line-height: 1.5; color: var(--ink-2, #444b57); background: transparent; border: 1px solid var(--line, #e3e6eb); border-radius: 9999px; padding: 2px 10px; cursor: pointer; } .ds-chip:hover { border-color: var(--line-strong, #cfd4db); color: var(--ink, #0e1116); } .ds-chip:focus-visible { outline: 2px solid var(--focus, #3b5bdb); outline-offset: 2px; }"
+    },
+    {
+      "name": "Contract Checklist Card",
+      "kind": "card",
+      "refersTo": "term-row",
+      "description": "Hairline card of contract term rows; each row seeks to its proving second.",
+      "html": "<ol class=\"ds-card\"><li><button class=\"ds-term\"><span class=\"ds-dot ds-dot-pass\">&#x2713;</span><span><b>On screen at least 3 seconds in total</b><span class=\"ds-detail\">On screen 4.0 s in total (needs 3 s).</span></span><span class=\"ds-jump\">Jump to 0:01.2</span></button></li><li><button class=\"ds-term\"><span class=\"ds-dot ds-dot-fail\">&#x2715;</span><span><b>On screen at least 2 seconds within the first 5 seconds</b><span class=\"ds-detail\">On screen 0 s in the first 5 s (needs 2 s).</span></span><span class=\"ds-jump\">See the first 5 s</span></button></li></ol>",
+      "css": ".ds-card { list-style: none; margin: 0; padding: 0; background: var(--surface, #fff); border: 1px solid var(--line, #e3e6eb); border-radius: 10px; box-shadow: var(--shadow-1, 0 1px 2px rgb(14 17 22 / 0.06)); overflow: hidden; } .ds-card li + li { border-top: 1px solid var(--line, #e3e6eb); } .ds-term { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: start; width: 100%; text-align: left; font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); font-size: 14px; line-height: 1.5; color: var(--ink, #0e1116); background: transparent; border: 0; padding: 12px 16px; cursor: pointer; transition: background-color 150ms; } .ds-term b { display: block; font-weight: 500; } .ds-term:hover { background: rgb(238 240 243 / 0.6); } .ds-term:focus-visible { background: var(--sunken, #eef0f3); outline: 2px solid var(--focus, #3b5bdb); outline-offset: -2px; } .ds-detail { display: block; color: var(--ink-2, #444b57); } .ds-jump { font-size: 12px; font-weight: 500; color: var(--ink-2, #444b57); white-space: nowrap; } .ds-dot { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; font-size: 12px; font-weight: 700; } .ds-dot-pass { background: var(--pass-soft, #e3f3ea); color: var(--pass, #127a4b); } .ds-dot-fail { background: var(--fail-soft, #fbe7e5); color: var(--fail, #c2362f); }"
+    },
+    {
+      "name": "Screen-Time Strip",
+      "kind": "custom",
+      "refersTo": "screen-time-strip",
+      "description": "Signature seekable time ruler: lime on-screen segments, violet mention ticks, first-seen notch, longest-run underline, hatched look-alike stretch, term window, playhead, mono ruler.",
+      "html": "<div class=\"ds-strip-wrap\"><div class=\"ds-strip\" role=\"slider\" tabindex=\"0\" aria-label=\"Video position\" aria-valuemin=\"0\" aria-valuemax=\"17.6\" aria-valuenow=\"4\"><div class=\"ds-window\" style=\"left:0;width:28%\"></div><div class=\"ds-reject\" style=\"left:62%;width:14%\"></div><div class=\"ds-seg\" style=\"left:8%;width:22%\"></div><div class=\"ds-seg\" style=\"left:40%;width:12%\"></div><div class=\"ds-longest\" style=\"left:8%;width:22%\"></div><div class=\"ds-first\" style=\"left:8%\"></div><div class=\"ds-tick\" style=\"left:18%\"></div><div class=\"ds-tick\" style=\"left:46%\"></div><div class=\"ds-playhead\" style=\"left:23%\"></div></div><div class=\"ds-ruler\"><span style=\"left:0\">0:00</span><span style=\"left:28.4%\">0:05</span><span style=\"left:56.8%\">0:10</span><span style=\"left:85.2%\">0:15</span></div></div>",
+      "css": ".ds-strip-wrap { width: 100%; user-select: none; } .ds-strip { position: relative; height: 44px; overflow: hidden; background: var(--sunken, #eef0f3); border: 1px solid var(--line, #e3e6eb); border-radius: 6px; cursor: ew-resize; } .ds-strip:focus-visible { outline: 2px solid var(--focus, #3b5bdb); outline-offset: 2px; } .ds-strip > div { position: absolute; } .ds-seg { top: 0; bottom: 0; background: var(--lime, #c8f031); } .ds-window { top: 0; bottom: 0; background: repeating-linear-gradient(135deg, rgb(14 17 22 / 0.07) 0 4px, transparent 4px 8px); outline: 1px dashed rgb(105 112 125 / 0.4); } .ds-reject { top: 4px; bottom: 4px; border: 1px dashed var(--fail, #c2362f); border-radius: 2px; background: repeating-linear-gradient(135deg, rgb(194 54 47 / 0.16) 0 3px, transparent 3px 7px); } .ds-longest { bottom: -1px; height: 3px; background: var(--lime-ink, #2f3a00); } .ds-first { top: 0; width: 0; height: 0; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--lime-ink, #2f3a00); } .ds-tick { bottom: 0; height: 50%; width: 3px; border-radius: 2px 2px 0 0; background: var(--violet, #6e56cf); } .ds-playhead { top: -1px; bottom: -1px; width: 2px; background: var(--ink, #0e1116); pointer-events: none; } .ds-playhead::before { content: ''; position: absolute; top: -2px; left: -3px; width: 8px; height: 8px; border-radius: 9999px; background: var(--ink, #0e1116); } .ds-ruler { position: relative; height: 16px; margin-top: 6px; font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--ink-3, #69707d); } .ds-ruler span { position: absolute; transform: translateX(-50%); } .ds-ruler span:first-child { transform: none; }"
+    },
+    {
+      "name": "Video Overlay Box",
+      "kind": "custom",
+      "refersTo": "overlay-box-label",
+      "description": "Box drawn over the 9:16 player: lime for the counted product, dashed red for a rejected look-alike.",
+      "html": "<div class=\"ds-player\"><div class=\"ds-box ds-box-match\" style=\"left:20%;top:30%;width:28%;height:26%\"><span>Brand product</span></div><div class=\"ds-box ds-box-reject\" style=\"left:58%;top:52%;width:26%;height:22%\"><span>Look-alike, not counted</span></div></div>",
+      "css": ".ds-player { position: relative; width: 220px; aspect-ratio: 9 / 16; background: var(--ink, #0e1116); border-radius: 10px; box-shadow: var(--shadow-2, 0 8px 24px -8px rgb(14 17 22 / 0.18), 0 2px 6px rgb(14 17 22 / 0.06)); overflow: hidden; font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); } .ds-box { position: absolute; border-radius: 3px; } .ds-box span { position: absolute; top: -20px; left: -2px; white-space: nowrap; border-radius: 3px; padding: 1px 6px; font-size: 11px; font-weight: 500; line-height: 16px; } .ds-box-match { border: 2px solid var(--lime, #c8f031); box-shadow: 0 0 0 1px rgb(14 17 22 / 0.35); } .ds-box-match span { background: var(--lime, #c8f031); color: var(--lime-ink, #2f3a00); } .ds-box-reject { border: 2px dashed var(--fail, #c2362f); } .ds-box-reject span { background: var(--fail, #c2362f); color: #fff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Marked Tape",
+    "overview": "**Creative North Star: \"The Marked Tape\"**\n\nScreen-Time reads like a time tape that someone has gone over with a highlighter. The working surface is a cool, quiet paper: near-white ground, ink text, hairline rules, almost no colour. Against that calm, one signal is loud on purpose. Highlighter lime marks every second the product was actually on screen, in the strip under the player, the boxes over the video, the bars in the roll-up table and the swatch beside the total. Everything else stays neutral so that lime always means one thing.\n\nThe density follows the Linear and Stripe category standard the brief pinned. Tables are tight, figures line up, and each screen opens on a verdict with its evidence attached instead of a row of same-size stat cards. Violet carries spoken mentions. A three-tone verdict palette (pass, fail, unsure) carries judgement. A single focus blue carries keyboard focus. No other hues appear.\n\nThe world is light-only and flat by default. Depth comes from hairline borders on white cards set on a slightly darker ground. The one heavy shadow belongs to the video player, which is the only object on the page with physical weight.",
+    "keyCharacteristics": [
+      "Cool paper ground, white cards, 1px hairlines; colour is spent on meaning, not decoration.",
+      "Lime means product on screen, and nothing else does.",
+      "Verdicts come first and use their own pass, fail and unsure tones; progress stays ink and neutral.",
+      "Geist everywhere, with tabular figures; Geist Mono only for timecodes.",
+      "The screen-time strip is the signature: a seekable time ruler that every number points back to."
+    ],
+    "rules": [
+      {
+        "name": "The One Meaning Rule",
+        "body": "Lime marks seconds the product was on screen and nothing else: no lime buttons, badges, progress, selection or decoration. If a lime pixel does not point to a counted second, remove it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Verdict Owns Judgement Rule",
+        "body": "Pass, fail and unsure are the only colours that judge. Loading and in-progress states use ink and neutral greys, never lime or a verdict tone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Rejection Carries Proof Rule",
+        "body": "A rejected look-alike is never hidden. It is drawn in fail red, always dashed (and hatched on the strip), so the rejection shows its own evidence.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every figure (seconds, counts, terms met, percentages) uses tabular numerals, and figure columns are right-aligned.",
+        "section": "typography"
+      },
+      {
+        "name": "The Clock Face Rule",
+        "body": "Geist Mono is reserved for time positions written as m:ss.s. Durations (\"4.0 s\") and counts stay in Geist.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Heavy Object Rule",
+        "body": "Only the video player casts a real shadow. Cards rest at shadow-1 or less, and nothing changes elevation on hover.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do open every report on the verdict and its terms. The measurement sits underneath, never above.",
+      "Do reserve lime for on-screen seconds (segments, counted boxes, the total swatch) and lime-ink for the marks drawn on lime data.",
+      "Do make every figure that refers to a moment seekable: a button or row that moves the player to that second.",
+      "Do show rejected look-alikes and not-checkable terms explicitly, dashed in fail red or as amber \"Needs review\".",
+      "Do use tabular figures for every number, right-aligned in table columns.",
+      "Do use Geist Mono only for m:ss.s timecodes.",
+      "Do keep progress and loading in ink and neutral greys."
+    ],
+    "donts": [
+      "Don't use lime for status, progress, buttons, highlights or selection.",
+      "Don't use a verdict colour for anything that is not a judgement or a step outcome.",
+      "Don't build hero metrics or rows of same-size stat cards. Figures sit inline or in the compact roll-up sidebar.",
+      "Don't add shadows beyond rest and player, or lift cards on hover.",
+      "Don't introduce new hues. The palette is ink, neutrals, lime, violet, the three verdict tones and focus blue.",
+      "Don't set durations or counts in Geist Mono."
+    ]
+  }
+}

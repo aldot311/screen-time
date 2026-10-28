@@ -74,9 +74,10 @@ body {
   background: var(--ground);
 }
 
+/* Lime means "product on screen" and nothing else, so selection uses the ink scale. */
 ::selection {
-  background: var(--lime);
-  color: var(--lime-ink);
+  background: var(--ink);
+  color: var(--surface);
 }
 
 :focus-visible {

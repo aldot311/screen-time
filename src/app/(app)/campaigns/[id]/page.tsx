@@ -125,7 +125,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                         )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right tabular">{r ? seconds(r.metrics.secondsOnScreen) : "–"}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular">
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px] tabular">
                         {r ? (r.metrics.firstSeenSec === null ? "Never" : timecode(r.metrics.firstSeenSec)) : "–"}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right tabular">
