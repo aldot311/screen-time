@@ -100,6 +100,7 @@ describe("computeMetrics", () => {
       prominenceScore: 0,
       segments: [],
       mentions: [],
+      visibleFrames: [],
     });
   });
 

@@ -87,7 +87,7 @@ export function prominenceScore(p: { share: number; avgArea: number; centreRatio
 
 /**
  * Metrics for one video. `detections` must hold only objects verified as a match.
- * secondsOnScreen counts detected frames only; segments (and longestRunSec) include bridged gaps.
+ * secondsOnScreen counts detected frames only (listed in visibleFrames); segments (and longestRunSec) include bridged gaps.
  */
 export function computeMetrics(detections: Detection[], info: VideoInfo, mentions: Mention[]): VideoMetrics {
   const samples = frameSamples(detections, info);
@@ -113,6 +113,7 @@ export function computeMetrics(detections: Detection[], info: VideoInfo, mention
       : 0,
     segments,
     mentions: sortedMentions,
+    visibleFrames: samples.map((s) => s.frame),
   };
 }
 

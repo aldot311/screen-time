@@ -67,7 +67,9 @@ export class CostGuard {
     }
     const parsed = JSON.parse(text) as unknown;
     if (!Array.isArray(parsed)) throw new Error(`Cost ledger ${this.ledgerPath} is not a JSON array`);
-    if (!parsed.every((e) => isValidUsd((e as Partial<LedgerEntry> | null)?.usd))) {
+    // Entries may be negative (refunds from adjust()), but every one must be a finite number.
+    const usdOf = (e: unknown) => (e as Partial<LedgerEntry> | null)?.usd;
+    if (!parsed.every((e) => typeof usdOf(e) === "number" && Number.isFinite(usdOf(e)))) {
       throw new Error(`Cost ledger ${this.ledgerPath} has an entry without a valid usd amount`);
     }
     return parsed as LedgerEntry[];
@@ -78,29 +80,72 @@ export class CostGuard {
     return entries.reduce((sum, e) => sum + micros(e.usd), 0) / 1e6;
   }
 
-  /** Throws CostLimitError if spending `usd` now would push this run or the ledger total over its cap. */
+  /**
+   * Checks a spend against both caps without reserving it. Parallel callers can all pass this check;
+   * paid pipelines must use reserve() instead.
+   */
   async assertCanSpend(usd: number): Promise<void> {
     if (!isValidUsd(usd)) throw new Error(`Invalid spend amount: ${usd}`);
+    this.checkCaps(usd, await this.totalSpentUsd());
+  }
+
+  /**
+   * Atomically checks both caps and appends `usd` to the ledger, inside the same per-ledger queue as
+   * every other write, so concurrent reservations cannot together overspend. Throws CostLimitError
+   * (and writes nothing) when either cap would be exceeded.
+   */
+  reserve(usd: number, note?: string): Promise<void> {
+    if (!isValidUsd(usd)) return Promise.reject(new Error(`Invalid spend amount: ${usd}`));
+    return this.enqueue(async (entries) => {
+      this.checkCaps(usd, entries.reduce((sum, e) => sum + micros(e.usd), 0) / 1e6);
+      return usd;
+    }, note);
+  }
+
+  /**
+   * Corrects an earlier reservation once the real charge is known. A negative delta is a refund (it
+   * cannot take this guard's spend below zero); a positive delta is recorded even past a cap, because
+   * the money is already spent.
+   */
+  adjust(deltaUsd: number, note?: string): Promise<void> {
+    if (typeof deltaUsd !== "number" || !Number.isFinite(deltaUsd)) {
+      return Promise.reject(new Error(`Invalid adjustment: ${deltaUsd}`));
+    }
+    return this.enqueue(async () => {
+      if (this.runMicros + micros(deltaUsd) < 0) {
+        throw new Error(`Refund of $${(-deltaUsd).toFixed(4)} exceeds this run's spend of $${this.runSpentUsd.toFixed(4)}`);
+      }
+      return deltaUsd;
+    }, note);
+  }
+
+  /** Records actual spend for this run and appends it to the ledger. Writes are serialized within the process. */
+  record(usd: number, note?: string): Promise<void> {
+    if (!isValidUsd(usd)) return Promise.reject(new Error(`Invalid spend amount: ${usd}`));
+    return this.enqueue(async () => usd, note);
+  }
+
+  private checkCaps(usd: number, ledgerUsd: number): void {
     const run = this.runMicros + micros(usd);
     if (run > micros(this.maxUsdPerRun)) {
       throw new CostLimitError(
         `Spend of $${usd.toFixed(4)} would exceed the per-run cap of $${this.maxUsdPerRun} (spent $${this.runSpentUsd.toFixed(4)})`,
       );
     }
-    const total = micros(await this.totalSpentUsd()) + micros(usd);
+    const total = micros(ledgerUsd) + micros(usd);
     if (total > micros(this.maxUsdTotal)) {
       throw new CostLimitError(
-        `Spend of $${usd.toFixed(4)} would exceed the total cap of $${this.maxUsdTotal} (ledger at $${((total - micros(usd)) / 1e6).toFixed(4)})`,
+        `Spend of $${usd.toFixed(4)} would exceed the total cap of $${this.maxUsdTotal} (ledger at $${ledgerUsd.toFixed(4)})`,
       );
     }
   }
 
-  /** Records actual spend for this run and appends it to the ledger. Writes are serialized within the process. */
-  record(usd: number, note?: string): Promise<void> {
-    if (!isValidUsd(usd)) return Promise.reject(new Error(`Invalid spend amount: ${usd}`));
+  /** Runs `decide` against the current ledger inside the per-ledger queue, then appends the amount it returns. */
+  private enqueue(decide: (entries: LedgerEntry[]) => Promise<number>, note?: string): Promise<void> {
     const key = resolve(this.ledgerPath);
     const next = (ledgerQueues.get(key) ?? Promise.resolve()).then(async () => {
       const entries = await this.readLedger();
+      const usd = await decide(entries);
       entries.push({ at: new Date().toISOString(), usd, ...(note ? { note } : {}) });
       await mkdir(dirname(this.ledgerPath), { recursive: true });
       const tmp = `${this.ledgerPath}.${process.pid}.${++tmpCounter}.tmp`;

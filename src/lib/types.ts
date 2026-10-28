@@ -65,6 +65,8 @@ export interface VideoMetrics {
   prominenceScore: number; // 0..100
   segments: Segment[];
   mentions: Mention[];
+  /** Frame indices actually detected on screen (segments also cover bridged gaps). Older reports lack it. */
+  visibleFrames?: number[];
 }
 
 /** A plain-English contract term turned into a typed rule by Muse Spark. */

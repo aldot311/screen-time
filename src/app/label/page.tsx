@@ -38,7 +38,24 @@ export default function LabelPage() {
   const [rate, setRate] = useState(0.5);
   const [saved, setSaved] = useState("");
   const video = useRef<HTMLVideoElement>(null);
-  const loaded = useRef(false);
+  // The doc as it came from the server (no need to save it back) and the latest unsaved edit.
+  const fromServer = useRef<LabelDoc | null>(null);
+  const pending = useRef<LabelDoc | null>(null);
+
+  // Saves under doc.id, which the doc carries, so a save can never land on another clip.
+  const flush = useCallback((keepalive = false) => {
+    const d = pending.current;
+    if (!d) return;
+    pending.current = null;
+    fetch("/api/dev/labels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(d),
+      keepalive,
+    })
+      .then((r) => setSaved(r.ok ? `Saved ${new Date().toLocaleTimeString()}` : "Save failed"))
+      .catch(() => setSaved("Save failed"));
+  }, []);
 
   useEffect(() => {
     fetch("/api/dev/videos")
@@ -51,29 +68,36 @@ export default function LabelPage() {
 
   useEffect(() => {
     if (!id) return;
-    loaded.current = false;
-    fetch(`/api/dev/labels?id=${encodeURIComponent(id)}`)
+    const ctl = new AbortController();
+    fetch(`/api/dev/labels?id=${encodeURIComponent(id)}`, { signal: ctl.signal })
       .then((r) => r.json())
       .then((l: LabelDoc) => {
-        if (!l.targets.length) l.targets = [newTarget()];
-        setDoc(l);
+        if (ctl.signal.aborted) return; // a later clip was picked while this one loaded
+        const loadedDoc = { ...l, id, targets: l.targets.length ? l.targets : [newTarget()] };
+        fromServer.current = loadedDoc;
+        setDoc(loadedDoc);
         setTargetIdx(0);
-        loaded.current = true;
-      });
+      })
+      .catch(() => {});
+    return () => ctl.abort();
   }, [id]);
 
-  // Autosave after every change once the clip's labels have loaded.
+  // Autosave 400 ms after the last change; a pending save is flushed on clip switch, unmount and pagehide.
   useEffect(() => {
-    if (!id || !doc || !loaded.current) return;
-    const t = setTimeout(() => {
-      fetch("/api/dev/labels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(doc),
-      }).then((r) => setSaved(r.ok ? `Saved ${new Date().toLocaleTimeString()}` : "Save failed"));
-    }, 400);
+    if (!doc || doc === fromServer.current) return;
+    pending.current = doc;
+    const t = setTimeout(() => flush(), 400);
     return () => clearTimeout(t);
-  }, [id, doc]);
+  }, [doc, flush]);
+
+  useEffect(() => {
+    const onHide = () => flush(true);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      flush(true);
+    };
+  }, [flush]);
 
   const target = doc?.targets[targetIdx];
   const ranges = target?.ranges ?? [];
@@ -162,7 +186,9 @@ export default function LabelPage() {
           <select
             value={id}
             onChange={(e) => {
+              flush();
               setMarkIn(null);
+              setDoc(null); // edits made while the next clip loads must not land on this one
               setId(e.target.value);
             }}
             className="rounded border px-2 py-1"

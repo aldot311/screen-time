@@ -354,6 +354,43 @@ describe("retries and errors", () => {
     await expect(samVideo({ fileId: "file-1", prompt: "can" }, opts(fetch))).rejects.toThrow("fetch failed");
     expect(calls).toHaveLength(1);
   });
+
+  it("does not retry a Spark call after a network failure, since the request may already be billed", async () => {
+    const { fetch, calls } = mockFetch([
+      () => {
+        throw new TypeError("fetch failed");
+      },
+      json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: "{}" }] }] }),
+    ]);
+    await expect(sparkJson({ input: [], schema: {}, name: "n" }, opts(fetch))).rejects.toThrow("fetch failed");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not retry a transcription after a network failure, since the audio may already be billed", async () => {
+    const { fetch, calls } = mockFetch([
+      () => {
+        throw new TypeError("fetch failed");
+      },
+      json({ transcript: "", turns: [] }),
+    ]);
+    await expect(transcribe(Buffer.from("RIFF"), opts(fetch))).rejects.toThrow("fetch failed");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("still retries Spark and transcription on 503", async () => {
+    const spark = mockFetch([
+      json({ error: { message: "busy", type: "server_error", code: "busy" } }, 503),
+      json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: "{}" }] }] }),
+    ]);
+    expect(await sparkJson({ input: [], schema: {}, name: "n" }, opts(spark.fetch))).toEqual({});
+    expect(spark.calls).toHaveLength(2);
+    const asr = mockFetch([
+      json({ error: { message: "busy", type: "server_error", code: "busy" } }, 503),
+      json({ transcript: "hi", turns: [] }),
+    ]);
+    expect((await transcribe(Buffer.from("RIFF"), opts(asr.fetch))).transcript).toBe("hi");
+    expect(asr.calls).toHaveLength(2);
+  });
 });
 
 describe("review regressions", () => {

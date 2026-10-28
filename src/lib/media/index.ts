@@ -125,13 +125,17 @@ export function paddedCrop(box: Box, padding: number, width: number, height: num
   return { x: x1, y: y1, w: x2 - x1 + 1, h: y2 - y1 + 1 };
 }
 
-/** Grow a crop to even width/height of at least 2 (yuv420p crop rounds odd sizes down, so 1 px became 0),
- *  shifting it back inside the frame when growing would cross the right/bottom edge. */
+/** Grow a crop to an even origin and even width/height of at least 2 (yuv420p crop rounds odd sizes and
+ *  odd x/y down, so 1 px became 0 and an odd origin shifted the content). An odd origin moves left/up by one
+ *  pixel and the size grows to keep the original box inside; the crop shifts back inside the frame when
+ *  growing would cross the right/bottom edge. */
 export function evenCrop(r: CropRect, width: number, height: number): CropRect {
   const fit = (pos: number, size: number, limit: number) => {
     const maxEven = limit - (limit % 2);
-    const s = Math.min(Math.max(2, size + (size % 2)), maxEven);
-    return { pos: Math.max(0, Math.min(pos, limit - s)), size: s };
+    const p = pos - (pos % 2);
+    const grown = size + (pos - p);
+    const s = Math.min(Math.max(2, grown + (grown % 2)), maxEven);
+    return { pos: Math.max(0, Math.min(p, maxEven - s)), size: s };
   };
   const x = fit(r.x, r.w, width);
   const y = fit(r.y, r.h, height);

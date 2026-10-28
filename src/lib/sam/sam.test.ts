@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FPS } from "../types";
+import { boxFootprint } from "./geometry";
 import { frameToSec, maskFootprint, parseSamVideo, parseSseEvents } from "./index";
 import {
   DIAGONAL_8,
@@ -204,6 +205,13 @@ describe("maskFootprint", () => {
     const result = maskFootprint(raster, 2, 2, { left: 0, top: 0, right: 4, bottom: 4 }, { width: 10, height: 10 });
     expect(result.areaFraction).toBeCloseTo(4 / 100);
     expect(result.centroid).toEqual({ x: expect.closeTo(0.3), y: expect.closeTo(0.3) });
+  });
+});
+
+describe("boxFootprint", () => {
+  it("returns 0, not NaN, when the frame size is zero", () => {
+    const result = boxFootprint({ left: 0, top: 0, right: 0, bottom: 0 }, { width: 0, height: 0 });
+    expect(result).toEqual({ areaFraction: 0, centroid: { x: 0, y: 0 } });
   });
 });
 

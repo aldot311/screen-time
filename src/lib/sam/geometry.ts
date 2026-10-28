@@ -66,5 +66,5 @@ function boxCentroid(bounds: Bounds, frame: FrameSize): { x: number; y: number }
 }
 
 function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value));
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
 }

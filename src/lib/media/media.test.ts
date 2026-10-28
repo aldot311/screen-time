@@ -156,6 +156,31 @@ describe("evenCrop", () => {
     expect(evenCrop({ x: 0, y: 0, w: 99, h: 57 }, 640, 360)).toEqual({ x: 0, y: 0, w: 100, h: 58 });
     expect(evenCrop({ x: 0, y: 0, w: 641, h: 361 }, 641, 361)).toEqual({ x: 0, y: 0, w: 640, h: 360 });
   });
+
+  it("makes the origin even too, growing left/up so yuv420p cannot shift the content", () => {
+    expect(evenCrop({ x: 11, y: 13, w: 4, h: 4 }, 640, 360)).toEqual({ x: 10, y: 12, w: 6, h: 6 });
+    expect(evenCrop({ x: 637, y: 357, w: 3, h: 3 }, 640, 360)).toEqual({ x: 636, y: 356, w: 4, h: 4 });
+  });
+
+  it("keeps the original box inside the even crop", () => {
+    for (const [width, height] of [[640, 360], [641, 361]]) {
+      for (let x = 0; x < 40; x++) {
+        for (let w = 1; x + w <= width && w < 40; w += 3) {
+          const r = { x: width - 1 - x - w, y: x % 7, w, h: w };
+          // An odd frame cannot hold an even crop reaching its last column; skip only those.
+          if (r.x < 0 || (width % 2 && r.x + r.w === width)) continue;
+          const c = evenCrop(r, width, height);
+          expect(c.x % 2 + c.y % 2 + c.w % 2 + c.h % 2).toBe(0);
+          expect(c.x).toBeLessThanOrEqual(r.x);
+          expect(c.y).toBeLessThanOrEqual(r.y);
+          expect(c.x + c.w).toBeGreaterThanOrEqual(r.x + r.w);
+          expect(c.y + c.h).toBeGreaterThanOrEqual(r.y + r.h);
+          expect(c.x + c.w).toBeLessThanOrEqual(width);
+          expect(c.y + c.h).toBeLessThanOrEqual(height);
+        }
+      }
+    }
+  });
 });
 
 describe("ffmpeg process limits", () => {

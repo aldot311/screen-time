@@ -1,9 +1,11 @@
 // Run one or more local clips through the full pipeline and write a JSON report per clip.
 // Usage: pnpm run-clip --prompt "drink can" --product "a teal Celsius energy drink can" \
 //   --brand Celsius --term "On screen at least 3 seconds in the first 10 seconds" \
-//   --max-usd 0.50 data/videos/clip01.mp4 [more clips...]
+//   --target celsius --max-usd 0.50 data/videos/clip01.mp4 [more clips...]
+// Reports land in <out>/[<target>/]<clip>/report.json, the layout scripts/accuracy.mts reads.
+// --max-usd caps each clip; --max-total-usd caps the shared ledger across clips and runs.
 import { mkdir, writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { CostGuard } from "@/lib/meta";
 import { runVideo } from "@/lib/pipeline/run";
@@ -18,6 +20,7 @@ const { values, positionals } = parseArgs({
     "max-usd": { type: "string", default: "0.50" },
     "max-total-usd": { type: "string", default: "20" },
     out: { type: "string", default: "data/out" },
+    target: { type: "string" },
   },
 });
 
@@ -26,15 +29,43 @@ if (!values.prompt || !values.product || !positionals.length) {
   process.exit(2);
 }
 
-const guard = new CostGuard({
-  maxUsdPerRun: Number(values["max-usd"]),
-  maxUsdTotal: Number(values["max-total-usd"]),
-  ledgerPath: join(values.out, "ledger.json"),
-});
+const target = values.target;
+if (target !== undefined && (!target || target === "." || target === ".." || /[/\\]/.test(target))) {
+  console.error(`--target must be a plain folder name, got "${target}".`);
+  process.exit(2);
+}
+const reportRoot = target ? join(values.out, target) : values.out;
 
-for (const clip of positionals) {
-  const videoId = basename(clip).replace(/\.[^.]+$/, "");
-  const workDir = join(values.out, videoId);
+// One guard per clip, so --max-usd is a per-clip cap; all share one ledger, so --max-total-usd spans the batch.
+const ledgerPath = join(values.out, "ledger.json");
+const newGuard = () =>
+  new CostGuard({
+    maxUsdPerRun: Number(values["max-usd"]),
+    maxUsdTotal: Number(values["max-total-usd"]),
+    ledgerPath,
+  });
+
+// Labels name a clip by its path under data/videos (stock/stock01); accuracy looks reports up by the
+// last segment, so two inputs with the same file name would overwrite each other's work dir.
+const videosDir = resolve("data/videos");
+const clips = positionals.map((path) => {
+  const rel = relative(videosDir, resolve(path));
+  const inside = rel && !rel.startsWith("..") && !isAbsolute(rel);
+  const label = (inside ? rel.split(/[/\\]/).join("/") : basename(path)).replace(/\.[^.]+$/, "");
+  return { path, label, videoId: label.split("/").at(-1)! };
+});
+const byId = new Map<string, string>();
+for (const c of clips) {
+  const seen = byId.get(c.videoId);
+  if (seen !== undefined) {
+    console.error(`"${seen}" and "${c.path}" would both write to ${join(reportRoot, c.videoId)}; run them separately.`);
+    process.exit(2);
+  }
+  byId.set(c.videoId, c.path);
+}
+
+for (const { path: clip, label, videoId } of clips) {
+  const workDir = join(reportRoot, videoId);
   await mkdir(workDir, { recursive: true });
   const report = await runVideo({
     videoId,
@@ -44,15 +75,15 @@ for (const clip of positionals) {
     productDescription: values.product,
     brandTerms: values.brand,
     contractTerms: values.term,
-    guard,
-    log: (msg) => console.log(`[${videoId}] ${msg}`),
+    guard: newGuard(),
+    log: (msg) => console.log(`[${label}] ${msg}`),
   });
   await writeFile(join(workDir, "report.json"), JSON.stringify(report, null, 2));
   const m = report.metrics;
   console.log(
-    `[${videoId}] on screen ${m.secondsOnScreen.toFixed(1)} s of ${report.info.durationSec.toFixed(1)} s, ` +
+    `[${label}] on screen ${m.secondsOnScreen.toFixed(1)} s of ${report.info.durationSec.toFixed(1)} s, ` +
       `prominence ${m.prominenceScore}, mentions ${m.mentions.length}, cost $${report.cost.usd.toFixed(3)}`,
   );
-  for (const t of report.terms) console.log(`[${videoId}]   ${t.pass === null ? "?" : t.pass ? "PASS" : "FAIL"} ${t.term.text}: ${t.detail}`);
+  for (const t of report.terms) console.log(`[${label}]   ${t.pass === null ? "?" : t.pass ? "PASS" : "FAIL"} ${t.term.text}: ${t.detail}`);
 }
-console.log(`Total spent so far: $${(await guard.totalSpentUsd()).toFixed(3)}`);
+console.log(`Total spent so far: $${(await newGuard().totalSpentUsd()).toFixed(3)}`);

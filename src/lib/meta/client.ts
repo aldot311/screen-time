@@ -233,6 +233,8 @@ export async function sparkJson<T = unknown>(
     {
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       makeBody: () => body,
+      // A dropped connection may still have been billed; let the caller decide rather than pay twice.
+      retryNetworkErrors: false,
     },
     opts,
   );
@@ -273,6 +275,7 @@ export async function transcribe(wav: Uint8Array, opts: ClientOptions = {}): Pro
         form.append("audio", audio, "audio.wav");
         return form;
       },
+      retryNetworkErrors: false,
     },
     opts,
   );

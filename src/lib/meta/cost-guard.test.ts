@@ -93,3 +93,48 @@ describe("assertCanSpend / record", () => {
     expect(() => guard(1, -1)).toThrow(/Invalid cost caps/);
   });
 });
+
+describe("reserve / adjust", () => {
+  it("lets only one of two parallel reservations through when both together would pass the per-run cap", async () => {
+    const g = guard(0.03, 10);
+    const results = await Promise.allSettled([g.reserve(0.02, "a"), g.reserve(0.02, "b")]);
+    expect(results.map((r) => r.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect((results.find((r) => r.status === "rejected") as PromiseRejectedResult).reason).toBeInstanceOf(CostLimitError);
+    expect(g.runSpentUsd).toBeCloseTo(0.02, 10);
+    expect(await g.readLedger()).toHaveLength(1);
+  });
+
+  it("enforces the total cap across guards that share a ledger, even in parallel", async () => {
+    const path = join(dir, "ledger.json");
+    const results = await Promise.allSettled([guard(1, 0.03, path).reserve(0.02), guard(1, 0.03, path).reserve(0.02)]);
+    expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
+    expect(await guard(1, 1, path).totalSpentUsd()).toBeCloseTo(0.02, 10);
+  });
+
+  it("refunds with a negative adjustment, which record() would refuse", async () => {
+    const g = guard(1, 1);
+    await g.reserve(0.015, "sam reserve");
+    await expect(g.record(-0.005)).rejects.toThrow(/Invalid/);
+    await g.adjust(-0.005, "sam adjust");
+    expect(g.runSpentUsd).toBeCloseTo(0.01, 10);
+    expect(await g.totalSpentUsd()).toBeCloseTo(0.01, 10);
+    expect((await g.readLedger()).map((e) => e.usd)).toEqual([0.015, -0.005]);
+  });
+
+  it("records a positive adjustment even past the caps, since the money is already spent", async () => {
+    const g = guard(0.01, 0.01);
+    await g.reserve(0.01);
+    await g.adjust(0.005, "billed more than estimated");
+    expect(await g.totalSpentUsd()).toBeCloseTo(0.015, 10);
+    await expect(g.reserve(0)).rejects.toBeInstanceOf(CostLimitError);
+  });
+
+  it("refuses a refund larger than this guard's spend, and non-finite adjustments", async () => {
+    const g = guard(1, 1);
+    await g.reserve(0.01);
+    await expect(g.adjust(-0.02)).rejects.toThrow(/exceeds/);
+    await expect(g.adjust(Number.NaN)).rejects.toThrow(/Invalid/);
+    await expect(g.reserve(-1)).rejects.toThrow(/Invalid/);
+    expect(await g.totalSpentUsd()).toBeCloseTo(0.01, 10);
+  });
+});

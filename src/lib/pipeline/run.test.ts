@@ -18,12 +18,13 @@ function sse(events: { type: string }[]): string {
   return events.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join("");
 }
 const lane = { item_id: "msg-1", output_index: 0, content_index: 0 };
-const samStream = sse([
-  { type: "response.created" },
-  { type: "response.output_text.delta", ...lane, delta: SAM_TEXT },
-  { type: "response.output_text.done", ...lane, text: SAM_TEXT },
-  { type: "response.completed", response: { status: "completed", usage: { video_frames_processed: 15 } } },
-] as { type: string }[]);
+const samStream = (framesProcessed: number) =>
+  sse([
+    { type: "response.created" },
+    { type: "response.output_text.delta", ...lane, delta: SAM_TEXT },
+    { type: "response.output_text.done", ...lane, text: SAM_TEXT },
+    { type: "response.completed", response: { status: "completed", usage: { video_frames_processed: framesProcessed } } },
+  ] as { type: string }[]);
 
 const sparkReply = (payload: unknown) =>
   new Response(
@@ -34,7 +35,7 @@ const sparkReply = (payload: unknown) =>
     { status: 200, headers: { "content-type": "application/json" } },
   );
 
-function fakeApi(verdict: "match" | "lookalike"): { fetch: FetchLike; paths: string[] } {
+function fakeApi(verdict: "match" | "lookalike", samFrames = 15): { fetch: FetchLike; paths: string[] } {
   const paths: string[] = [];
   const fetch: FetchLike = async (url, init) => {
     const path = new URL(url).pathname;
@@ -44,7 +45,7 @@ function fakeApi(verdict: "match" | "lookalike"): { fetch: FetchLike; paths: str
       return Response.json({ transcript: "love my Celsius", turns: [{ startMs: 0, endMs: 900, transcript: "love my Celsius" }] });
     if (path === "/v1/responses") {
       const body = JSON.parse(String(init?.body));
-      if (body.model === "sam-3.1") return new Response(samStream, { status: 200 });
+      if (body.model === "sam-3.1") return new Response(samStream(samFrames), { status: 200 });
       if (body.text?.format?.name === "product_check")
         return sparkReply({ verdict, visibility: "clear", reason: "Teal can with the brand logo." });
       return sparkReply({
@@ -56,13 +57,13 @@ function fakeApi(verdict: "match" | "lookalike"): { fetch: FetchLike; paths: str
   return { fetch, paths };
 }
 
-async function setup() {
+async function setup(durationSec = 1) {
   const dir = await mkdtemp(join(tmpdir(), "st-run-"));
   const src = join(dir, "src.mp4");
   execFileSync(ffmpegStatic as string, [
     "-v", "error", "-y",
-    "-f", "lavfi", "-i", "testsrc=size=320x334:rate=30:duration=1",
-    "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=1",
+    "-f", "lavfi", "-i", `testsrc=size=320x334:rate=30:duration=${durationSec}`,
+    "-f", "lavfi", "-i", `sine=frequency=440:sample_rate=44100:duration=${durationSec}`,
     "-shortest", src,
   ]);
   const guard = new CostGuard({ maxUsdPerRun: 1, maxUsdTotal: 1, ledgerPath: join(dir, "ledger.json") });
@@ -93,7 +94,19 @@ describe("runVideo", () => {
     expect(report.metrics.secondsOnScreen).toBeCloseTo(2 / 15);
     expect(report.metrics.mentions).toHaveLength(1);
     expect(report.terms[0].pass).toBe(true);
-    expect(report.cost).toEqual({ samFrames: 15, usd: 0.01 }); // 15 frames, billed at the 50-frame minimum
+    // SAM $0.01 (15 frames billed at the 50-frame minimum) + verify $0.02 + transcribe $0.01 + terms $0.02.
+    expect(report.cost).toEqual({ samFrames: 15, usd: 0.06 });
+    expect(await guard.totalSpentUsd()).toBeCloseTo(0.06, 10);
+  }, 30_000);
+
+  it("refunds the SAM reserve when fewer frames are billed than estimated", async () => {
+    const { dir, src, guard } = await setup(5); // 75 frames reserved = $0.015
+    const report = await runVideo(base(dir, src, guard, fakeApi("match", 60).fetch));
+    expect(report.info.frameCount).toBe(75);
+    // SAM $0.012 (60 billed frames) + verify $0.02 + transcribe $0.01 + terms $0.02.
+    expect(report.cost).toEqual({ samFrames: 60, usd: 0.062 });
+    expect(await guard.totalSpentUsd()).toBeCloseTo(0.062, 10);
+    expect((await guard.readLedger()).map((e) => e.usd)).toContain(-0.003);
   }, 30_000);
 
   it("drops look-alikes from the metrics", async () => {
@@ -101,6 +114,17 @@ describe("runVideo", () => {
     const report = await runVideo(base(dir, src, guard, fakeApi("lookalike").fetch));
     expect(report.tracks[0].verdict).toBe("lookalike");
     expect(report.metrics.secondsOnScreen).toBe(0);
+  }, 30_000);
+
+  it("releases the SAM reserve when the upload fails before SAM is called", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = fakeApi("match");
+    const fetch: FetchLike = async (url, init) =>
+      new URL(url).pathname === "/v1/files"
+        ? Response.json({ error: { message: "too big", type: "invalid_request_error", code: "too_big" } }, { status: 413 })
+        : ok(url, init);
+    await expect(runVideo(base(dir, src, guard, fetch))).rejects.toMatchObject({ status: 413 });
+    expect(await guard.totalSpentUsd()).toBe(0);
   }, 30_000);
 
   it("refuses to call SAM when the budget would be exceeded", async () => {
