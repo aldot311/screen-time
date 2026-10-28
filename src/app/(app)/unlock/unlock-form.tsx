@@ -24,7 +24,7 @@ export function UnlockForm() {
           setError((await res.json().catch(() => null))?.error ?? "Could not unlock.");
           return;
         }
-        router.push(next.startsWith("/") && !next.startsWith("//") ? next : "/campaigns");
+        router.push(sameOriginPath(next));
         router.refresh();
       }}
     >
@@ -44,4 +44,14 @@ export function UnlockForm() {
       </button>
     </form>
   );
+}
+
+/** Only ever go back to a page on this site: "/\\evil.com", "//evil.com" and absolute URLs resolve elsewhere. */
+function sameOriginPath(next: string): string {
+  try {
+    const u = new URL(next, window.location.origin);
+    return u.origin === window.location.origin ? u.pathname + u.search + u.hash : "/campaigns";
+  } catch {
+    return "/campaigns";
+  }
 }

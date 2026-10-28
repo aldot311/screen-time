@@ -9,11 +9,15 @@ describe("decideAccess", () => {
   });
 
   it("allows only the cookie made from the configured password", async () => {
-    const env = { NODE_ENV: "production", SCREEN_TIME_PASSWORD: "demo-pass" };
+    const env = { NODE_ENV: "production", SCREEN_TIME_PASSWORD: "demo-pass-long" };
     expect(await decideAccess(undefined, env)).toBe("locked");
     expect(await decideAccess(await accessToken("wrong"), env)).toBe("locked");
-    expect(await decideAccess("demo-pass", env)).toBe("locked"); // the raw password is not the cookie
-    expect(await decideAccess(await accessToken("demo-pass"), env)).toBe("allow");
+    expect(await decideAccess("demo-pass-long", env)).toBe("locked"); // the raw password is not the cookie
+    expect(await decideAccess(await accessToken("demo-pass-long"), env)).toBe("allow");
+  });
+
+  it("treats a password under 12 characters as unset, so writes stay off", async () => {
+    expect(await decideAccess(await accessToken("short"), { NODE_ENV: "production", SCREEN_TIME_PASSWORD: "short" })).toBe("disabled");
   });
 
   it("compares strings exactly", () => {

@@ -3,8 +3,10 @@
 
 export const ACCESS_COOKIE = "st_access";
 
+/** The configured password, or null. A short one is treated as unset, so the deploy fails closed. */
 export function accessPassword(env: Record<string, string | undefined> = process.env): string | null {
-  return env.SCREEN_TIME_PASSWORD?.trim() || null;
+  const p = env.SCREEN_TIME_PASSWORD?.trim();
+  return p && p.length >= 12 ? p : null;
 }
 
 /** The cookie value for a password: an HMAC, so the cookie never contains the password itself. */
