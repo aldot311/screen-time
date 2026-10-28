@@ -3,11 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Download } from "lucide-react";
 import { getCampaign, listVideos } from "@/lib/campaign/store";
-import { STEPS } from "@/lib/campaign/types";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ScreenTimeStrip } from "@/components/screen-time-strip";
 import { UploadVideos } from "@/components/upload-videos";
-import { VerdictBadge } from "@/components/verdict-badge";
+import { VideoStatus } from "@/components/video-status";
 import { seconds, termCounts, timecode, verdictOf } from "@/components/format";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +63,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
       <div className="mt-6 grid gap-x-10 gap-y-6 lg:grid-cols-[1fr_320px]">
         <section aria-label="Creators" className="min-w-0">
           <ul className="divide-y divide-line rounded-[10px] border border-line bg-surface shadow-1 sm:hidden">
-            {videos.map((v, i) => {
+            {videos.map((v) => {
               const r = v.report;
               return (
                 <li key={v.id}>
@@ -74,15 +73,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                         <span className="block truncate font-medium">{v.creator}</span>
                         <span className="block truncate text-[12px] text-ink-3">{v.title}</span>
                       </span>
-                      {v.status === "failed" ? (
-                        <span className="text-[12px] font-medium text-fail">Failed</span>
-                      ) : v.status === "running" || v.status === "uploaded" ? (
-                        <span className="text-[12px] text-ink-3">
-                          {v.status === "running" ? `${STEPS.find((s) => s.id === v.step)?.label ?? "Starting"}…` : "Waiting to start"}
-                        </span>
-                      ) : (
-                        <VerdictBadge verdict={verdicts[i]} />
-                      )}
+                      <VideoStatus video={v} />
                     </span>
                     {r && (
                       <span className="mt-2 flex items-center gap-3">
@@ -109,7 +100,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {videos.map((v, i) => {
+                {videos.map((v) => {
                   const r = v.report;
                   const counts = r ? termCounts(r.terms) : null;
                   const href = `/campaigns/${campaign.id}/videos/${v.id}`;
@@ -125,13 +116,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                         {r ? (
                           <ScreenTimeStrip durationSec={r.info.durationSec} segments={r.metrics.segments} mentions={r.metrics.mentions} size="mini" />
                         ) : (
-                          <span className="text-[12px] text-ink-3">
-                            {v.status === "failed"
-                              ? "Analysis failed"
-                              : v.status === "running"
-                                ? `${STEPS.find((s) => s.id === v.step)?.label ?? "Starting"}…`
-                                : "Waiting to start"}
-                          </span>
+                          <span className="block h-2.5 rounded-[6px] bg-sunken" aria-hidden />
                         )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right tabular">{r ? seconds(r.metrics.secondsOnScreen) : "–"}</td>
@@ -142,13 +127,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                         {counts && r ? `${counts.passed}/${r.terms.length}` : "–"}
                       </td>
                       <td className="px-4 py-3">
-                        {v.status === "failed" ? (
-                          <span className="text-[12px] font-medium text-fail">Failed</span>
-                        ) : v.status === "done" ? (
-                          <VerdictBadge verdict={verdicts[i]} />
-                        ) : (
-                          <span className="text-[12px] text-ink-3">In progress</span>
-                        )}
+                        <VideoStatus video={v} />
                       </td>
                     </tr>
                   );

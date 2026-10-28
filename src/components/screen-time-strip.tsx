@@ -14,6 +14,10 @@ interface Props {
   /** A contract term's window (e.g. "first 5 s") or evidence to emphasise. */
   window?: Segment | null;
   evidence?: Segment[];
+  /** Stretches where a rejected look-alike was on screen: drawn so the rejection carries its own proof. */
+  rejected?: Segment[];
+  firstSeenSec?: number | null;
+  longest?: Segment | null;
   onSeek?: (sec: number) => void;
   size?: "full" | "mini";
 }
@@ -25,6 +29,9 @@ export function ScreenTimeStrip({
   playheadSec,
   window,
   evidence = [],
+  rejected = [],
+  firstSeenSec = null,
+  longest = null,
   onSeek,
   size = "full",
 }: Props) {
@@ -91,6 +98,14 @@ export function ScreenTimeStrip({
             style={{ left: pct(window.startSec), width: `calc(${pct(window.endSec)} - ${pct(window.startSec)})` }}
           />
         )}
+        {rejected.map((s) => (
+          <div
+            key={`r-${s.startSec}`}
+            title={`Look-alike on screen ${timecode(s.startSec)}–${timecode(s.endSec)}, not counted`}
+            className="absolute inset-y-1 rounded-[2px] border border-dashed border-fail bg-[repeating-linear-gradient(135deg,rgb(194_54_47/0.16)_0_3px,transparent_3px_7px)]"
+            style={{ left: pct(s.startSec), width: `max(3px, calc(${pct(s.endSec)} - ${pct(s.startSec)}))` }}
+          />
+        ))}
         {segments.map((s) => (
           <div
             key={`${s.startSec}-${s.endSec}`}
@@ -105,6 +120,20 @@ export function ScreenTimeStrip({
             style={{ left: pct(s.startSec), width: `max(4px, calc(${pct(s.endSec)} - ${pct(s.startSec)}))` }}
           />
         ))}
+        {!mini && longest && (
+          <div
+            title="Longest continuous run"
+            className="absolute -bottom-px h-[3px] bg-lime-ink"
+            style={{ left: pct(longest.startSec), width: `calc(${pct(longest.endSec)} - ${pct(longest.startSec)})` }}
+          />
+        )}
+        {!mini && firstSeenSec !== null && (
+          <div
+            title={`First seen at ${timecode(firstSeenSec)}`}
+            className="absolute top-0 size-0 -translate-x-1/2 border-x-[5px] border-t-[6px] border-x-transparent border-t-lime-ink"
+            style={{ left: pct(firstSeenSec) }}
+          />
+        )}
         {mentions.map((m) => (
           <div
             key={`m-${m.startSec}`}
@@ -113,7 +142,7 @@ export function ScreenTimeStrip({
             style={{ left: pct(m.startSec) }}
           />
         ))}
-        {playheadSec !== undefined && !mini && (
+        {playheadSec !== undefined && playheadSec > 0 && !mini && (
           <div className="pointer-events-none absolute -top-px -bottom-px w-0.5 bg-ink" style={{ left: pct(playheadSec) }}>
             <div className="absolute -top-0.5 -left-[3px] size-2 rounded-full bg-ink" />
           </div>

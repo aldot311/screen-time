@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getCampaign, getVideo } from "@/lib/campaign/store";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ReportView } from "@/components/report-view";
+import { RunAgainButton } from "@/components/run-again-button";
 import { RunSteps } from "@/components/run-steps";
 
 export const dynamic = "force-dynamic";
@@ -51,10 +52,15 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
               </h2>
               <p className="mt-1 mb-5 max-w-[60ch] text-ink-2">
                 {video.status === "failed"
-                  ? "Nothing from a failed step is counted. Fix the problem below and run it again."
+                  ? "Screen-Time could not finish this video, so nothing from it is counted yet. The reason is shown under the step that stopped. Once it is fixed, run it again; the video does not need to be uploaded again."
                   : `Looking for “${campaign.prompt}”, checking each find against ${campaign.productDescription}, then measuring and checking the contract.`}
               </p>
               <RunSteps status={video.status} step={video.step} error={video.error} />
+              {video.status === "failed" && !campaign.synthetic && (
+                <div className="mt-6">
+                  <RunAgainButton campaignId={campaign.id} videoId={video.id} />
+                </div>
+              )}
             </section>
           </div>
         )}

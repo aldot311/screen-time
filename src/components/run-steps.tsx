@@ -11,30 +11,32 @@ export function RunSteps({ status, step, error }: { status: VideoStatus; step: S
         const active = status === "running" && i === at;
         const failed = status === "failed" && i === at;
         return (
-          <li key={s.id} className="flex items-center gap-3">
-            <span
-              className={[
-                "grid size-6 shrink-0 place-items-center rounded-full",
-                done ? "bg-pass-soft text-pass" : failed ? "bg-fail-soft text-fail" : active ? "bg-lime text-lime-ink" : "bg-sunken text-ink-3",
-              ].join(" ")}
-            >
-              {done ? (
-                <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
-              ) : failed ? (
-                <X className="size-3.5" strokeWidth={2.5} aria-hidden />
-              ) : active ? (
-                <Loader2 className="size-3.5 animate-spin" aria-hidden />
-              ) : (
-                <span className="font-mono text-[11px] tabular">{i + 1}</span>
-              )}
+          <li key={s.id}>
+            <span className="flex items-center gap-3">
+              <span
+                className={[
+                  "grid size-6 shrink-0 place-items-center rounded-full",
+                  done ? "bg-pass-soft text-pass" : failed ? "bg-fail-soft text-fail" : active ? "bg-lime text-lime-ink" : "bg-sunken text-ink-3",
+                ].join(" ")}
+              >
+                {done ? (
+                  <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
+                ) : failed ? (
+                  <X className="size-3.5" strokeWidth={2.5} aria-hidden />
+                ) : active ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <span className="text-[11px] tabular">{i + 1}</span>
+                )}
+              </span>
+              <span className={done || active || failed ? "text-ink" : "text-ink-3"}>{s.label}</span>
             </span>
-            <span className={done || active || failed ? "text-ink" : "text-ink-3"}>{s.label}</span>
+            {failed && error && (
+              <p className="mt-2 ml-9 max-w-[60ch] rounded-[8px] bg-fail-soft px-3 py-2 text-fail">{error}</p>
+            )}
           </li>
         );
       })}
-      {status === "failed" && error && (
-        <li className="mt-3 rounded-[8px] bg-fail-soft px-3 py-2 text-fail">{error}</li>
-      )}
     </ol>
   );
 }

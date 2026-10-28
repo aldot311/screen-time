@@ -18,7 +18,9 @@ export default async function CampaignsPage() {
         total: videos.length,
         delivered: verdicts.filter((v) => v === "delivered").length,
         short: verdicts.filter((v) => v === "short").length,
-        review: verdicts.filter((v) => v === "review").length,
+        review: verdicts.filter((v, i) => v === "review" && videos[i].status === "done").length,
+        running: videos.filter((v) => v.status === "running" || v.status === "uploaded").length,
+        stopped: videos.filter((v) => v.status === "failed").length,
       };
     }),
   );
@@ -40,7 +42,35 @@ export default async function CampaignsPage() {
         </Link>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-[10px] border border-line bg-surface shadow-1">
+      <ul className="mt-6 divide-y divide-line rounded-[10px] border border-line bg-surface shadow-1 sm:hidden">
+        {rows.map(({ c, total, delivered, short, review, running, stopped }) => (
+          <li key={c.id}>
+            <Link href={`/campaigns/${c.id}`} className="block px-4 py-3">
+              <span className="flex items-center gap-2">
+                <span className="truncate font-medium">{c.name}</span>
+                {c.synthetic && <span className="shrink-0 rounded-full bg-sunken px-2 py-0.5 text-[11px] text-ink-3">Preview data</span>}
+              </span>
+              <span className="mt-0.5 block text-[12px] text-ink-3">
+                {c.brand} · {total} video{total === 1 ? "" : "s"}
+              </span>
+              <span className="mt-2 block">
+                <MixBar delivered={delivered} short={short} review={review} total={total} running={running} stopped={stopped} />
+              </span>
+            </Link>
+          </li>
+        ))}
+        {!rows.length && (
+          <li className="px-4 py-8 text-center text-ink-2">
+            No campaigns yet.{" "}
+            <Link href="/campaigns/new" className="font-medium text-ink underline">
+              Create the first one
+            </Link>
+            .
+          </li>
+        )}
+      </ul>
+
+      <div className="mt-6 hidden overflow-x-auto rounded-[10px] border border-line bg-surface shadow-1 sm:block">
         <table className="w-full min-w-[720px] text-left">
           <thead className="border-b border-line text-[12px] text-ink-3">
             <tr>
@@ -51,7 +81,7 @@ export default async function CampaignsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {rows.map(({ c, total, delivered, short, review }) => (
+            {rows.map(({ c, total, delivered, short, review, running, stopped }) => (
               <tr key={c.id} className="hover:bg-sunken/50">
                 <td className="px-4 py-3">
                   <Link href={`/campaigns/${c.id}`} className="font-medium hover:underline">
@@ -65,7 +95,7 @@ export default async function CampaignsPage() {
                 <td className="max-w-[320px] px-4 py-3 text-ink-2">{c.productDescription}</td>
                 <td className="px-4 py-3 text-right tabular">{total}</td>
                 <td className="px-4 py-3">
-                  <MixBar delivered={delivered} short={short} review={review} total={total} />
+                  <MixBar delivered={delivered} short={short} review={review} total={total} running={running} stopped={stopped} />
                 </td>
               </tr>
             ))}
@@ -87,18 +117,24 @@ export default async function CampaignsPage() {
   );
 }
 
-function MixBar({ delivered, short, review, total }: { delivered: number; short: number; review: number; total: number }) {
+function MixBar(props: { delivered: number; short: number; review: number; total: number; running: number; stopped: number }) {
+  const { delivered, short, review, total, running, stopped } = props;
   const w = (n: number) => `${total ? (n / total) * 100 : 0}%`;
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-2 w-40 overflow-hidden rounded-full bg-sunken" aria-hidden>
+    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span className="flex h-2 w-40 overflow-hidden rounded-full bg-sunken" aria-hidden>
         <span className="bg-pass" style={{ width: w(delivered) }} />
         <span className="bg-fail" style={{ width: w(short) }} />
         <span className="bg-unsure" style={{ width: w(review) }} />
-      </div>
+      </span>
       <span className="text-[12px] text-ink-2 tabular">
         {delivered} / {short} / {review}
       </span>
-    </div>
+      {(running > 0 || stopped > 0) && (
+        <span className="text-[12px] text-ink-3">
+          {[running && `${running} in progress`, stopped && `${stopped} stopped`].filter(Boolean).join(", ")}
+        </span>
+      )}
+    </span>
   );
 }
