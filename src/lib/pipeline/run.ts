@@ -2,7 +2,7 @@
 // (Voice Transcribe) → measure → check contract terms. Every billed call reserves its cost in the CostGuard first.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CostGuard, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
+import { CostGuard, MetaApiError, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
 import { checkTerms, computeMetrics, frameSamples, findMentions } from "@/lib/metrics";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
@@ -73,7 +73,18 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     await spend.adjust(-samEstimate, `sam ${input.videoId} upload failed`);
     throw err;
   }
-  const sam = await samVideo({ fileId, prompt: input.prompt, includeConfidence: true }, client);
+  let sam: Awaited<ReturnType<typeof samVideo>>;
+  try {
+    sam = await samVideo({ fileId, prompt: input.prompt, includeConfidence: true }, client);
+  } catch (err) {
+    // A 4xx (bad request, auth, billing, rate limit) is rejected before any frame is processed, so it is
+    // refunded. Anything else (5xx, a dropped connection, a stream that failed midway) may have been
+    // billed, so the reservation stays.
+    if (err instanceof MetaApiError && err.status >= 400 && err.status < 500) {
+      await spend.adjust(-samEstimate, `sam ${input.videoId} rejected (${err.status})`);
+    }
+    throw err;
+  }
   const samFrames = sam.framesProcessed ?? info.frameCount;
   await spend.adjust(guard.estimateSamUsd(samFrames) - samEstimate, `sam ${input.videoId} adjust`);
   const parsed = await parseSamVideo(sam.raw, info);

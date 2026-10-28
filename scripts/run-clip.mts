@@ -45,8 +45,8 @@ const newGuard = () =>
     ledgerPath,
   });
 
-// Labels name a clip by its path under data/videos (stock/stock01); accuracy looks reports up by the
-// last segment, so two inputs with the same file name would overwrite each other's work dir.
+// Labels name a clip by its path under data/videos (stock/stock01), and reports are written under that
+// same path, so clips with the same file name in different folders never share a work dir.
 const videosDir = resolve("data/videos");
 const clips = positionals.map((path) => {
   const rel = relative(videosDir, resolve(path));
@@ -56,16 +56,16 @@ const clips = positionals.map((path) => {
 });
 const byId = new Map<string, string>();
 for (const c of clips) {
-  const seen = byId.get(c.videoId);
+  const seen = byId.get(c.label);
   if (seen !== undefined) {
-    console.error(`"${seen}" and "${c.path}" would both write to ${join(reportRoot, c.videoId)}; run them separately.`);
+    console.error(`"${seen}" and "${c.path}" would both write to ${join(reportRoot, c.label)}; rename one.`);
     process.exit(2);
   }
-  byId.set(c.videoId, c.path);
+  byId.set(c.label, c.path);
 }
 
 for (const { path: clip, label, videoId } of clips) {
-  const workDir = join(reportRoot, videoId);
+  const workDir = join(reportRoot, label);
   await mkdir(workDir, { recursive: true });
   const report = await runVideo({
     videoId,

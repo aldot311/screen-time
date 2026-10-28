@@ -41,20 +41,41 @@ export default function LabelPage() {
   // The doc as it came from the server (no need to save it back) and the latest unsaved edit.
   const fromServer = useRef<LabelDoc | null>(null);
   const pending = useRef<LabelDoc | null>(null);
+  // Saves run one at a time, so an older save can never land after a newer one.
+  const saveChain = useRef<Promise<void>>(Promise.resolve());
+  const inFlight = useRef<LabelDoc | null>(null);
 
   // Saves under doc.id, which the doc carries, so a save can never land on another clip.
   const flush = useCallback((keepalive = false) => {
-    const d = pending.current;
+    // On page hide, also resend a save that is still in flight: the browser may cancel it.
+    const d = pending.current ?? (keepalive ? inFlight.current : null);
     if (!d) return;
     pending.current = null;
-    fetch("/api/dev/labels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(d),
-      keepalive,
-    })
-      .then((r) => setSaved(r.ok ? `Saved ${new Date().toLocaleTimeString()}` : "Save failed"))
-      .catch(() => setSaved("Save failed"));
+    const post = () =>
+      fetch("/api/dev/labels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(d),
+        keepalive,
+      });
+    if (keepalive) {
+      void post();
+      return;
+    }
+    saveChain.current = saveChain.current.then(async () => {
+      inFlight.current = d;
+      try {
+        const r = await post();
+        if (!r.ok) throw new Error(String(r.status));
+        setSaved(`Saved ${new Date().toLocaleTimeString()}`);
+      } catch {
+        // Keep the edit so the next change or clip switch retries it, unless a newer edit replaced it.
+        pending.current ??= d;
+        setSaved("Save failed, will retry");
+      } finally {
+        inFlight.current = null;
+      }
+    });
   }, []);
 
   useEffect(() => {

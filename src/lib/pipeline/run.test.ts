@@ -127,6 +127,24 @@ describe("runVideo", () => {
     expect(await guard.totalSpentUsd()).toBe(0);
   }, 30_000);
 
+  it("refunds the SAM reserve when SAM rejects the request, but keeps it when SAM fails server-side", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = fakeApi("match");
+    const failSam = (status: number): FetchLike => async (url, init) => {
+      const isSam = new URL(url).pathname === "/v1/responses" && JSON.parse(String(init?.body)).model === "sam-3.1";
+      return isSam
+        ? Response.json({ error: { message: "nope", type: "invalid_request_error", code: "x" } }, { status })
+        : ok(url, init);
+    };
+    await expect(runVideo(base(dir, src, guard, failSam(402)))).rejects.toMatchObject({ status: 402 });
+    expect(await guard.totalSpentUsd()).toBe(0);
+
+    const guard2 = new CostGuard({ maxUsdPerRun: 1, maxUsdTotal: 1, ledgerPath: join(dir, "l3.json") });
+    const opts = { ...base(dir, src, guard2, failSam(500)), client: { fetch: failSam(500), apiKey: "k", sleep: async () => undefined, maxRetries: 0 } };
+    await expect(runVideo(opts)).rejects.toMatchObject({ status: 500 });
+    expect(await guard2.totalSpentUsd()).toBeCloseTo(0.01); // 15 frames at the 50-frame minimum, possibly billed
+  }, 30_000);
+
   it("refuses to call SAM when the budget would be exceeded", async () => {
     const { dir, src } = await setup();
     const tiny = new CostGuard({ maxUsdPerRun: 0.001, maxUsdTotal: 1, ledgerPath: join(dir, "l2.json") });

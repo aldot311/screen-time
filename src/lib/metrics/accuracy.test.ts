@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { FPS, type Segment } from "@/lib/types";
 
@@ -23,6 +23,7 @@ function runAccuracy(clips: Record<string, Clip>): string {
   dirs.push(dir);
   mkdirSync(join(dir, "data/labels"), { recursive: true });
   for (const [clip, c] of Object.entries(clips)) {
+    mkdirSync(dirname(join(dir, "data/labels", `${clip}.json`)), { recursive: true });
     writeFileSync(join(dir, "data/labels", `${clip}.json`), JSON.stringify({ id: clip, targets: [{ name: "brand", ranges: c.ranges }] }));
     const out = join(dir, "data/out/brand", clip);
     mkdirSync(out, { recursive: true });
@@ -59,7 +60,7 @@ describe("scripts/accuracy.mts", () => {
   it("reports precision n/a and recall 0% when nothing was predicted", () => {
     const out = runAccuracy({ a: { ranges: [[0, 14]], visibleFrames: [] } });
     expect(out).toMatch(/a:brand .*precision n\/a\s+recall\s+0%/);
-    expect(out).toMatch(/Overall \(per frame\): precision n\/a\s+recall 0\.0%/);
+    expect(out).toMatch(/Overall \(per frame\): precision n\/a\s+recall 0\.0%\s+F1 0\.0%/);
   }, 30_000);
 
   it("lets a false positive on an expected-0 s clip lower precision", () => {
@@ -67,7 +68,12 @@ describe("scripts/accuracy.mts", () => {
       a: { ranges: [[0, 9]], segments: [seg(0, 9)], visibleFrames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
       b: { ranges: [], segments: [seg(0, 9)], visibleFrames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
     });
-    expect(out).toMatch(/b:brand .*precision\s+0%/);
+    expect(out).toMatch(/b:brand .*precision\s+0%\s+recall n\/a/);
     expect(out).toContain("Overall (per frame): precision 50.0%  recall 100.0%");
+  }, 30_000);
+
+  it("finds reports for clips in subfolders by their full id", () => {
+    const out = runAccuracy({ "stock/s1": { ranges: [[0, 2]], visibleFrames: [0, 1, 2] } });
+    expect(out).toMatch(/stock\/s1:brand .*precision 100%/);
   }, 30_000);
 });
