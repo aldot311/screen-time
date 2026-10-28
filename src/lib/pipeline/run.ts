@@ -6,7 +6,8 @@ import { CostGuard, MetaApiError, samVideo, sparkJson, transcribe, uploadFile, t
 import { checkTerms, computeMetrics, frameSamples, findMentions } from "@/lib/metrics";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
-import type { ContractTerm, Detection, Track, TrackVerification, VideoReport } from "@/lib/types";
+import type { StepId } from "@/lib/campaign/types";
+import type { ContractTerm, Detection, Track, TrackVerification, VerifyVerdict, VideoReport } from "@/lib/types";
 import { parseTermsPrompt, TERMS_SCHEMA, toContractTerms, VERIFY_SCHEMA, verifyPrompt, type VerifyOutput } from "./prompts";
 
 // Spark and transcription are billed by tokens and audio seconds; these are generous per-call reserves
@@ -25,6 +26,8 @@ export interface RunInput {
   guard: CostGuard;
   client?: ClientOptions;
   log?: (msg: string) => void;
+  /** Called as each of the six steps starts, so a caller can show progress. A throw aborts the run. */
+  onStep?: (step: StepId) => void | Promise<void>;
 }
 
 // In micro-dollars, like the guard's ledger, so the report total does not pick up float noise.
@@ -57,11 +60,14 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   const { guard, client } = input;
   const spend = new VideoSpend(guard);
   const videoPath = join(input.workDir, `${input.videoId}.mp4`);
+  const step = async (id: StepId) => input.onStep?.(id);
 
+  await step("normalize");
   log("normalizing");
   const info = await normalizeVideo(input.sourcePath, videoPath);
 
   // Reserve SAM's cost before the upload; the frames billed come back in usage and settle the reserve.
+  await step("track");
   const samEstimate = guard.estimateSamUsd(info.frameCount);
   await spend.reserve(samEstimate, `sam ${input.videoId} reserve`);
   log(`tracking "${input.prompt}" over ${info.frameCount} frames (~$${samEstimate.toFixed(3)})`);
@@ -90,6 +96,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   const parsed = await parseSamVideo(sam.raw, info);
   for (const d of parsed.diagnostics) log(`sam: ${d}`);
 
+  await step("verify");
   log(`verifying ${parsed.tracks.length} tracked object(s)`);
   const verifications = await Promise.all(
     parsed.tracks.map((t) => verifyTrack(t, videoPath, input, info.frameCount, spend)),
@@ -97,6 +104,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   const matchIds = new Set(verifications.filter((v) => v.verdict === "match").map((v) => v.objectId));
   const matched: Detection[] = parsed.detections.filter((d) => matchIds.has(d.objectId));
 
+  await step("listen");
   log("listening for spoken mentions");
   const wavPath = await extractWav(videoPath, join(input.workDir, `${input.videoId}.wav`));
   let turns: { startMs: number; endMs: number; transcript: string }[] = [];
@@ -106,7 +114,9 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   }
   const mentions = findMentions(turns, input.brandTerms);
 
+  await step("measure");
   const metrics = computeMetrics(matched, info, mentions);
+  await step("contract");
   const terms = await parseTerms(input, spend);
   const termResults = checkTerms(terms, metrics, frameSamples(matched, info));
 
@@ -117,6 +127,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     tracks: verifications,
     metrics,
     terms: termResults,
+    detections: tagDetections(parsed.detections, verifications),
     // Everything reserved and settled for this video: SAM as billed, Spark and transcription as reserved.
     cost: { samFrames, usd: spend.usd },
   };
@@ -151,6 +162,23 @@ async function verifyTrack(
     input.client,
   );
   return { objectId: track.objectId, ...out };
+}
+
+/** Every tracked box with its object's verdict, for the player overlay; only the fields the overlay draws. */
+export function tagDetections(
+  detections: Detection[],
+  verifications: TrackVerification[],
+): (Detection & { verdict: VerifyVerdict })[] {
+  const verdicts = new Map(verifications.map((v) => [v.objectId, v.verdict]));
+  return detections.map((d) => ({
+    frame: d.frame,
+    objectId: d.objectId,
+    box: d.box,
+    areaFraction: d.areaFraction,
+    centroid: d.centroid,
+    ...(d.confidence === undefined ? {} : { confidence: d.confidence }),
+    verdict: verdicts.get(d.objectId) ?? "unclear",
+  }));
 }
 
 /** First, middle and largest appearance: enough views to tell the product from a look-alike. */

@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
+/* Keep Tailwind from scanning dev logs and media: a log write would rebuild the CSS and reload the page in a loop. */
+@source not "../../.next";
+@source not "../../data";
+@source not "../../.impeccable";
+
+/* Screen-Time: cool paper-white ground, ink text, hairlines, and one committed signal colour:
+   highlighter lime marks every second a product was on screen, wherever it appears. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ground: #f7f8fa;
+  --surface: #ffffff;
+  --sunken: #eef0f3;
+  --ink: #0e1116;
+  --ink-2: #444b57; /* secondary text, 9.3:1 on ground */
+  --ink-3: #69707d; /* tertiary text and labels, 4.8:1 on ground */
+  --line: #e3e6eb;
+  --line-strong: #cfd4db;
+
+  --lime: #c8f031; /* on-screen time */
+  --lime-ink: #2f3a00; /* text on lime */
+  --lime-soft: #eef9c8;
+  --violet: #6e56cf; /* spoken mentions */
+  --violet-soft: #ece8fb;
+
+  --pass: #127a4b;
+  --pass-soft: #e3f3ea;
+  --fail: #c2362f;
+  --fail-soft: #fbe7e5;
+  --unsure: #9a6b00;
+  --unsure-soft: #fbf1d9;
+
+  --focus: #3b5bdb;
+  --shadow-1: 0 1px 2px rgb(14 17 22 / 0.06), 0 1px 1px rgb(14 17 22 / 0.03);
+  --shadow-2: 0 8px 24px -8px rgb(14 17 22 / 0.18), 0 2px 6px rgb(14 17 22 / 0.06);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-lime: var(--lime);
+  --color-lime-ink: var(--lime-ink);
+  --color-lime-soft: var(--lime-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-pass: var(--pass);
+  --color-pass-soft: var(--pass-soft);
+  --color-fail: var(--fail);
+  --color-fail-soft: var(--fail-soft);
+  --color-unsure: var(--unsure);
+  --color-unsure-soft: var(--unsure-soft);
+  --color-focus: var(--focus);
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ground);
+}
+
+::selection {
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--focus);
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+/* Figures line up in tables and readouts. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -99,6 +99,23 @@ describe("runVideo", () => {
     expect(await guard.totalSpentUsd()).toBeCloseTo(0.06, 10);
   }, 30_000);
 
+  it("reports each step as it starts, in order", async () => {
+    const { dir, src, guard } = await setup();
+    const steps: string[] = [];
+    await runVideo({ ...base(dir, src, guard, fakeApi("match").fetch), onStep: (s) => void steps.push(s) });
+    expect(steps).toEqual(["normalize", "track", "verify", "listen", "measure", "contract"]);
+  }, 30_000);
+
+  it("tags every tracked box with its object's verdict, for the overlay", async () => {
+    const { dir, src, guard } = await setup();
+    const report = await runVideo(base(dir, src, guard, fakeApi("lookalike").fetch));
+    expect(report.detections).toHaveLength(2);
+    expect(report.detections?.map((d) => [d.frame, d.objectId, d.verdict])).toEqual([[0, 0, "lookalike"], [1, 0, "lookalike"]]);
+    expect(Object.keys(report.detections![0]).sort()).toEqual(
+      expect.arrayContaining(["areaFraction", "box", "centroid", "frame", "objectId", "verdict"]),
+    );
+  }, 30_000);
+
   it("refunds the SAM reserve when fewer frames are billed than estimated", async () => {
     const { dir, src, guard } = await setup(5); // 75 frames reserved = $0.015
     const report = await runVideo(base(dir, src, guard, fakeApi("match", 60).fetch));

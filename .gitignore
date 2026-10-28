@@ -29,3 +29,6 @@ yarn-error.log*
 data/sheets/
 .playwright-mcp/
 .remember/
+data/store/
+.impeccable/review/
+.impeccable/mocks/

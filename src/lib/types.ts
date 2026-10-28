@@ -98,4 +98,6 @@ export interface VideoReport {
   metrics: VideoMetrics;
   terms: TermResult[];
   cost: { samFrames: number; usd: number };
+  /** Every tracked box with its object's verdict, so the player can draw the overlay. Older reports lack it. */
+  detections?: (Detection & { verdict: VerifyVerdict })[];
 }
