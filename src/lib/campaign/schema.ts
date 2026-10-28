@@ -31,16 +31,31 @@ export const Creator = z
 
 /** A video the browser already uploaded to Vercel Blob with a client token from /api/blob-upload. */
 export const RegisterVideo = z.object({
-  url: z.url().refine(isBlobUrl, "Must be a Vercel Blob URL"),
+  url: z.url().refine((u) => isBlobUrl(u), "Must be a URL in this app's Blob store"),
   creator: Creator,
   title: z.string().trim().max(200).optional(),
 });
 
-/** Only our Blob store's https URLs are fetched server-side, so a client cannot make the run download anything else. */
-export function isBlobUrl(url: string): boolean {
+/**
+ * The public host of this deployment's own Blob store, from BLOB_STORE_HOST or the store id inside
+ * BLOB_READ_WRITE_TOKEN (vercel_blob_rw_<storeId>_<secret>). Null when no store is configured.
+ */
+export function ownBlobHost(env: NodeJS.ProcessEnv = process.env): string | null {
+  if (env.BLOB_STORE_HOST) return env.BLOB_STORE_HOST.toLowerCase();
+  const storeId = env.BLOB_READ_WRITE_TOKEN?.split("_")[3];
+  return storeId ? `${storeId.toLowerCase()}.public.blob.vercel-storage.com` : null;
+}
+
+/**
+ * Only https URLs in our own Blob store, under this campaign's folder, are fetched server-side, so a
+ * client cannot make a run download from someone else's store or any other host.
+ */
+export function isBlobUrl(url: string, campaignId?: string, env: NodeJS.ProcessEnv = process.env): boolean {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" && u.hostname.endsWith(".blob.vercel-storage.com") && !u.username && !u.password;
+    const host = ownBlobHost(env);
+    if (u.protocol !== "https:" || u.username || u.password || !host || u.hostname !== host) return false;
+    return campaignId === undefined || u.pathname.startsWith(`/campaigns/${campaignId}/`);
   } catch {
     return false;
   }

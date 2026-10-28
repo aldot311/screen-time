@@ -1,4 +1,4 @@
-import { Creator, MAX_VIDEO_BYTES, RegisterVideo, VIDEO_TYPES } from "@/lib/campaign/schema";
+import { Creator, isBlobUrl, MAX_VIDEO_BYTES, RegisterVideo, VIDEO_TYPES } from "@/lib/campaign/schema";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
 import { getCampaign, putVideo, randomSuffix, saveVideoFile, slugify } from "@/lib/campaign/store";
 import type { VideoEntry } from "@/lib/campaign/types";
@@ -30,6 +30,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const parsed = RegisterVideo.safeParse(await req.json().catch(() => undefined));
     if (!parsed.success) return Response.json({ error: "Invalid video", issues: parsed.error.issues }, { status: 400 });
     const { url, creator } = parsed.data;
+    if (!isBlobUrl(url, id)) return fail(400, "The video must be uploaded to this campaign's folder");
     const title = parsed.data.title || decodeURIComponent(new URL(url).pathname.split("/").at(-1) ?? "video");
     return Response.json(await putVideo(entry(videoId(title), creator, title, url)), { status: 201 });
   }

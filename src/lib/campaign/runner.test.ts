@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { executeRun, startRun, usdFromEnv } from "./runner";
+import { byteLimit, executeRun, startRun, usdFromEnv } from "./runner";
 import { getVideo, putCampaign, putVideo } from "./store";
 import type { Campaign, VideoEntry } from "./types";
 
@@ -44,7 +44,7 @@ describe("executeRun", () => {
     await putCampaign(campaign);
     const v = await putVideo(video({ status: "running", step: "normalize" }));
     const done = await executeRun(campaign, v);
-    expect(done).toMatchObject({ status: "failed", error: "The video's source is not in the store" });
+    expect(done).toMatchObject({ status: "failed", error: "The video's source is not in this campaign's store" });
     expect((await getVideo("c1", "v1"))?.status).toBe("failed");
   });
 });
@@ -56,5 +56,16 @@ describe("usdFromEnv", () => {
     expect(usdFromEnv("", 0.5)).toBe(0.5);
     expect(usdFromEnv("abc", 20)).toBe(20);
     expect(usdFromEnv("-1", 20)).toBe(20);
+  });
+});
+
+describe("byteLimit", () => {
+  it("passes data under the limit and fails once it is exceeded, whatever Content-Length said", async () => {
+    const { Readable } = await import("node:stream");
+    const { pipeline } = await import("node:stream/promises");
+    const { Writable } = await import("node:stream");
+    const sink = () => new Writable({ write: (_c, _e, cb) => cb() });
+    await expect(pipeline(Readable.from([Buffer.alloc(5), Buffer.alloc(5)]), byteLimit(10), sink())).resolves.toBeUndefined();
+    await expect(pipeline(Readable.from([Buffer.alloc(6), Buffer.alloc(6)]), byteLimit(10), sink())).rejects.toThrow("over 200 MB");
   });
 });

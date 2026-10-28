@@ -107,12 +107,19 @@ describe("campaign routes", () => {
     expect(res.status).toBe(415);
     const remote = await videos.POST(json({ url: "https://example.com/x.mp4", creator: "@a" }), params({ id }));
     expect(remote.status).toBe(400);
+    vi.stubEnv("BLOB_STORE_HOST", "abc.public.blob.vercel-storage.com");
+    const otherCampaign = await videos.POST(
+      json({ url: "https://abc.public.blob.vercel-storage.com/campaigns/someone-else/files/x.mp4", creator: "@a" }),
+      params({ id }),
+    );
+    expect(otherCampaign.status).toBe(400);
     const blob = await videos.POST(
-      json({ url: "https://abc.public.blob.vercel-storage.com/campaigns/types/files/clip-x1.mp4", creator: "@a" }),
+      json({ url: `https://abc.public.blob.vercel-storage.com/campaigns/${id}/files/clip-x1.mp4`, creator: "@a" }),
       params({ id }),
     );
     expect(blob.status).toBe(201);
     expect(await blob.json()).toMatchObject({ title: "clip-x1.mp4", status: "uploaded" });
+    vi.unstubAllEnvs();
   });
 });
 

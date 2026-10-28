@@ -76,6 +76,10 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                       </span>
                       {v.status === "failed" ? (
                         <span className="text-[12px] font-medium text-fail">Failed</span>
+                      ) : v.status === "running" || v.status === "uploaded" ? (
+                        <span className="text-[12px] text-ink-3">
+                          {v.status === "running" ? `${STEPS.find((s) => s.id === v.step)?.label ?? "Starting"}…` : "Waiting to start"}
+                        </span>
                       ) : (
                         <VerdictBadge verdict={verdicts[i]} />
                       )}
@@ -140,8 +144,10 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                       <td className="px-4 py-3">
                         {v.status === "failed" ? (
                           <span className="text-[12px] font-medium text-fail">Failed</span>
-                        ) : (
+                        ) : v.status === "done" ? (
                           <VerdictBadge verdict={verdicts[i]} />
+                        ) : (
+                          <span className="text-[12px] text-ink-3">In progress</span>
                         )}
                       </td>
                     </tr>

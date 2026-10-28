@@ -3,7 +3,7 @@ import { createReadStream, createWriteStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { API_KEY_ENV } from "@/lib/meta/http";
@@ -66,7 +66,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
   let current = video;
   const workDir = await mkdtemp(join(tmpdir(), `st-${video.id}-`));
   try {
-    const sourcePath = await localSource(video.sourceUrl ?? video.videoUrl, workDir);
+    const sourcePath = await localSource(video.sourceUrl ?? video.videoUrl, workDir, campaign.id);
     const report = await withLedgerFile((ledgerPath) =>
       runVideo({
         videoId: video.id,
@@ -97,15 +97,26 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
 }
 
 /** A local path for the source video, downloading it into workDir when it lives in Blob. */
-async function localSource(url: string, workDir: string): Promise<string> {
+async function localSource(url: string, workDir: string, campaignId: string): Promise<string> {
   const local = localFileFromUrl(url);
   if (local) return local;
-  if (!isBlobUrl(url)) throw new Error("The video's source is not in the store");
-  const res = await fetch(url);
+  if (!isBlobUrl(url, campaignId)) throw new Error("The video's source is not in this campaign's store");
+  const res = await fetch(url, { redirect: "error" });
   if (!res.ok || !res.body) throw new Error(`Could not download the video (${res.status})`);
   if (Number(res.headers.get("content-length") ?? 0) > MAX_VIDEO_BYTES) throw new Error("The video is over 200 MB");
   // Not named <videoId>.mp4: runVideo writes the normalized copy under that name in the same folder.
   const path = join(workDir, "source-upload");
-  await pipeline(Readable.fromWeb(res.body as NodeReadableStream), createWriteStream(path));
+  // Count bytes as they arrive: Content-Length can be absent or wrong.
+  await pipeline(Readable.fromWeb(res.body as NodeReadableStream), byteLimit(MAX_VIDEO_BYTES), createWriteStream(path));
   return path;
+}
+
+export function byteLimit(max: number): Transform {
+  let seen = 0;
+  return new Transform({
+    transform(chunk: Buffer, _enc, done) {
+      seen += chunk.length;
+      done(seen > max ? new Error("The video is over 200 MB") : null, chunk);
+    },
+  });
 }
