@@ -19,7 +19,9 @@ export function verifyPrompt(productDescription: string, samPrompt: string): str
     `The brand's product is: ${productDescription}.`,
     `Decide whether the tracked object is that exact product ("match"), a different product of the same kind`,
     `("lookalike", for example another brand's can), or impossible to tell ("unclear").`,
-    `Judge colour, shape, logo and label text. Visibility: "clear" if the label is readable or the product is`,
+    `Judge colour, shape, logo and label text. If the description names no logo, brand mark or label, judge only the`,
+    `features it does name (colour, shape, material) and never answer "unclear" just because no logo is visible;`,
+    `"unclear" is for when the object itself cannot be made out. Visibility: "clear" if the label is readable or the product is`,
     `unmistakable, "partial" if covered or cut off, "blurred" if motion or focus hides it.`,
     `Give a one-sentence reason a brand manager would understand.`,
   ].join(" ");
