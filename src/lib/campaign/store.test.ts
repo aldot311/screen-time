@@ -118,3 +118,11 @@ describe("slugify", () => {
     expect(isValidId(slugify("x".repeat(100) + " y"))).toBe(true);
   });
 });
+
+describe("strongEtag", () => {
+  it("drops the weak prefix a compressed CDN response adds, so ifMatch can match", async () => {
+    const { strongEtag } = await import("./store");
+    expect(strongEtag('W/"dc56"')).toBe('"dc56"');
+    expect(strongEtag('"dc56"')).toBe('"dc56"');
+  });
+});

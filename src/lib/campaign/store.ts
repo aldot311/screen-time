@@ -211,15 +211,19 @@ export function localBackend(root = localStoreRoot()): Backend {
 const ACCESS = "public" as const;
 
 /**
- * Reads a JSON document past the CDN. The SDK honors useCache: false only for private blobs; a public read can serve a
+ * Reads a JSON document past the CDN, uncompressed. The SDK honors useCache: false only for private blobs; a public read can serve a
  * copy up to cacheControlMaxAge old, so a poll would miss a status just written and an ETag update would retry on the
  * old version until it gave up. A one-off query string is always a cache miss.
  */
 function getFresh(key: string) {
   const host = ownBlobHost();
   const target = host ? `https://${host}/${key}?fresh=${crypto.randomUUID()}` : key;
-  return get(target, { access: ACCESS, useCache: false });
+  // Uncompressed: a compressed response carries a weak ETag (W/"..."), which an ifMatch write never matches.
+  return get(target, { access: ACCESS, useCache: false, headers: { "accept-encoding": "identity" } });
 }
+
+/** The strong form of an ETag (a weak W/ prefix dropped), as ifMatch needs it. */
+export const strongEtag = (etag: string) => etag.replace(/^W\//, "");
 
 const UPDATE_ATTEMPTS = 5;
 
@@ -250,7 +254,7 @@ export function blobBackend(): Backend {
           await put(key, JSON.stringify(next), {
             access: ACCESS,
             addRandomSuffix: false,
-            ifMatch: res.blob.etag,
+            ifMatch: strongEtag(res.blob.etag),
             contentType: "application/json",
             cacheControlMaxAge: 60,
           });
