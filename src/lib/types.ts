@@ -76,7 +76,20 @@ export type ContractRule =
   | { kind: "min_continuous"; seconds: number }
   | { kind: "min_area"; fraction: number; forSeconds: number }
   | { kind: "mentioned"; minTimes: number; withinFirstSec?: number }
-  | { kind: "first_seen_before"; seconds: number };
+  | { kind: "first_seen_before"; seconds: number }
+  /** The sponsorship is disclosed (FTC): said aloud ("ad", "sponsored", "paid partnership") or shown on screen. */
+  | { kind: "disclosed" };
+
+/** Where the video discloses the sponsorship. Spoken comes from the transcript; on-screen from Muse Spark reading
+ *  sampled frames for text the creator burned into the video (#ad, "Sponsored"). The app's own "Paid partnership" label is
+ *  added by the platform's UI and is never in the uploaded file. */
+export interface Disclosure {
+  spoken: Mention[];
+  onScreen: { startSec: number; text: string }[];
+  /** True when the frames were read for on-screen text; false when that check failed (onScreen is then empty and
+   *  unknown, not "none"). Absent in reports made before the field existed, which always ran it. */
+  onScreenChecked?: boolean;
+}
 
 export interface ContractTerm {
   text: string; // as the brand wrote it
@@ -108,6 +121,13 @@ export interface VideoReport {
   metrics: VideoMetrics;
   terms: TermResult[];
   cost: { samFrames: number; usd: number };
+  /** Where the sponsorship was disclosed. Older reports lack it. */
+  disclosure?: Disclosure;
+  /** True when Muse Spark compared each find against the brand's product photo, not only its description. */
+  usedProductPhoto?: boolean;
+  /** The product photo this run compared against (the campaign's photo at run time), set only when usedProductPhoto.
+   *  The campaign's current photo may have changed since. */
+  productImageUrl?: string;
   /** Present when the first prompt found nothing and Muse Spark suggested another, in order; `prompt` is the one used. */
   promptAttempts?: PromptAttempt[];
   /** Every tracked box with its object's verdict, so the player can draw the overlay. Older reports lack it. */

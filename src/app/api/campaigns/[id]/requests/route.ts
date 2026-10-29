@@ -1,12 +1,16 @@
 import { z } from "zod";
 import { Creator } from "@/lib/campaign/schema";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
-import { getCampaign } from "@/lib/campaign/store";
-import { createRequestToken, linkSecret, newNonce, REQUEST_TTL_DAYS } from "@/lib/campaign/requests";
+import { getCampaign, updateCampaign } from "@/lib/campaign/store";
+import { linkSecret } from "@/lib/campaign/requests";
+import { issueRequest, recordRequest } from "@/lib/campaign/roster";
 
 const Body = z.object({ creator: Creator });
 
-/** Makes a link a creator can open to send their video for this campaign (behind the demo password, via the proxy). */
+/**
+ * Makes a link a creator can open to send their video for this campaign (behind the demo password, via the proxy),
+ * and records it on the creator's roster entry (adding them if needed). The link is returned once and never stored.
+ */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   if (id === PREVIEW_ID) return Response.json({ error: "The preview campaign is read-only" }, { status: 409 });
@@ -17,7 +21,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const secret = linkSecret();
   if (!secret) return Response.json({ error: "Request links are switched off on this deployment." }, { status: 503 });
 
-  const exp = Math.floor(Date.now() / 1000) + REQUEST_TTL_DAYS * 86400;
-  const token = await createRequestToken({ campaignId: id, creator: parsed.data.creator, exp, nonce: newNonce() }, secret);
-  return Response.json({ path: `/submit/${token}`, creator: parsed.data.creator, expiresAt: new Date(exp * 1000).toISOString() }, { status: 201 });
+  const issued = await issueRequest(id, parsed.data.creator, secret);
+  await updateCampaign(id, (c) => recordRequest(c, issued.creator, issued.record));
+  return Response.json({ path: issued.path, creator: issued.creator, expiresAt: issued.expiresAt }, { status: 201 });
 }

@@ -1,5 +1,5 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { MAX_VIDEO_BYTES, VIDEO_TYPES } from "@/lib/campaign/schema";
+import { IMAGE_TYPES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, PRODUCT_UPLOAD_RE, VIDEO_TYPES } from "@/lib/campaign/schema";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
 import { getCampaign, isValidId, requestUsed, takeUploadSlot, usingBlob } from "@/lib/campaign/store";
 import { ACCESS_COOKIE, accessError, decideAccess } from "@/lib/access";
@@ -8,9 +8,11 @@ import { requestFilePrefix } from "@/lib/campaign/upload-name";
 import { cookies } from "next/headers";
 
 /**
- * Issues client-upload tokens so the browser can send videos over 4 MB straight to Blob. The client uploads to
- * campaigns/<campaignId>/files/<name>.mp4|.mov, then registers the returned URL with
- * POST /api/campaigns/<campaignId>/videos (JSON).
+ * Issues client-upload tokens so the browser can send files over 4 MB straight to Blob:
+ * - videos to campaigns/<campaignId>/files/<name>.mp4|.mov, then registered with POST /api/campaigns/<id>/videos
+ *   (JSON). The brand, or a creator holding a request link (as clientPayload) for files named after that link.
+ * - the product photo to campaigns/<campaignId>/files/product-<name>.jpg|.png|.webp (at most 8 MB), then set with
+ *   POST /api/campaigns/<id>/photo (JSON). The brand only: a request link never gets a photo token.
  */
 export async function POST(req: Request) {
   if (!usingBlob()) return Response.json({ error: "Blob storage is not configured" }, { status: 503 });
@@ -21,13 +23,20 @@ export async function POST(req: Request) {
       body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
-        const m = /^campaigns\/([^/]+)\/files\/[\w.-]+\.(mp4|mov)$/i.exec(pathname);
+        const photo = PRODUCT_UPLOAD_RE.exec(pathname);
+        const m = photo ?? /^campaigns\/([^/]+)\/files\/[\w.-]+\.(mp4|mov)$/i.exec(pathname);
         const campaignId = m?.[1] ?? "";
+        // First, for every branch (brand video, brand photo, creator video): never the read-only preview, never a
+        // campaign that does not exist, and before a creator's upload slot is spent.
+        if (!m || !isValidId(campaignId) || campaignId === PREVIEW_ID || !(await getCampaign(campaignId))) {
+          throw new Error("Upload path must be campaigns/<campaign id>/files/<name>.mp4 (or product-<name>.jpg|png|webp) for an existing campaign");
+        }
         // Token requests come from the browser: the brand's carry the demo-password cookie, a creator's carry the
         // signed request link as clientPayload, which only allows its own campaign.
         const access = await decideAccess((await cookies()).get(ACCESS_COOKIE)?.value);
         let creatorUpload = false;
         if (access !== "allow") {
+          if (photo) throw new AccessRefused(access);
           const claims = clientPayload ? await verifyRequestToken(clientPayload, linkSecret()) : null;
           if (!claims || claims.campaignId !== campaignId) throw new AccessRefused(access);
           // The file is named after the link, so /api/submit accepts only files uploaded with this link.
@@ -39,12 +48,9 @@ export async function POST(req: Request) {
           if (await requestUsed(claims.nonce)) throw new Error("A video was already sent with this link");
           if (!(await takeUploadSlot(claims.nonce))) throw new Error("Too many upload attempts with this link. Ask the brand for a new one.");
         }
-        if (!isValidId(campaignId) || campaignId === PREVIEW_ID || !(await getCampaign(campaignId))) {
-          throw new Error("Upload path must be campaigns/<campaign id>/files/<name>.mp4 for an existing campaign");
-        }
         return {
-          allowedContentTypes: [...VIDEO_TYPES],
-          maximumSizeInBytes: MAX_VIDEO_BYTES,
+          allowedContentTypes: photo ? [...IMAGE_TYPES] : [...VIDEO_TYPES],
+          maximumSizeInBytes: photo ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES,
           addRandomSuffix: true,
           // A creator's token is short-lived: with three per link, a replayed token cannot keep filling the store.
           ...(creatorUpload ? { validUntil: Date.now() + 10 * 60_000 } : {}),

@@ -3,17 +3,23 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CostGuard, CostLimitError, MetaApiError, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
-import { checkTerms, computeMetrics, frameSamples, findMentions } from "@/lib/metrics";
+import { checkTerms, computeMetrics, findDisclosures, findMentions, frameSamples } from "@/lib/metrics";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
 import type { StepId } from "@/lib/campaign/types";
-import type { ContractTerm, Detection, PromptAttempt, Track, TrackVerification, VerifyVerdict, VideoReport } from "@/lib/types";
+import { FPS, type ContractTerm, type Detection, type Disclosure, type Mention, type PromptAttempt, type Track, type TrackVerification, type VerifyVerdict, type VideoReport } from "@/lib/types";
 import {
+  DISCLOSURE_FRAMES,
+  DISCLOSURE_OPENING_SEC,
+  DISCLOSURE_SCHEMA,
+  MAX_SPARK_IMAGES,
+  disclosurePrompt,
   parseTermsPrompt,
   SUGGEST_SCHEMA,
   suggestPromptText,
   TERMS_SCHEMA,
   toContractTerms,
+  toOnScreen,
   toSuggestion,
   VERIFY_SCHEMA,
   verifyPrompt,
@@ -49,6 +55,11 @@ export interface RunInput {
   productDescription: string; // what the brand's product looks like, for verification
   brandTerms: string[]; // spoken names to listen for
   contractTerms: string[]; // plain English
+  /** The brand's product photo as a data: or https URL; Muse Spark sees it first when checking each tracked object. */
+  productImageUrl?: string;
+  /** Where that photo is stored (the campaign's productImageUrl), recorded in the report when it was used. Never a
+   *  data URL: reports are stored. */
+  productImageSource?: string;
   guard: CostGuard;
   client?: ClientOptions;
   log?: (msg: string) => void;
@@ -93,6 +104,8 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   const info = await normalizeVideo(input.sourcePath, videoPath);
 
   const attempts: PromptAttempt[] = [];
+  // Set when any verification actually sent the product photo.
+  const photo = { used: false };
 
   /** One SAM pass over the uploaded video with `prompt`, then a Muse Spark check of the objects it tracked (at most
    *  `maxVerify` of them). The caller has already reserved `reserved` for it. */
@@ -125,7 +138,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     const verifications = await Promise.all(
       parsed.tracks.map((t) =>
         checked.has(t.objectId)
-          ? verifyTrack(t, videoPath, { ...input, prompt }, info.frameCount, spend, tag)
+          ? verifyTrack(t, videoPath, { ...input, prompt }, info.frameCount, spend, tag, photo)
           : Promise.resolve<TrackVerification>({
               objectId: t.objectId,
               verdict: "unclear",
@@ -162,7 +175,8 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     // Only try again when the budget still covers the retry and everything after it, so a recovery attempt can
     // never leave the run unable to finish its report.
     const estimate = guard.estimateSamUsd(info.frameCount);
-    const rest = TRANSCRIBE_RESERVE_USD + (input.contractTerms.length ? SPARK_RESERVE_USD : 0);
+    // Terms cost one Spark call, and a "disclosed" term one more to read the frames.
+    const rest = TRANSCRIBE_RESERVE_USD + (input.contractTerms.length ? 2 * SPARK_RESERVE_USD : 0);
     const retryCost = SPARK_RESERVE_USD + estimate + RETRY_VERIFY_TRACKS * SPARK_RESERVE_USD;
     if (!(await fitsBudget(guard, retryCost + rest))) {
       log("not enough budget left to try another prompt");
@@ -194,12 +208,25 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     turns = (await transcribe(await readFile(wavPath), client)).turns;
   }
   const mentions = findMentions(turns, input.brandTerms);
+  const spoken: Mention[] = findDisclosures(turns);
 
   await step("measure");
   const metrics = computeMetrics(matched, info, mentions);
   await step("contract");
   const terms = await parseTerms(input, spend);
-  const termResults = checkTerms(terms, metrics, frameSamples(matched, info));
+  // Reading the frames for #ad costs a Spark call, so it runs only when a term asks for disclosure.
+  let disclosure: Disclosure | undefined;
+  if (terms.some((t) => t.rule?.kind === "disclosed")) {
+    log("looking for a sponsorship disclosure on screen");
+    // Optional by design: a failed frame check (extraction, budget or Spark) never costs the finished report.
+    try {
+      disclosure = { spoken, onScreen: await findOnScreenDisclosure(videoPath, info.frameCount, input, spend), onScreenChecked: true };
+    } catch (err) {
+      log(`on-screen disclosure check failed: ${err instanceof Error ? err.message : err}`);
+      disclosure = { spoken, onScreen: [], onScreenChecked: false };
+    }
+  }
+  const termResults = checkTerms(terms, metrics, frameSamples(matched, info), disclosure);
 
   return {
     videoId: input.videoId,
@@ -209,6 +236,9 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     tracks: verifications,
     metrics,
     terms: termResults,
+    ...(disclosure ? { disclosure } : {}),
+    usedProductPhoto: photo.used,
+    ...(photo.used && input.productImageSource ? { productImageUrl: input.productImageSource } : {}),
     detections: tagDetections(parsed.detections, verifications),
     // Everything reserved and settled for this video: SAM as billed, Spark and transcription as reserved.
     cost: { samFrames, usd: spend.usd },
@@ -222,6 +252,7 @@ async function verifyTrack(
   frameCount: number,
   spend: VideoSpend,
   tag = "0",
+  photo = { used: false },
 ): Promise<TrackVerification> {
   const picks = pickFrames(track.detections, frameCount);
   const images = await Promise.all(
@@ -231,6 +262,7 @@ async function verifyTrack(
       return `data:image/jpeg;base64,${(await readFile(out)).toString("base64")}`;
     }),
   );
+  const withPhoto = Boolean(input.productImageUrl);
   await spend.reserve(SPARK_RESERVE_USD, `verify ${input.videoId} obj${track.objectId}`);
   const out = await sparkJson<VerifyOutput>(
     {
@@ -238,12 +270,14 @@ async function verifyTrack(
       schema: VERIFY_SCHEMA,
       strict: true,
       input: [
-        { type: "input_text", text: verifyPrompt(input.productDescription, input.prompt) },
-        ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
+        { type: "input_text", text: verifyPrompt(input.productDescription, input.prompt, withPhoto) },
+        // The reference photo goes first, as the prompt says.
+        ...(withPhoto ? [input.productImageUrl!] : []).concat(images).map((image_url) => ({ type: "input_image" as const, image_url })),
       ],
     },
     input.client,
   );
+  if (withPhoto) photo.used = true;
   return { objectId: track.objectId, ...out };
 }
 
@@ -271,6 +305,66 @@ export function pickFrames(detections: Detection[], frameCount: number): Detecti
   const largest = sorted.reduce((best, d) => (d.areaFraction > best.areaFraction ? d : best));
   const picks = [sorted[0], sorted[Math.floor(sorted.length / 2)], largest].filter((d) => d.frame < frameCount);
   return [...new Map(picks.map((d) => [d.frame, d])).values()];
+}
+
+/** Frame indices spread evenly over the video, distinct (a very short clip would otherwise repeat one). */
+export function evenFrames(frameCount: number, n: number): number[] {
+  return [...new Set(Array.from({ length: n }, (_, i) => Math.floor(((i + 0.5) * frameCount) / n)))];
+}
+
+/**
+ * About ten frames weighted to the opening, where disclosures usually sit: 0.5 s, 1.5 s and 3 s, then evenly across the
+ * rest up to the final half second. A clip of 3 s or less is sampled evenly throughout. Distinct, in order, inside the video, at most 50.
+ */
+export function disclosureFrames(frameCount: number, n = DISCLOSURE_FRAMES): number[] {
+  const total = Math.min(n, MAX_SPARK_IMAGES);
+  if (frameCount <= 0 || total <= 0) return [];
+  const durationSec = frameCount / FPS;
+  const opening = DISCLOSURE_OPENING_SEC.filter((t) => t < durationSec);
+  if (durationSec <= DISCLOSURE_OPENING_SEC.at(-1)!) return evenFrames(frameCount, Math.min(total, frameCount));
+  const restCount = total - opening.length;
+  const from = DISCLOSURE_OPENING_SEC.at(-1)!;
+  // The last one lands in the final second, so a label held to the end of the video is read too.
+  const end = Math.max(from, durationSec - 0.5);
+  const rest = Array.from({ length: restCount }, (_, i) => from + ((i + 1) * (end - from)) / restCount);
+  const frames = [...opening, ...rest].map((t) => Math.min(frameCount - 1, Math.floor(t * FPS)));
+  return [...new Set(frames)].sort((a, b) => a - b).slice(0, total);
+}
+
+/** One Muse Spark call over frames weighted to the opening: where the creator burned "#ad", "Sponsored" or the like into the
+ *  video. Platform UI labels ("Paid partnership") are never in the uploaded file, so they are not looked for. */
+async function findOnScreenDisclosure(
+  videoPath: string,
+  frameCount: number,
+  input: RunInput,
+  spend: VideoSpend,
+): Promise<Disclosure["onScreen"]> {
+  const frames = disclosureFrames(frameCount);
+  const images = await frameImages(videoPath, frames, input, "ad");
+  await spend.reserve(SPARK_RESERVE_USD, `disclosure ${input.videoId}`);
+  const out = await sparkJson<unknown>(
+    {
+      name: "disclosure_check",
+      schema: DISCLOSURE_SCHEMA,
+      strict: true,
+      input: [
+        { type: "input_text", text: disclosurePrompt(images.length) },
+        ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
+      ],
+    },
+    input.client,
+  );
+  return toOnScreen(out, frames.map((f) => f / FPS));
+}
+
+/** Whole frames as JPEG data URLs, written to the work dir as <videoId>-<prefix>-<frame>.jpg. */
+async function frameImages(videoPath: string, frames: number[], input: RunInput, prefix: string): Promise<string[]> {
+  return Promise.all(
+    frames.map(async (f) => {
+      const out = await extractFrameJpeg(videoPath, f, join(input.workDir, `${input.videoId}-${prefix}-${f}.jpg`));
+      return `data:image/jpeg;base64,${(await readFile(out)).toString("base64")}`;
+    }),
+  );
 }
 
 async function parseTerms(input: RunInput, spend: VideoSpend): Promise<ContractTerm[]> {
@@ -301,13 +395,7 @@ async function suggestPrompt(
   spend: VideoSpend,
 ): Promise<{ prompt: string; reason: string } | null> {
   // Distinct frames only: a very short clip would otherwise extract the same frame into one file concurrently.
-  const frames = [...new Set(Array.from({ length: SUGGEST_FRAMES }, (_, i) => Math.floor(((i + 0.5) * frameCount) / SUGGEST_FRAMES)))];
-  const images = await Promise.all(
-    frames.map(async (f) => {
-      const out = await extractFrameJpeg(videoPath, f, join(input.workDir, `${input.videoId}-look-${f}.jpg`));
-      return `data:image/jpeg;base64,${(await readFile(out)).toString("base64")}`;
-    }),
-  );
+  const images = await frameImages(videoPath, evenFrames(frameCount, SUGGEST_FRAMES), input, "look");
   await spend.reserve(SPARK_RESERVE_USD, `suggest ${input.videoId}`);
   const out = await sparkJson<unknown>(
     {

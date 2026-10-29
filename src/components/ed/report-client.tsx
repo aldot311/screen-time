@@ -6,13 +6,14 @@
 // plays exactly the moment that proves it: in the main player when at least half of it is on screen, otherwise in a
 // mini player docked at the bottom of a phone, without moving the page. The control that started it shows "Playing".
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Check, CircleHelp, Mic, Pause, Play, ScanLine, X } from "lucide-react";
-import { FPS, type Segment, type TermResult, type VideoReport } from "@/lib/types";
+import { Check, CircleHelp, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
+import { FPS, type Disclosure, type Segment, type TermResult, type VideoReport } from "@/lib/types";
 import { countedBefore, framesToSegments, percent, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
 import { Figure, Swatch } from "./bits";
 import { ReportLanes, type Lit } from "./report-lanes";
+import { PayOrHold, ShareReport } from "./report-decision";
 
 interface Props {
   report: VideoReport;
@@ -27,6 +28,10 @@ interface Props {
   /** Preview reports: numbers from hand labels, no boxes, no audio. */
   synthetic?: boolean;
 }
+
+/** Fields the backend is adding to the report: the photo the run actually compared with, and whether the on-screen
+ *  disclosure read succeeded. Read through this type so the report works before and after they land. */
+type ReportExtras = { productImageUrl?: string; disclosure?: Disclosure & { onScreenChecked?: boolean } };
 
 interface Proof {
   from: number;
@@ -63,6 +68,12 @@ const Range = ({ a, b }: { a: number; b: number }) => (
 );
 
 export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false }: Props) {
+  const extras = report as VideoReport & ReportExtras;
+  // Only the photo this run used: a photo added to the campaign later was not part of this check.
+  const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
+  const disclosure = extras.disclosure;
+  const disclosureTerm = report.terms.some((t) => t.term.rule?.kind === "disclosed");
+  const onScreenFailed = disclosure?.onScreenChecked === false;
   const player = useRef<PlayerHandle>(null);
   const stage = useRef<HTMLDivElement>(null);
   const origin = useRef<HTMLElement | null>(null);
@@ -262,6 +273,23 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         };
       return { from: 0, to: rule.seconds, label: `Play the first ${rule.seconds} s`, range: <Range a={0} b={rule.seconds} />, lead: 0, tone: "ink" };
     }
+    if (rule?.kind === "disclosed") {
+      const said = disclosure?.spoken[0];
+      const shown = disclosure?.onScreen[0];
+      // Whichever disclosure comes first in the video is the proof.
+      if (said && (!shown || said.startSec <= shown.startSec))
+        return { from: said.startSec, to: said.endSec, label: `Hear “${said.text}”`, range: <Range a={said.startSec} b={said.endSec} />, lead: 0.8, tone: "voice" };
+      if (shown)
+        return {
+          from: shown.startSec,
+          to: Math.min(d, shown.startSec + 2),
+          label: `See “${shown.text}”`,
+          range: <Range a={shown.startSec} b={Math.min(d, shown.startSec + 2)} />,
+          lead: 0.3,
+          tone: "ink",
+        };
+      return null;
+    }
     if (rule?.kind === "min_area" && (ev || largestMatch)) {
       const at = ev?.startSec ?? largestMatch!.t;
       const end = ev?.endSec ?? at + 1.5;
@@ -426,6 +454,12 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             </p>
           )}
         </header>
+
+        {/* What to do about it: a recommendation, then a way to send the report to whoever decides. */}
+        <div className="-mt-6 space-y-3 sm:-mt-4">
+          <PayOrHold verdict={verdict} creator={creator} terms={report.terms} />
+          <ShareReport title={`${title} · ${creator}`} />
+        </div>
 
         {/* Contract terms: the whole row plays what it proves. */}
         <section aria-labelledby="terms-h">
@@ -700,6 +734,18 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
           <p className="mt-1 max-w-[60ch] text-[14px] text-(--ink-3)">
             SAM 3.1 tracked them; Muse Spark checked each against the brief. Rejected objects are shown for transparency and never count.
           </p>
+          {referencePhoto && (
+            <figure className="mt-4 grid grid-cols-[72px_1fr] items-center gap-4 rounded-(--r-card) bg-(--wash) p-3 ring-1 ring-(--hair)">
+              <span className="block aspect-square overflow-hidden rounded-[12px] bg-(--card) ring-1 ring-(--hair-2)">
+                {/* eslint-disable-next-line @next/next/no-img-element -- the stored product photo */}
+                <img src={referencePhoto} alt={`${brand} reference photo`} className="size-full object-cover" />
+              </span>
+              <figcaption className="min-w-0">
+                <span className="block text-[15px] font-semibold">Reference photo</span>
+                <span className="mt-0.5 block text-[13.5px] leading-snug text-(--ink-2)">Muse Spark compared each find with this photo.</span>
+              </figcaption>
+            </figure>
+          )}
           {attempts && (
             <ol id="search" className="mt-4 scroll-mt-[80px] space-y-3 rounded-(--r-inner) bg-(--wash) p-4 text-[14.5px] text-(--ink-2)">
               {attempts.map((a, i) => (
@@ -848,6 +894,97 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               </li>
             )}
           </ul>
+        </section>
+
+        {/* Disclosure: where the sponsorship was said aloud or shown on screen. */}
+        <section aria-labelledby="disc-h">
+          <h2 id="disc-h" className="ed-display text-[26px] leading-tight">
+            Disclosure
+          </h2>
+          <p className="mt-1 max-w-[60ch] text-[14px] text-(--ink-3)">
+            Whether the video says it is an ad: heard by Muse Voice Transcribe, or read on screen by Muse Spark (#ad, &ldquo;Sponsored&rdquo;,
+            &ldquo;Paid partnership&rdquo;).
+          </p>
+          {onScreenFailed && (
+            <p className="mt-3 flex max-w-[60ch] gap-2 rounded-(--r-ctl) bg-(--review-soft) px-3.5 py-2.5 text-[13.5px] leading-snug font-medium text-(--review)">
+              <CircleHelp className="mt-px size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+              On-screen check failed; spoken check only.
+            </p>
+          )}
+          {!disclosure ? (
+            <p className="mt-4 rounded-(--r-inner) bg-(--card) p-4 text-[14.5px] text-(--ink-3) ring-1 ring-(--hair)">
+              {synthetic
+                ? "Disclosure is not checked in the preview."
+                : disclosureTerm
+                  ? "Analyzed before disclosure checks."
+                  : "Disclosure wasn’t part of this contract."}
+            </p>
+          ) : !disclosureTerm && disclosure.spoken.length + disclosure.onScreen.length === 0 ? (
+            <p className="mt-4 rounded-(--r-inner) bg-(--card) p-4 text-[14.5px] text-(--ink-3) ring-1 ring-(--hair)">
+              Disclosure wasn&rsquo;t part of this contract.
+            </p>
+          ) : disclosure.spoken.length + disclosure.onScreen.length === 0 ? (
+            <p className="mt-4 rounded-(--r-inner) bg-(--card) p-4 ring-1 ring-(--hair)">
+              <span className="block text-[15.5px] font-semibold">Not disclosed</span>
+              <span className="mt-0.5 block text-[14px] text-(--ink-2)">
+                {onScreenFailed
+                  ? "Nothing heard that says it is an ad. The screen could not be read, so a label on screen may have been missed."
+                  : "Nothing heard that says it is an ad, and no #ad or sponsorship label read on screen."}
+              </span>
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {disclosure.spoken.map((mn, i) => {
+                const key = `disc-said-${i}`;
+                const live = isOn(key);
+                return (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      aria-pressed={live}
+                      aria-label={`${live ? "Pause" : "Play"}: said aloud, ${mn.text}`}
+                      onClick={(e) => playRange(e, key, mn.startSec, mn.endSec, `Hear “${mn.text}”`, "voice", 0.8)}
+                      className="ed-press ed-press-soft flex min-h-14 w-full items-center gap-3 rounded-(--r-inner) bg-(--card) px-4 py-3 text-left shadow-(--sh-1) ring-1 ring-(--hair) hover:ring-(--hair-2) active:bg-(--voice-soft)"
+                    >
+                      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${live ? "bg-(--voice) text-white" : "bg-(--voice-soft) text-(--voice)"}`}>
+                        {live ? <Pause className="size-3.5" fill="currentColor" strokeWidth={0} aria-hidden /> : <Mic className="size-4" strokeWidth={2.25} aria-hidden />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[12.5px] font-semibold text-(--ink-3)">Said aloud</span>
+                        <span className="block text-[16px] font-medium">&ldquo;{mn.text}&rdquo;</span>
+                      </span>
+                      <span className="text-[13px] text-(--voice)">{live ? <span className="font-semibold">Playing</span> : <Tc>{timecode(mn.startSec)}</Tc>}</span>
+                    </button>
+                  </li>
+                );
+              })}
+              {disclosure.onScreen.map((o, i) => {
+                const key = `disc-shown-${i}`;
+                const live = isOn(key);
+                const end = Math.min(d, o.startSec + 2);
+                return (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      aria-pressed={live}
+                      aria-label={`${live ? "Pause" : "Play"}: shown on screen, ${o.text}`}
+                      onClick={(e) => playRange(e, key, o.startSec, end, `See “${o.text}”`)}
+                      className="ed-press ed-press-soft flex min-h-14 w-full items-center gap-3 rounded-(--r-inner) bg-(--card) px-4 py-3 text-left shadow-(--sh-1) ring-1 ring-(--hair) hover:ring-(--hair-2) active:bg-(--wash)"
+                    >
+                      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${live ? "bg-(--ink) text-white" : "bg-(--wash) text-(--ink)"}`}>
+                        {live ? <Pause className="size-3.5" fill="currentColor" strokeWidth={0} aria-hidden /> : <ScanText className="size-4" strokeWidth={2.25} aria-hidden />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[12.5px] font-semibold text-(--ink-3)">Shown on screen</span>
+                        <span className="block text-[16px] font-medium break-words">&ldquo;{o.text}&rdquo;</span>
+                      </span>
+                      <span className="text-[13px] text-(--ink-2)">{live ? <span className="font-semibold text-(--ink)">Playing</span> : <Tc>{timecode(o.startSec)}</Tc>}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
           <div className="mt-10 border-t border-(--hair) pt-4 text-[12.5px] leading-[1.6] text-(--ink-3)">
             {synthetic ? (
               <p>

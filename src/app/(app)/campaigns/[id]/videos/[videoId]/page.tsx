@@ -9,6 +9,7 @@ import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
 import { RunStepsEd } from "@/components/ed/run-steps";
 import { RunAgain } from "@/components/ed/run-again";
+import { videoPhase } from "@/components/ed/campaign-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,12 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
   const backLabel = sibling && named ? `${campaign.brand} · ${short.charAt(0).toUpperCase()}${short.slice(1)}` : campaign.brand;
   // A creator's link submission waits for the brand to start it; the brand's own upload starts by itself. Only poll
   // while something is actually going to change.
-  const waiting = video.status === "uploaded" && Boolean(video.consent);
-  const running = video.status === "running" || (video.status === "uploaded" && !video.consent);
+  // eslint-disable-next-line react-hooks/purity -- a server render: "now" is the request time
+  const phase = videoPhase(video, Date.now());
+  // "waiting": a creator's link upload; "stalled": the brand's own upload whose run never started. Both need Run analysis.
+  const waiting = phase === "waiting";
+  const stalled = phase === "uploaded";
+  const running = phase === "running" || phase === "starting";
   const synthetic = Boolean(video.synthetic ?? campaign.synthetic);
   const title = humanTitle(video.title);
 
@@ -95,6 +100,10 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
                   </span>
                   Live · updates every 1.5 s
                 </p>
+              ) : stalled ? (
+                <p className="inline-flex h-8 items-center gap-1.5 rounded-full bg-(--card) px-3 text-[13px] font-semibold text-(--ink-2) shadow-(--sh-1) ring-1 ring-(--hair)">
+                  Uploaded · not started
+                </p>
               ) : waiting ? (
                 <p className="inline-flex h-8 items-center gap-1.5 rounded-full bg-(--card) px-3 text-[13px] font-semibold text-(--ink-2) shadow-(--sh-1) ring-1 ring-(--hair)">
                   <ShieldCheck className="size-4 text-(--pass)" strokeWidth={2.25} aria-hidden />
@@ -111,6 +120,8 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
                   ? "The analysis stopped before it finished."
                   : waiting
                     ? "Ready to analyze."
+                    : stalled
+                      ? "Uploaded. The analysis has not started."
                     : video.status === "uploaded"
                       ? "Uploaded. The analysis starts in a moment."
                       : video.status === "done"
@@ -120,7 +131,9 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
               <p className="mt-3 max-w-[60ch] text-[16px] leading-[1.55] text-(--ink-2)">
                 {waiting && video.consent
                   ? `Sent by ${video.creator} through a request link on ${new Date(video.consent.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · consent recorded. Start the analysis when you are ready; it takes about a minute.`
-                  : video.status === "failed" || video.status === "done"
+                  : stalled
+                    ? "The analysis did not start after the upload, so nothing is counted yet. Start it when you are ready; the video does not need to be uploaded again."
+                    : video.status === "failed" || video.status === "done"
                     ? "Nothing from this video is counted yet. The reason is shown under the step that stopped. Once it is fixed, run it again; the video does not need to be uploaded again."
                     : `Looking for “${campaign.prompt}”, checking each find against ${campaign.productDescription}, then measuring and checking the contract.`}
               </p>
@@ -135,7 +148,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
                 </p>
               )}
 
-              {waiting && !synthetic && (
+              {(waiting || stalled) && !synthetic && (
                 <div className="mt-6">
                   <RunAgain campaignId={campaign.id} videoId={video.id} first />
                 </div>

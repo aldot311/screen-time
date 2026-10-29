@@ -53,7 +53,10 @@ export function RequestFromCreator({ campaignId, creator, children }: { campaign
             type="button"
             onClick={() => {
               navigator.clipboard.writeText(state.url).then(
-                () => setState({ ...state, copied: true }),
+                () => {
+                  setState({ ...state, copied: true });
+                  setTimeout(() => setState((s) => (s.kind === "ready" ? { ...s, copied: false } : s)), 2000);
+                },
                 () => (document.getElementById(inputId) as HTMLInputElement | null)?.select(),
               );
             }}

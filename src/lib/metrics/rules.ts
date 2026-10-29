@@ -1,4 +1,4 @@
-import { FPS, type ContractRule, type ContractTerm, type Mention, type Segment, type TermResult, type VideoMetrics } from "@/lib/types";
+import { FPS, type ContractRule, type ContractTerm, type Disclosure, type Mention, type Segment, type TermResult, type VideoMetrics } from "@/lib/types";
 import { framesToSegments, type FrameSample } from "./compute";
 
 // Seconds are multiples of 1/15, so float sums can land a hair under a whole-number threshold.
@@ -8,22 +8,28 @@ const EPS = 1e-6;
  * Check one contract term against a video's metrics.
  * `frames` (from frameSamples) is needed for min_area (per-frame size) and for a passing min_seconds_within
  * (bridged segments over-count); without it min_area is not checkable and min_seconds_within can only fail.
+ * `disclosure` (spoken and on-screen) is needed for "disclosed"; without it that term is not checked.
  */
-export function checkTerm(term: ContractTerm, metrics: VideoMetrics, frames?: FrameSample[]): TermResult {
+export function checkTerm(term: ContractTerm, metrics: VideoMetrics, frames?: FrameSample[], disclosure?: Disclosure): TermResult {
   if (!term.rule) {
     return { term, pass: null, evidence: [], detail: "Could not be turned into a checkable rule." };
   }
-  const { pass, evidence, detail } = checkRule(term.rule, metrics, frames);
+  const { pass, evidence, detail } = checkRule(term.rule, metrics, frames, disclosure);
   return { term, pass, evidence, detail };
 }
 
-export function checkTerms(terms: ContractTerm[], metrics: VideoMetrics, frames?: FrameSample[]): TermResult[] {
-  return terms.map((t) => checkTerm(t, metrics, frames));
+export function checkTerms(
+  terms: ContractTerm[],
+  metrics: VideoMetrics,
+  frames?: FrameSample[],
+  disclosure?: Disclosure,
+): TermResult[] {
+  return terms.map((t) => checkTerm(t, metrics, frames, disclosure));
 }
 
 type Outcome = Omit<TermResult, "term">;
 
-function checkRule(rule: ContractRule, m: VideoMetrics, frames?: FrameSample[]): Outcome {
+function checkRule(rule: ContractRule, m: VideoMetrics, frames?: FrameSample[], disclosure?: Disclosure): Outcome {
   switch (rule.kind) {
     case "min_seconds_total": {
       const pass = atLeast(m.secondsOnScreen, rule.seconds);
@@ -96,7 +102,41 @@ function checkRule(rule: ContractRule, m: VideoMetrics, frames?: FrameSample[]):
             : `First seen at ${fmt(first)} s (needs to appear before ${need(rule.seconds)} s).`,
       };
     }
+    case "disclosed":
+      return checkDisclosed(disclosure);
   }
+}
+
+/** Disclosed when the creator says it ("ad", "sponsored", "paid partnership") or shows it as text burned into
+ *  the video ("#ad", "Sponsored"). The evidence is every such moment; the detail names the first of each. */
+function checkDisclosed(d: Disclosure | undefined): Outcome {
+  if (!d) return { pass: null, evidence: [], detail: "Not checked: this video was analyzed before disclosure checks." };
+  const shown: Segment[] = d.onScreen.map((s) => ({ startSec: s.startSec, endSec: s.startSec + 1 / FPS }));
+  const evidence = [...d.spoken.map(mentionSegment), ...shown].sort((a, b) => a.startSec - b.startSec);
+  // Said aloud settles it; otherwise a frame check that failed leaves it open rather than "not disclosed".
+  if (!d.spoken.length && d.onScreenChecked === false) {
+    return { pass: null, evidence: [], detail: "Not checked on screen: the frame check failed" };
+  }
+  if (!evidence.length) return { pass: false, evidence, detail: "Not disclosed: no “ad” or “sponsored” said or shown on screen" };
+  return { pass: true, evidence, detail: `Disclosed: ${disclosureWhere(d)}` };
+}
+
+/** "said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5": the first spoken and first on-screen disclosure. */
+export function disclosureWhere(d: Disclosure): string {
+  const said = d.spoken[0];
+  const seen = [...d.onScreen].sort((a, b) => a.startSec - b.startSec)[0];
+  return [
+    ...(said ? [`said “${said.text}” at ${clock(said.startSec)}`] : []),
+    ...(seen ? [`shown on screen “${seen.text}” at ${clock(seen.startSec)}`] : []),
+  ].join("; ");
+}
+
+/** 1.25 -> "0:01.2", 75.5 -> "1:15.5"; tenths round down like the other details. */
+export function clock(sec: number): string {
+  const tenths = Math.floor(Math.max(0, sec) * 10 + EPS);
+  const minutes = Math.floor(tenths / 600);
+  const rest = (tenths % 600) / 10;
+  return `${minutes}:${rest < 10 ? "0" : ""}${rest.toFixed(1)}`;
 }
 
 /** Parts of the segments that fall inside [0, limitSec). */

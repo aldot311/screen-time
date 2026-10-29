@@ -12,8 +12,10 @@ import { CampaignList, type Row } from "@/components/ed/campaign-list";
 import { CampaignRail } from "@/components/ed/campaign-rail";
 import { CampaignActions } from "@/components/ed/campaign-actions";
 import { CampaignBriefCard, CampaignBriefDisclosure } from "@/components/ed/campaign-brief";
-import { DISPLAY, LiveDot, plural, shortName } from "@/components/ed/campaign-ui";
+import { creatorEntry, DISPLAY, LiveDot, plural, shortName, videoPhase } from "@/components/ed/campaign-ui";
 import { UploadVideos } from "@/components/ed/upload-videos";
+import { CampaignCover } from "@/components/ed/product-photo";
+import { CampaignCreators } from "@/components/ed/campaign-creators";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +26,14 @@ export async function generateMetadata({ params }: PageProps<"/campaigns/[id]">)
 
 const floor10 = (s: number) => Math.floor(s * 10 + 1e-6) / 10;
 
-export default async function CampaignPage({ params }: PageProps<"/campaigns/[id]">) {
+export default async function CampaignPage({ params, searchParams }: PageProps<"/campaigns/[id]">) {
   const { id } = await params;
+  const photoFailed = (await searchParams).photo === "failed";
   const campaign = await getCampaign(id);
   if (!campaign) notFound();
   const videos = await listVideos(id);
+  // eslint-disable-next-line react-hooks/purity -- a server render: "now" is the request time, for link expiry and run starts
+  const now = Date.now();
 
   // One rule for card titles: the creator handle is the title and the clip is mono metadata. When every video shares
   // one handle, the header says it once and the cards are titled by clip.
@@ -39,7 +44,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     const r = v.report;
     // "clip01.mp4 (synthetic preview)" -> "clip01": the extension is noise and the page already marks preview data.
     const clip = v.title.replace(/\s*\(synthetic preview\)\s*$/i, "").replace(/\.(mp4|mov)$/i, "");
-    const waiting = v.status === "uploaded" && Boolean(v.consent);
+    const phase = videoPhase(v, now);
     return {
       id: v.id,
       campaignId: campaign.id,
@@ -49,7 +54,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
       creator: v.creator,
       thumbUrl: v.thumbUrl,
       verdict: verdictOf(r),
-      status: waiting ? "waiting" : v.status,
+      status: phase,
       stepLabel: STEPS.find((s) => s.id === v.step)?.label,
       error: v.status === "failed" ? friendlyError(v.error) : undefined,
       seconds: r ? r.metrics.secondsOnScreen : null,
@@ -69,8 +74,8 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   const delivered = done.filter((r) => r.verdict === "delivered").length;
   const short = done.filter((r) => r.verdict === "short").length;
   const review = done.filter((r) => r.verdict === "review").length;
-  const running = rows.filter((r) => r.status === "running" || r.status === "uploaded").length;
-  const waiting = rows.filter((r) => r.status === "waiting").length;
+  const running = rows.filter((r) => r.status === "running" || r.status === "starting").length;
+  const waiting = rows.filter((r) => r.status === "waiting" || r.status === "uploaded").length;
   const stopped = rows.filter((r) => r.status === "failed").length;
   // Exact per-video values summed once, floored only for display (the campaign list does the same).
   const totalOnScreen = done.reduce((s, r) => s + (r.seconds ?? 0), 0);
@@ -91,7 +96,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     return {
       voice: voice.length > 0,
       silent: voice.some((t) => /\b0 times\b/.test(t.detail)),
-      screen: failed.some((t) => t.term.rule && t.term.rule.kind !== "mentioned"),
+      screen: failed.some((t) => t.term.rule && t.term.rule.kind !== "mentioned" && t.term.rule.kind !== "disclosed"),
     };
   });
   const nVoice = kinds.filter((k) => k.voice).length;
@@ -108,6 +113,10 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     else missLine = `${short} fell short.`;
   }
   const reviewLine = review ? `${review} need${review === 1 ? "s" : ""} review.` : null;
+  const creators = (campaign.creators ?? []).map((c) => creatorEntry(c, videos, campaign.id, now));
+  const mode = process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct";
+  const creatorsSection =
+    canUpload || creators.length > 0 ? <CampaignCreators campaignId={campaign.id} entries={creators} editable={canUpload} /> : null;
   const after = [
     running && `${running} still being checked`,
     waiting && `${waiting} waiting for you to run`,
@@ -130,11 +139,19 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
         <div className="grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="min-w-0 space-y-5">
             <header>
-              <h1 className={`${DISPLAY} text-[38px] leading-[1] sm:text-[56px]`}>{campaign.brand}</h1>
-              <p className="mt-1.5 text-[15px] text-(--ink-2)">
-                {shortName(campaign)} ·{" "}
-                {countLine}
-              </p>
+              <CampaignCover
+                campaignId={campaign.id}
+                brand={campaign.brand}
+                url={campaign.productImageUrl}
+                mode={mode}
+                editable={canUpload}
+                failedOnCreate={photoFailed}
+              >
+                <h1 className={`${DISPLAY} text-[38px] leading-[1] break-words sm:text-[56px]`}>{campaign.brand}</h1>
+                <p className="mt-1.5 text-[15px] text-(--ink-2)">
+                  {shortName(campaign)} · {countLine}
+                </p>
+              </CampaignCover>
 
               <p className={`${DISPLAY} mt-5 max-w-[24ch] text-[24px] leading-[1.15] font-medium! sm:text-[30px]`}>
                 {videos.length === 0 ? (
@@ -210,6 +227,8 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
               <CampaignBriefDisclosure campaign={campaign} />
             </div>
 
+            {videos.length === 0 && creatorsSection}
+
             <section aria-label="Videos" className="min-w-0">
               {rows.length ? (
                 <CampaignList rows={rows} />
@@ -226,12 +245,14 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                 </p>
               )}
             </section>
+
+            {videos.length > 0 && <div className="pt-4">{creatorsSection}</div>}
           </div>
 
           {/* The side column follows the reader down the list, so it never leaves an empty column. */}
           <aside className="min-w-0 space-y-5 lg:sticky lg:top-[calc(env(safe-area-inset-top)+76px)] lg:-m-1 lg:max-h-[calc(100dvh-92px)] lg:self-start lg:overflow-y-auto lg:p-1 lg:[scrollbar-width:thin]">
             <CampaignActions csv={csv} filename={`${campaign.id}.csv`}>
-              {canUpload ? <UploadVideos campaignId={campaign.id} mode={process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct"} /> : null}
+              {canUpload ? <UploadVideos campaignId={campaign.id} mode={mode} /> : null}
             </CampaignActions>
             <div className="hidden lg:block">
               <CampaignBriefCard campaign={campaign} />

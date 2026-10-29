@@ -18,18 +18,21 @@ const STEPS = [
     title: "Track",
     text: "Finds every can, cup or sneaker in every frame from a two-word prompt.",
     extra: "If the word finds nothing, Muse Spark looks at the video and suggests a better one.",
+    extraLabel: "Prompt recovery.",
   },
   {
     icon: ShieldCheck,
     model: "Muse Spark",
     title: "Verify",
     text: "Looks at crops of each object and throws out anything that is not your exact product.",
+    extra: "Add a product photo and it compares each find with the photo too, not only your description.",
+    extraLabel: "Product photo.",
   },
   {
     icon: AudioLines,
     model: "Muse Voice Transcribe",
     title: "Listen",
-    text: "Marks the second the creator says your brand name out loud.",
+    text: "Marks the second the creator says your brand name out loud, and whether they said it’s an ad.",
   },
   {
     icon: FileCheck2,
@@ -181,7 +184,7 @@ export default async function Landing() {
                     <p className="mt-2 text-[15px] leading-[1.55] text-(--ink-2)">{s.text}</p>
                     {"extra" in s && (
                       <p className="mt-2 text-[14px] leading-[1.5] text-(--ink-3)">
-                        <span className="font-semibold text-(--ink-2)">Prompt recovery.</span> {s.extra}
+                        <span className="font-semibold text-(--ink-2)">{s.extraLabel}</span> {s.extra}
                       </p>
                     )}
                   </div>

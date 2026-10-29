@@ -22,6 +22,22 @@ export type NewCampaign = z.infer<typeof NewCampaign>;
 export const VIDEO_TYPES = ["video/mp4", "video/quicktime"] as const;
 export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
+export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export type ImageType = (typeof IMAGE_TYPES)[number];
+export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/** The image type its first bytes say it is (JPEG, PNG or WebP), or null: the declared type is the uploader's word. */
+export function sniffImageType(bytes: Uint8Array): ImageType | null {
+  const at = (i: number, ...xs: number[]) => xs.every((x, k) => bytes[i + k] === x);
+  if (at(0, 0xff, 0xd8, 0xff)) return "image/jpeg";
+  if (at(0, 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
+  if (at(0, 0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50)) return "image/webp";
+  return null;
+}
+
+/** Brand uploads of the product photo straight to Blob: campaigns/<id>/files/product-<name>.jpg|png|webp. */
+export const PRODUCT_UPLOAD_RE = /^campaigns\/([^/]+)\/files\/product-[\w.-]+\.(jpg|jpeg|png|webp)$/i;
+
 export const Creator = z
   .string()
   .trim()

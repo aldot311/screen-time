@@ -9,6 +9,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { BlobNotFoundError, BlobPreconditionFailedError, del, get, head, list, put } from "@vercel/blob";
 import type { LedgerEntry } from "@/lib/meta/cost-guard";
+import { ownBlobHost } from "./schema";
 import { PREVIEW_ID, previewCampaign, previewVideos } from "./preview";
 import type { Campaign, VideoEntry } from "./types";
 
@@ -57,6 +58,11 @@ export interface Backend {
   writeJson(key: string, value: unknown): Promise<void>;
   /** Writes `value` only if `key` does not exist yet; false when it already did. Atomic on both backends. */
   createJson(key: string, value: unknown): Promise<boolean>;
+  /**
+   * Read-modify-write of one document that never loses a concurrent update: `mutate` gets the current value and
+   * returns the new one (it may run more than once, so it must not have side effects). Null when there is no document.
+   */
+  updateJson<T>(key: string, mutate: (current: T) => T | Promise<T>): Promise<T | null>;
   removeJson(key: string): Promise<void>;
   /** Size and type of a stored file by its URL, or null when there is no such file. */
   fileInfo(url: string): Promise<{ size: number; contentType: string } | null>;
@@ -87,11 +93,39 @@ export function localFileFromUrl(url: string, root = localStoreRoot()): string |
   return isFileKey(key) ? localPath(root, key) : null;
 }
 
-/** Only files written by saveVideoFile and saveImageFile are servable. */
-export const FILE_KEY_RE = /^campaigns\/[a-z0-9-]+\/files\/[a-z0-9-]+\/[a-z0-9-]+\.(mp4|mov|jpg)$/;
+/** Only files written by saveVideoFile and saveImageFile are servable: campaigns/<id>/files/<video id or
+ *  "campaign">/<name>.<ext>. Campaign-wide files (the product photo) use the folder name "campaign", which no video id
+ *  can take (video ids always end in a random suffix). */
+export const FILE_KEY_RE = /^campaigns\/[a-z0-9-]+\/files\/[a-z0-9-]+\/[a-z0-9-]+\.(mp4|mov|jpg|jpeg|png|webp)$/;
 export const isFileKey = (key: string) => FILE_KEY_RE.test(key);
 
+/** The folder for files that belong to the campaign rather than one video. */
+export const CAMPAIGN_FILES = "campaign";
+
+/** Content type of a stored file by its extension. */
+export const FILE_TYPES: Record<string, string> = {
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
+
 let tmpCounter = 0;
+
+// Local read-modify-writes of one file run one after another within this process (dev runs a single process).
+const localQueues = new Map<string, Promise<unknown>>();
+
+function queued<T>(path: string, task: () => Promise<T>): Promise<T> {
+  const run = (localQueues.get(path) ?? Promise.resolve()).catch(() => undefined).then(task);
+  const tail = run.catch(() => undefined);
+  localQueues.set(path, tail);
+  void tail.then(() => {
+    if (localQueues.get(path) === tail) localQueues.delete(path);
+  });
+  return run;
+}
 
 export function localBackend(root = localStoreRoot()): Backend {
   const pathOf = (key: string) => {
@@ -112,23 +146,33 @@ export function localBackend(root = localStoreRoot()): Backend {
       throw err;
     }
   };
+  const readJson = async (key: string): Promise<unknown | null> => {
+    try {
+      return JSON.parse(await readFile(pathOf(key), "utf8"));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw err;
+    }
+  };
+  const writeJson = (key: string, value: unknown) => atomic(key, (tmp) => writeFile(tmp, JSON.stringify(value, null, 2)));
   return {
     kind: "local",
-    async readJson(key) {
-      try {
-        return JSON.parse(await readFile(pathOf(key), "utf8"));
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-        throw err;
-      }
-    },
-    writeJson: (key, value) => atomic(key, (tmp) => writeFile(tmp, JSON.stringify(value, null, 2))),
+    readJson,
+    writeJson,
+    updateJson: <T,>(key: string, mutate: (current: T) => T | Promise<T>) =>
+      queued(pathOf(key), async () => {
+        const current = (await readJson(key)) as T | null;
+        if (current === null) return null;
+        const next = await mutate(current);
+        await writeJson(key, next);
+        return next;
+      }),
     removeJson: (key) => rm(pathOf(key), { force: true }),
     async fileInfo(url) {
       const path = localFileFromUrl(url, root);
       const info = path ? await stat(path).catch(() => null) : null;
       if (!info?.isFile()) return null;
-      return { size: info.size, contentType: path!.endsWith(".mov") ? "video/quicktime" : "video/mp4" };
+      return { size: info.size, contentType: FILE_TYPES[path!.split(".").at(-1)!.toLowerCase()] ?? "application/octet-stream" };
     },
     async createJson(key, value) {
       const path = pathOf(key);
@@ -166,12 +210,24 @@ export function localBackend(root = localStoreRoot()): Backend {
 // their URLs are unguessable; JSON documents use fixed paths and are readable by anyone who knows the store URL.
 const ACCESS = "public" as const;
 
+/**
+ * Reads a JSON document past the CDN. The SDK honors useCache: false only for private blobs; a public read can serve a
+ * copy up to cacheControlMaxAge old, so a poll would miss a status just written and an ETag update would retry on the
+ * old version until it gave up. A one-off query string is always a cache miss.
+ */
+function getFresh(key: string) {
+  const host = ownBlobHost();
+  const target = host ? `https://${host}/${key}?fresh=${crypto.randomUUID()}` : key;
+  return get(target, { access: ACCESS, useCache: false });
+}
+
+const UPDATE_ATTEMPTS = 5;
+
 export function blobBackend(): Backend {
   return {
     kind: "blob",
     async readJson(key) {
-      // useCache: false reads from origin, so a poll sees the status written a moment ago.
-      const res = await get(key, { access: ACCESS, useCache: false });
+      const res = await getFresh(key);
       if (!res || res.statusCode !== 200) return null;
       return JSON.parse(await new Response(res.stream).text());
     },
@@ -183,6 +239,27 @@ export function blobBackend(): Backend {
         contentType: "application/json",
         cacheControlMaxAge: 60,
       });
+    },
+    // Optimistic concurrency: write only if the document is still the version read (its ETag), else read and retry.
+    async updateJson<T>(key: string, mutate: (current: T) => T | Promise<T>): Promise<T | null> {
+      for (let attempt = 0; attempt < UPDATE_ATTEMPTS; attempt++) {
+        const res = await getFresh(key);
+        if (!res || res.statusCode !== 200) return null;
+        const next = await mutate(JSON.parse(await new Response(res.stream).text()) as T);
+        try {
+          await put(key, JSON.stringify(next), {
+            access: ACCESS,
+            addRandomSuffix: false,
+            ifMatch: res.blob.etag,
+            contentType: "application/json",
+            cacheControlMaxAge: 60,
+          });
+          return next;
+        } catch (err) {
+          if (!(err instanceof BlobPreconditionFailedError)) throw err;
+        }
+      }
+      throw new Error("The campaign was being changed by someone else at the same time. Try again.");
     },
     async createJson(key, value) {
       try {
@@ -265,6 +342,20 @@ export async function putCampaign(c: Campaign): Promise<Campaign> {
   return c;
 }
 
+/**
+ * Changes a stored campaign without losing a change made at the same moment (by another request or instance).
+ * `mutate` may run more than once and must not have side effects. Null when the campaign does not exist.
+ */
+export async function updateCampaign(id: string, mutate: (c: Campaign) => Campaign | Promise<Campaign>): Promise<Campaign | null> {
+  if (id === PREVIEW_ID) throw new ReadOnlyError();
+  if (!isValidId(id)) return null;
+  return backend().updateJson<Campaign>(campaignKey(id), async (c) => {
+    const next = await mutate(c);
+    if (next.id !== id) throw new Error("A campaign update cannot change its id");
+    return next;
+  });
+}
+
 export async function listVideos(campaignId: string): Promise<VideoEntry[]> {
   if (campaignId === PREVIEW_ID) return previewVideos();
   if (!isValidId(campaignId)) return [];
@@ -307,9 +398,20 @@ export async function saveVideoFile(
   return saveFile(campaignId, videoId, name, ext, body, contentType);
 }
 
-/** Stores a JPEG still of a video (its thumbnail or a product crop) and returns its URL. */
-export async function saveImageFile(campaignId: string, videoId: string, name: string, body: Uint8Array): Promise<string> {
-  return saveFile(campaignId, videoId, name, "jpg", body, "image/jpeg");
+const IMAGE_EXTENSIONS: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+/** Stores a still (a video's thumbnail or a product crop, or with videoId CAMPAIGN_FILES the product photo) and
+ *  returns its URL. JPEG unless another image type is given. */
+export async function saveImageFile(
+  campaignId: string,
+  videoId: string,
+  name: string,
+  body: Uint8Array,
+  contentType = "image/jpeg",
+): Promise<string> {
+  const ext = IMAGE_EXTENSIONS[contentType];
+  if (!ext) throw new Error(`Unsupported image type ${contentType}`);
+  return saveFile(campaignId, videoId, name, ext, body, contentType);
 }
 
 async function saveFile(campaignId: string, videoId: string, name: string, ext: string, body: FileBody, contentType: string) {

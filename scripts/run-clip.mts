@@ -1,14 +1,15 @@
 // Run one or more local clips through the full pipeline and write a JSON report per clip.
 // Usage: pnpm run-clip --prompt "drink can" --product "a teal Celsius energy drink can" \
 //   --brand Celsius --term "On screen at least 3 seconds in the first 10 seconds" \
-//   --target celsius --max-usd 0.50 data/videos/clip01.mp4 [more clips...]
+//   --target celsius --max-usd 0.50 [--product-photo can.jpg] data/videos/clip01.mp4 [more clips...]
 // Reports land in <out>/[<target>/]<clip>/report.json, the layout scripts/accuracy.mts reads.
 // --max-usd caps each clip; --max-total-usd caps the shared ledger across clips and runs.
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { CostGuard } from "@/lib/meta";
 import { runVideo } from "@/lib/pipeline/run";
+import { MAX_IMAGE_BYTES, sniffImageType } from "@/lib/campaign/schema";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -21,6 +22,8 @@ const { values, positionals } = parseArgs({
     "max-total-usd": { type: "string", default: "20" },
     out: { type: "string", default: "data/out" },
     target: { type: "string" },
+    // A JPEG, PNG or WebP of the product: Muse Spark compares each tracked object against it.
+    "product-photo": { type: "string" },
   },
 });
 
@@ -34,6 +37,17 @@ if (target !== undefined && (!target || target === "." || target === ".." || /[/
   console.error(`--target must be a plain folder name, got "${target}".`);
   process.exit(2);
 }
+let productImageUrl: string | undefined;
+if (values["product-photo"]) {
+  const bytes = new Uint8Array(await readFile(values["product-photo"]));
+  const type = bytes.length <= MAX_IMAGE_BYTES ? sniffImageType(bytes) : null;
+  if (!type) {
+    console.error(`--product-photo must be a JPEG, PNG or WebP of at most 8 MB.`);
+    process.exit(2);
+  }
+  productImageUrl = `data:${type};base64,${Buffer.from(bytes).toString("base64")}`;
+}
+
 const reportRoot = target ? join(values.out, target) : values.out;
 
 // One guard per clip, so --max-usd is a per-clip cap; all share one ledger, so --max-total-usd spans the batch.
@@ -75,6 +89,7 @@ for (const { path: clip, label, videoId } of clips) {
     productDescription: values.product,
     brandTerms: values.brand,
     contractTerms: values.term,
+    productImageUrl,
     guard: newGuard(),
     log: (msg) => console.log(`[${label}] ${msg}`),
   });
@@ -83,6 +98,11 @@ for (const { path: clip, label, videoId } of clips) {
   console.log(
     `[${label}] on screen ${m.secondsOnScreen.toFixed(1)} s of ${report.info.durationSec.toFixed(1)} s, ` +
       `prominence ${m.prominenceScore}, mentions ${m.mentions.length}, cost $${report.cost.usd.toFixed(3)}`,
+  );
+  const d = report.disclosure;
+  console.log(
+    `[${label}] product photo used: ${report.usedProductPhoto ? "yes" : "no"}; disclosure: ` +
+      (d ? `${d.spoken.length} spoken, ${d.onScreen.length} on screen` : "not checked"),
   );
   for (const t of report.terms) console.log(`[${label}]   ${t.pass === null ? "?" : t.pass ? "PASS" : "FAIL"} ${t.term.text}: ${t.detail}`);
 }

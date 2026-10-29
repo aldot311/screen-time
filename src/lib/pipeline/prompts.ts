@@ -13,10 +13,13 @@ export const VERIFY_SCHEMA = {
   },
 } as const;
 
-export function verifyPrompt(productDescription: string, samPrompt: string): string {
+export function verifyPrompt(productDescription: string, samPrompt: string, withPhoto = false): string {
   return [
-    `A video tracker searched for "${samPrompt}" and returned the object shown in these crops from one creator video.`,
+    withPhoto
+      ? `The first image is the brand's reference photo of its product. The other images are crops from one creator video of the object a video tracker returned when it searched for "${samPrompt}".`
+      : `A video tracker searched for "${samPrompt}" and returned the object shown in these crops from one creator video.`,
     `The brand's product is: ${productDescription}.`,
+    ...(withPhoto ? [`Compare the crops against the reference photo as well as the description.`] : []),
     `Decide whether the tracked object is that exact product ("match"), a different product of the same kind`,
     `("lookalike", for example another brand's can), or impossible to tell ("unclear").`,
     `Judge color, shape, logo and label text. If the description names no logo, brand mark or label, judge only the`,
@@ -71,6 +74,7 @@ const KINDS = [
   "min_area",
   "mentioned",
   "first_seen_before",
+  "disclosed",
 ] as const;
 
 // Flat on purpose: strict structured output rejects oneOf, so every field is always present and the
@@ -111,6 +115,7 @@ export function parseTermsPrompt(terms: string[]): string {
     "- min_area: product fills at least `fraction` (0-1) of the frame for at least `forSeconds`.",
     "- mentioned: brand said aloud at least `minTimes` times; `withinFirstSec` > 0 limits it to the opening seconds, 0 means anywhere.",
     "- first_seen_before: product first appears before `seconds`.",
+    "- disclosed: the creator discloses the sponsorship, e.g. says it is an ad or shows #ad on screen. No numbers.",
     "Set unused numeric fields to 0. If a term cannot be expressed with these kinds, set checkable to false.",
     "Return one rule per term, with `index` the term's number.",
     "",
@@ -159,7 +164,66 @@ function toRule(r: RawRule): ContractRule | null {
         : null;
     case "first_seen_before":
       return pos(r.seconds) ? { kind: r.kind, seconds: r.seconds } : null;
+    case "disclosed":
+      return { kind: r.kind };
     default:
       return null;
   }
+}
+
+/** Frames Muse Spark reads for an on-screen sponsorship disclosure (the API takes at most 50 images). */
+export const DISCLOSURE_FRAMES = 10;
+export const MAX_SPARK_IMAGES = 50;
+/** Disclosures usually open the video, so these moments are always read (seconds). */
+export const DISCLOSURE_OPENING_SEC = [0.5, 1.5, 3];
+
+export const DISCLOSURE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["disclosed", "frames"],
+  properties: {
+    disclosed: { type: "boolean" },
+    frames: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["index", "text"],
+        properties: {
+          index: { type: "integer" },
+          text: {
+            type: "string",
+            description: "The disclosure as overlaid on the video by the creator (caption sticker or burned-in text), never an app UI label",
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export function disclosurePrompt(frameCount: number): string {
+  return [
+    `These ${frameCount} images are frames from one creator video file, in order, numbered from 0.`,
+    `Does any frame show a sponsorship disclosure as text overlaid on the video by the creator (caption stickers,`,
+    `burned-in text): "#ad", "#sponsored", "Ad", "Sponsored" or "#partner"? Only text that is part of the video counts.`,
+    `Ignore the product's own packaging and logos, prices, and any other text.`,
+    `Set "disclosed" to true only if you can read such a disclosure. For each frame that shows one, give its number in`,
+    `"index" and the disclosure exactly as written in "text". If none does, return "disclosed": false and an empty "frames".`,
+  ].join(" ");
+}
+
+/** The model's answer as on-screen disclosures at the times of the frames it named; anything malformed is dropped. */
+export function toOnScreen(output: unknown, frameTimes: number[]): { startSec: number; text: string }[] {
+  const o = output as { disclosed?: unknown; frames?: unknown } | null;
+  if (!o || o.disclosed !== true || !Array.isArray(o.frames)) return [];
+  const seen = new Set<number>();
+  const out: { startSec: number; text: string }[] = [];
+  for (const f of o.frames as { index?: unknown; text?: unknown }[]) {
+    const i = f?.index;
+    const text = typeof f?.text === "string" ? f.text.trim().replace(/\s+/g, " ").slice(0, 80) : "";
+    if (typeof i !== "number" || !Number.isInteger(i) || i < 0 || i >= frameTimes.length || !text || seen.has(i)) continue;
+    seen.add(i);
+    out.push({ startSec: frameTimes[i], text });
+  }
+  return out.sort((a, b) => a.startSec - b.startSec);
 }

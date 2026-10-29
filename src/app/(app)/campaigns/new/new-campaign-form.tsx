@@ -2,17 +2,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleAlert, Plus } from "lucide-react";
+import { ArrowRight, CircleAlert } from "lucide-react";
 import { ApiError } from "@/components/api-error";
 import { Spinner } from "@/components/ed/pending-link";
 import { DISPLAY } from "@/components/ed/campaign-ui";
-
-const EXAMPLE_TERMS = [
-  "On screen at least 3 seconds in total",
-  "On screen at least 2 seconds within the first 5 seconds",
-  "Say the brand name at least once",
-  "One continuous shot of at least 2 seconds",
-];
+import { ProductPhotoField, uploadProductPhoto } from "@/components/ed/product-photo";
+import { DEFAULT_TERMS, TermPicker, termsFrom, type TermState } from "./term-picker";
 
 const REQUIRED: Record<string, string> = {
   name: "Give the campaign a name.",
@@ -24,17 +19,22 @@ const REQUIRED: Record<string, string> = {
 const INPUT =
   "block w-full rounded-(--r-ctl) bg-(--card) px-3.5 text-[16px] text-(--ink) shadow-[0_1px_1px_rgb(20_19_15/0.03)] ring-1 ring-(--hair-2) outline-none transition-shadow duration-150 placeholder:text-[#a8a298] focus:ring-2! focus:ring-(--ink) focus-visible:outline-none! aria-invalid:ring-2! aria-invalid:ring-(--short) aria-invalid:focus:ring-(--short)";
 
-export function NewCampaignForm() {
+type Phase = { kind: "idle" } | { kind: "creating" } | { kind: "photo"; progress: number } | { kind: "opening" };
+
+export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const errorNote = useRef<HTMLDivElement>(null);
-  const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+  const busy = phase.kind !== "idle";
   const [error, setError] = useState<string | null>(null);
   const [invalid, setInvalid] = useState<Record<string, string>>({});
-  const [terms, setTerms] = useState(EXAMPLE_TERMS.slice(0, 3).join("\n"));
+  const [terms, setTerms] = useState<TermState>(DEFAULT_TERMS);
+  const [termsTried, setTermsTried] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
   // On a phone the keyboard needs the room: the sticky Create bar steps aside while a text field has focus.
   const [keyboard, setKeyboard] = useState(false);
-  const contract = useRef<HTMLTextAreaElement>(null);
+  const contract = useRef<HTMLDivElement>(null);
 
   // On a phone the Create bar steps aside only while the on-screen keyboard is open (the visual viewport shrinks by
   // more than 150px), not on every focus.
@@ -63,7 +63,18 @@ export function NewCampaignForm() {
       return;
     }
 
-    setBusy(true);
+    // The picked terms must make sense before anything is created.
+    const picked = termsFrom(terms);
+    setTermsTried(true);
+    if (Object.keys(picked.problems).length) {
+      requestAnimationFrame(() => {
+        const el = contract.current?.querySelector<HTMLElement>('[role="alert"]');
+        el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+      return;
+    }
+
+    setPhase({ kind: "creating" });
     setError(null);
     const list = (k: string, sep: RegExp) =>
       get(k)
@@ -78,10 +89,10 @@ export function NewCampaignForm() {
       // Blank spoken names default to the brand when a term asks the creator to say it.
       brandTerms: list("brandTerms", /,/).length
         ? list("brandTerms", /,/)
-        : list("contractTerms", /\n/).some((t) => /\b(say|says|said|mention|mentions|mentioned|spoken)\b/i.test(t))
+        : picked.terms.some((t) => /\b(say|says|said|mention|mentions|mentioned|spoken)\b/i.test(t))
           ? [get("brand")]
           : [],
-      contractTerms: list("contractTerms", /\n/),
+      contractTerms: picked.terms,
     };
     try {
       const res = await fetch("/api/campaigns", {
@@ -90,15 +101,26 @@ export function NewCampaignForm() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        setBusy(false);
+        setPhase({ kind: "idle" });
         setError((await res.json().catch(() => null))?.error ?? `Could not create the campaign (${res.status}).`);
         requestAnimationFrame(() => errorNote.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
         return;
       }
       const c = (await res.json()) as { id: string };
-      router.push(`/campaigns/${c.id}`); // busy stays on until the campaign page commits
+      // The campaign exists now. The photo is a bonus: if it fails, the campaign page says so and offers it again.
+      let photoFailed = false;
+      if (photo) {
+        setPhase({ kind: "photo", progress: 0 });
+        try {
+          await uploadProductPhoto(c.id, photo, mode, (p) => setPhase({ kind: "photo", progress: p }));
+        } catch {
+          photoFailed = true;
+        }
+      }
+      setPhase({ kind: "opening" });
+      router.push(`/campaigns/${c.id}${photoFailed ? "?photo=failed" : ""}`); // busy stays on until the campaign page commits
     } catch {
-      setBusy(false);
+      setPhase({ kind: "idle" });
       setError("Could not reach Screen-Time. Check the connection and try again.");
     }
   }
@@ -159,57 +181,26 @@ export function NewCampaignForm() {
               className={`${INPUT} min-h-[76px] resize-none py-3 leading-snug field-sizing-content`}
             />
           </Field>
+          <ProductPhotoField file={photo} onChange={setPhoto} />
         </Group>
       </div>
 
       <div className="min-w-0 space-y-7">
         <Group title="The contract">
+          <div ref={contract}>
+            <p className="text-[15px] font-semibold">Contract terms</p>
+            <p className="mt-1 mb-3 max-w-[62ch] text-[13.5px] leading-snug text-(--ink-3)">
+              Tick what the creator agreed to and change any number. Each one is checked against the video, with the second
+              that proves it.
+            </p>
+            <TermPicker value={terms} onChange={setTerms} showProblems={termsTried} />
+          </div>
           <Field
             label="Spoken brand names"
             name="brandTerms"
             hint="Comma-separated. Voice Transcribe listens for these in the audio. Left blank, it listens for the brand name when a term asks the creator to say it."
           >
             <input id="f-brandTerms" name="brandTerms" placeholder="e.g. Alani, Alani Nu" autoComplete="off" enterKeyHint="next" aria-describedby="f-brandTerms-hint" className={`${INPUT} h-12`} />
-          </Field>
-          <Field label="Contract terms" name="contractTerms" hint="One per line, in plain English. Muse Spark turns each into a rule that is checked to the frame.">
-            <textarea
-              ref={contract}
-              id="f-contractTerms"
-              name="contractTerms"
-              value={terms}
-              onChange={(e) => setTerms(e.target.value)}
-              rows={3}
-              placeholder="e.g. On screen at least 3 seconds in total"
-              aria-describedby="f-contractTerms-hint"
-              className={`${INPUT} min-h-[100px] resize-none py-3 leading-relaxed field-sizing-content`}
-            />
-            {EXAMPLE_TERMS.some((t) => !terms.includes(t)) && (
-              <div className="mt-3">
-                <p className="text-[13px] font-semibold text-(--ink-2)">Add an example</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {EXAMPLE_TERMS.filter((t) => !terms.includes(t)).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => {
-                        setTerms((s) => (s.trim() ? `${s.trim()}\n${t}` : t));
-                        // Land the caret after the added line, ready to edit it.
-                        requestAnimationFrame(() => {
-                          const el = contract.current;
-                          if (!el) return;
-                          el.focus();
-                          el.setSelectionRange(el.value.length, el.value.length);
-                        });
-                      }}
-                      className="ed-press inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-(--card) py-2 pr-4 pl-3 text-left text-[14px] leading-tight font-medium text-(--ink) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
-                    >
-                      <Plus className="size-4 shrink-0 text-(--ink-2)" strokeWidth={2.5} aria-hidden />
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </Field>
         </Group>
 
@@ -236,7 +227,15 @@ export function NewCampaignForm() {
               className="ed-press inline-flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-(--ink) px-6 text-[15px] font-semibold text-white shadow-(--sh-2) active:bg-black/85 disabled:cursor-wait disabled:opacity-80 md:flex-none [@media(hover:hover)]:hover:bg-black"
             >
               {busy ? <Spinner className="size-[18px]" /> : null}
-              {busy ? "Creating campaign…" : "Create campaign"}
+              <span className="tabular">
+                {phase.kind === "photo"
+                  ? `Uploading photo… ${Math.round(phase.progress * 100)}%`
+                  : phase.kind === "opening"
+                    ? "Opening campaign…"
+                    : busy
+                      ? "Creating campaign…"
+                      : "Create campaign"}
+              </span>
               {!busy && <ArrowRight className="size-[18px]" strokeWidth={2.25} aria-hidden />}
             </button>
             <span className="hidden text-[14px] text-(--ink-3) md:inline">You add creator videos on the next page.</span>

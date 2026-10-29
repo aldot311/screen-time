@@ -9,5 +9,5 @@ export {
   PROMINENCE_WEIGHTS,
   type FrameSample,
 } from "./compute";
-export { checkTerm, checkTerms, clipSegments } from "./rules";
-export { findMentions, tokenize, type TranscriptTurn } from "./mentions";
+export { checkTerm, checkTerms, clipSegments, clock, disclosureWhere } from "./rules";
+export { findDisclosures, findMentions, tokenize, type TranscriptTurn } from "./mentions";

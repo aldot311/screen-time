@@ -12,6 +12,19 @@ export interface Campaign {
   createdAt: string; // ISO
   /** True for the built-in preview campaign whose numbers come from labels, not a real run. */
   synthetic?: boolean;
+  /** A photo of the product (stored JPEG/PNG/WebP URL): the campaign's cover, and Muse Spark's reference image. */
+  productImageUrl?: string;
+  /** The creators the brand expects videos from, in the order added. Their status comes from the videos (matched by
+   *  handle) and the request links sent. */
+  creators?: CampaignCreator[];
+}
+
+export interface CampaignCreator {
+  handle: string; // "@maya.films"
+  addedAt: string; // ISO
+  /** The latest request link made for this creator, if any. Never the link itself: campaign records live in a public
+   *  store at a predictable path, and the link is the creator's upload credential. To copy a link again, make a new one. */
+  request?: { nonce: string; sentAt: string; expiresAt: string };
 }
 
 export type StepId = "normalize" | "track" | "verify" | "listen" | "measure" | "contract";

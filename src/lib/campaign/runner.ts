@@ -1,6 +1,6 @@
 // Runs one stored video through the pipeline, writing status, step, error and report back to the store as it goes.
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Transform } from "node:stream";
@@ -9,7 +9,7 @@ import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { API_KEY_ENV } from "@/lib/meta/http";
 import { CostGuard } from "@/lib/meta";
 import { runVideo } from "@/lib/pipeline/run";
-import { isBlobUrl, MAX_VIDEO_BYTES } from "./schema";
+import { isBlobUrl, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, sniffImageType } from "./schema";
 import { saveVisuals } from "./visuals";
 import { PREVIEW_ID } from "./preview";
 import { getCampaign, getVideo, localFileFromUrl, putVideo, saveVideoFile, withLedgerFile } from "./store";
@@ -68,6 +68,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
   const workDir = await mkdtemp(join(tmpdir(), `st-${video.id}-`));
   try {
     const sourcePath = await localSource(video.sourceUrl ?? video.videoUrl, workDir, campaign.id);
+    const productImageUrl = await productPhoto(campaign);
     const report = await withLedgerFile((ledgerPath) =>
       runVideo({
         videoId: video.id,
@@ -77,6 +78,8 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
         productDescription: campaign.productDescription,
         brandTerms: campaign.brandTerms,
         contractTerms: campaign.contractTerms,
+        productImageUrl,
+        productImageSource: productImageUrl ? campaign.productImageUrl : undefined,
         guard: new CostGuard({ ...budget(), ledgerPath }),
         onStep: async (step) => {
           // Tracking starts right after normalization, so the normalized copy is complete here.
@@ -102,6 +105,29 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
     return putVideo({ ...current, status: "failed", error }).catch(() => current);
   } finally {
     await rm(workDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The campaign's product photo as a data URL for Muse Spark, read from the local store or this campaign's Blob
+ * folder. Undefined when there is none or it cannot be read: the run then checks against the description alone.
+ */
+export async function productPhoto(campaign: Campaign): Promise<string | undefined> {
+  const url = campaign.productImageUrl;
+  if (!url) return undefined;
+  try {
+    let bytes: Uint8Array;
+    const local = localFileFromUrl(url);
+    if (local) bytes = new Uint8Array(await readFile(local));
+    else if (isBlobUrl(url, campaign.id)) {
+      const res = await fetch(url, { redirect: "error" });
+      if (!res.ok || Number(res.headers.get("content-length") ?? 0) > MAX_IMAGE_BYTES) return undefined;
+      bytes = new Uint8Array(await res.arrayBuffer());
+    } else return undefined;
+    const type = bytes.length <= MAX_IMAGE_BYTES ? sniffImageType(bytes) : null;
+    return type ? `data:${type};base64,${Buffer.from(bytes).toString("base64")}` : undefined;
+  } catch {
+    return undefined;
   }
 }
 

@@ -2,9 +2,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { devOnly, parseRange } from "@/lib/dev/files";
-import { isFileKey, localPath, localStoreRoot } from "@/lib/campaign/store";
-
-const TYPES: Record<string, string> = { mp4: "video/mp4", mov: "video/quicktime", jpg: "image/jpeg" };
+import { FILE_TYPES, isFileKey, localPath, localStoreRoot } from "@/lib/campaign/store";
 
 // Serves videos and stills from the local store (dev only) with Range support, so the player can seek.
 export async function GET(req: Request) {
@@ -25,7 +23,7 @@ export async function GET(req: Request) {
   return new Response(body, {
     status: range ? 206 : 200,
     headers: {
-      "Content-Type": TYPES[key.split(".").at(-1)!] ?? "application/octet-stream",
+      "Content-Type": FILE_TYPES[key.split(".").at(-1)!] ?? "application/octet-stream",
       "Accept-Ranges": "bytes",
       "Content-Length": String(size ? end - start + 1 : 0),
       ...(range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}),

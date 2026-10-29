@@ -16,7 +16,7 @@ export default function NewCampaignPage() {
           Describe the product the way you would to a person. Screen-Time tracks it in every creator video and checks each
           one against your contract.
         </p>
-        <NewCampaignForm />
+        <NewCampaignForm mode={process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct"} />
       </main>
     </>
   );

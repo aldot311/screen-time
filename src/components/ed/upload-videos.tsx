@@ -300,7 +300,7 @@ function errorOf(body: unknown): string | undefined {
 }
 
 /** fetch() cannot report upload progress, so the direct (multipart) upload uses XHR; same request otherwise. */
-function postWithProgress(url: string, body: FormData, onProgress: (fraction: number) => void) {
+export function postWithProgress(url: string, body: FormData, onProgress: (fraction: number) => void) {
   return new Promise<{ ok: boolean; status: number; body: unknown }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);

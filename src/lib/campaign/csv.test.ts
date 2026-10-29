@@ -30,7 +30,26 @@ describe("campaignCsv", () => {
     expect(rows).toHaveLength(3);
     expect(rows[0]).toBe(CSV_HEADER.join(","));
     // clip01: frames 18..77 of 167, all three terms checked, the mention term fails (the preview has no audio).
-    expect(rows[1]).toBe("@aldo.tile,clip01.mp4 (synthetic preview),done,4,35.9,1.2,4,56.2,0,3,0,0,0,0");
-    expect(rows[2]).toBe('@aldo.tile,"a, b",uploaded,,,,,,,,,,,');
+    // Preview reports predate disclosure checks and product photos.
+    expect(rows[1]).toBe("@aldo.tile,clip01.mp4 (synthetic preview),done,4,35.9,1.2,4,56.2,0,3,0,0,0,0,not checked,,no");
+    expect(rows[2]).toBe('@aldo.tile,"a, b",uploaded,,,,,,,,,,,,,,');
+  });
+
+  it("writes whether and where the sponsorship was disclosed, and whether the product photo was used", () => {
+    const v = previewVideos()[0];
+    const withReport = (over: object): VideoEntry => ({ ...v, report: { ...v.report!, ...over } });
+    const csv = campaignCsv([
+      withReport({
+        usedProductPhoto: true,
+        disclosure: { spoken: [{ startSec: 1.25, endSec: 1.5, text: "ad" }], onScreen: [{ startSec: 0.5, text: "#ad" }] },
+      }),
+      withReport({ usedProductPhoto: false, disclosure: { spoken: [], onScreen: [], onScreenChecked: true } }),
+      withReport({ disclosure: { spoken: [], onScreen: [], onScreenChecked: false } }),
+    ]);
+    const rows = csv.trimEnd().split("\r\n");
+    expect(CSV_HEADER.slice(-3)).toEqual(["disclosed", "disclosed_where", "product_photo_used"]);
+    expect(rows[1].endsWith(",yes,said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5,yes")).toBe(true);
+    expect(rows[2].endsWith(",no,,no")).toBe(true);
+    expect(rows[3].endsWith(",not checked,,no")).toBe(true);
   });
 });

@@ -1,4 +1,6 @@
 // Campaign roll-up as CSV, one row per video.
+import { disclosureWhere } from "@/lib/metrics/rules";
+import type { VideoReport } from "@/lib/types";
 import type { VideoEntry } from "./types";
 
 export const CSV_HEADER = [
@@ -16,6 +18,9 @@ export const CSV_HEADER = [
   "terms_unchecked",
   "lookalikes_rejected",
   "cost_usd",
+  "disclosed",
+  "disclosed_where",
+  "product_photo_used",
 ];
 
 type Cell = string | number | null;
@@ -56,7 +61,18 @@ export function videoRow(v: VideoEntry): Cell[] {
     count(null),
     r.tracks.filter((t) => t.verdict === "lookalike").length,
     round(r.cost.usd, 4),
+    ...disclosureCells(r),
+    r.usedProductPhoto ? "yes" : "no",
   ];
+}
+
+/** "yes" / "no" / "not checked" (older reports, a campaign with no disclosure term, or nothing said and the frame
+ *  check failed), and where it was disclosed. */
+function disclosureCells(r: VideoReport): [Cell, Cell] {
+  const d = r.disclosure;
+  if (!d) return ["not checked", null];
+  if (d.spoken.length || d.onScreen.length) return ["yes", disclosureWhere(d)];
+  return d.onScreenChecked === false ? ["not checked", null] : ["no", null];
 }
 
 export function campaignCsv(videos: VideoEntry[]): string {

@@ -28,8 +28,9 @@ export interface Row {
   creator: string;
   thumbUrl?: string;
   verdict: Verdict;
-  /** "waiting": sent by the creator through a request link; never runs until the brand starts it. */
-  status: "uploaded" | "waiting" | "running" | "done" | "failed";
+  /** See videoPhase: "waiting" (a creator's link upload) and "uploaded" (a run that never started) wait for the brand;
+   *  "starting" is a fresh upload whose run is about to start. */
+  status: "uploaded" | "starting" | "waiting" | "running" | "done" | "failed";
   stepLabel?: string;
   error?: string;
   seconds: number | null;
@@ -145,7 +146,7 @@ export function CampaignList({ rows }: { rows: Row[] }) {
       </p>
       <ul key={active} className="mt-2 grid gap-3 md:grid-cols-2">
         {shown.map((r, i) => (
-          <li key={r.id} id={`v-${r.id}`} className="scroll-mt-[calc(env(safe-area-inset-top)+72px)]">{r.status === "waiting" ? <WaitingCard r={r} /> : <CreatorCard r={r} eager={i < 12} />}</li>
+          <li key={r.id} id={`v-${r.id}`} className="scroll-mt-[calc(env(safe-area-inset-top)+72px)]">{r.status === "waiting" || r.status === "uploaded" ? <WaitingCard r={r} /> : <CreatorCard r={r} eager={i < 12} />}</li>
         ))}
       </ul>
     </div>
@@ -235,11 +236,11 @@ function CreatorCard({ r, eager }: { r: Row; eager: boolean }) {
           </>
         )}
 
-        {(r.status === "running" || r.status === "uploaded") && (
+        {(r.status === "running" || r.status === "starting") && (
           <span className="mt-auto pt-3">
             <span className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full bg-(--wash) px-2.5 text-[12.5px] font-semibold text-(--ink-2)">
               <Spinner className="size-3.5 shrink-0" />
-              <span className="truncate">{r.status === "running" ? (r.stepLabel ?? "Starting") : "Waiting to start"}</span>
+              <span className="truncate">{r.status === "running" ? (r.stepLabel ?? "Starting") : "Starting"}</span>
             </span>
             <span className="mt-2 block text-[12.5px] text-(--ink-3)">Checking now. This card updates by itself.</span>
           </span>
@@ -259,8 +260,10 @@ function CreatorCard({ r, eager }: { r: Row; eager: boolean }) {
   );
 }
 
-// A creator's submission waiting for the brand: no link (nothing to open yet), one clear action.
+// A video waiting for the brand, with one clear action and no link (nothing to open yet): a creator's submission, or
+// the brand's own upload whose run never started.
 function WaitingCard({ r }: { r: Row }) {
+  const sent = r.status === "waiting";
   return (
     <div className={CARD}>
       <CampaignThumb src={r.thumbUrl} className="rounded-[14px]" />
@@ -268,9 +271,11 @@ function WaitingCard({ r }: { r: Row }) {
         <Heading r={r} chevron={false} />
         <p className="mt-2 inline-flex h-7 w-fit max-w-full items-center gap-1.5 rounded-full bg-(--wash) px-2.5 text-[12.5px] font-semibold text-(--ink-2)">
           <Inbox className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-          <span className="truncate">Sent by {r.creator} · waiting for you</span>
+          <span className="truncate">{sent ? `Sent by ${r.creator} · waiting for you` : "Uploaded · not started"}</span>
         </p>
-        <p className="mt-2 text-[12.5px] leading-snug text-(--ink-3)">The creator agreed to the check. Nothing runs until you start it.</p>
+        <p className="mt-2 text-[12.5px] leading-snug text-(--ink-3)">
+          {sent ? "The creator agreed to the check. Nothing runs until you start it." : "The analysis did not start. Start it when you are ready."}
+        </p>
         <div className="mt-auto pt-3">
           <CampaignRunButton campaignId={r.campaignId} videoId={r.id} />
         </div>

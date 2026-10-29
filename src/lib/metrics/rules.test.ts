@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ContractRule, VideoMetrics } from "@/lib/types";
-import { checkTerm, checkTerms, clipSegments } from "./rules";
+import { checkTerm, checkTerms, clipSegments, clock } from "./rules";
 import type { FrameSample } from "./compute";
 
 function metrics(over: Partial<VideoMetrics> = {}): VideoMetrics {
@@ -268,5 +268,57 @@ describe("external review fixes", () => {
     expect(r.detail).toMatch(/per-frame/);
     const frames = [0, 3, 30, 31, 32, 33].map(sample);
     expect(checkTerm(rule, m, frames).pass).toBe(false);
+  });
+});
+
+describe("disclosed", () => {
+  const rule = term({ kind: "disclosed" });
+
+  it("passes on a spoken disclosure, with its moment as evidence", () => {
+    const r = checkTerm(rule, seen, undefined, { spoken: [{ startSec: 1.25, endSec: 1.6, text: "ad" }], onScreen: [] });
+    expect(r.pass).toBe(true);
+    expect(r.evidence).toEqual([{ startSec: 1.25, endSec: 1.6 }]);
+    expect(r.detail).toBe("Disclosed: said “ad” at 0:01.2");
+  });
+
+  it("passes on an on-screen disclosure alone", () => {
+    const r = checkTerm(rule, seen, undefined, { spoken: [], onScreen: [{ startSec: 0.5, text: "#sponsored" }] });
+    expect(r.pass).toBe(true);
+    expect(r.evidence).toEqual([{ startSec: 0.5, endSec: 0.5 + 1 / 15 }]);
+    expect(r.detail).toBe("Disclosed: shown on screen “#sponsored” at 0:00.5");
+  });
+
+  it("names the first of each, and keeps every moment in time order", () => {
+    const r = checkTerm(rule, seen, undefined, {
+      spoken: [{ startSec: 75.5, endSec: 76, text: "sponsored" }],
+      onScreen: [{ startSec: 9, text: "#ad" }, { startSec: 2, text: "#ad" }],
+    });
+    expect(r.detail).toBe("Disclosed: said “sponsored” at 1:15.5; shown on screen “#ad” at 0:02.0");
+    expect(r.evidence.map((e) => e.startSec)).toEqual([2, 9, 75.5]);
+  });
+
+  it("fails when nothing is said or shown", () => {
+    const r = checkTerm(rule, seen, undefined, { spoken: [], onScreen: [] });
+    expect(r).toMatchObject({ pass: false, evidence: [], detail: "Not disclosed: no “ad” or “sponsored” said or shown on screen" });
+  });
+
+  it("is not checked when nothing was said and the frame check failed; a spoken disclosure still passes", () => {
+    const failed = { spoken: [], onScreen: [], onScreenChecked: false };
+    expect(checkTerm(rule, seen, undefined, failed)).toMatchObject({ pass: null, detail: "Not checked on screen: the frame check failed" });
+    const said = { ...failed, spoken: [{ startSec: 1, endSec: 1.2, text: "this is an ad" }] };
+    expect(checkTerm(rule, seen, undefined, said).pass).toBe(true);
+    expect(checkTerm(rule, seen, undefined, { spoken: [], onScreen: [], onScreenChecked: true }).pass).toBe(false);
+  });
+
+  it("is not checked without disclosure data (older reports), and checkTerms passes it through", () => {
+    expect(checkTerm(rule, seen).pass).toBeNull();
+    const rs = checkTerms([rule, term({ kind: "min_continuous", seconds: 1 })], seen, undefined, { spoken: [], onScreen: [] });
+    expect(rs.map((r) => r.pass)).toEqual([false, true]);
+  });
+});
+
+describe("clock", () => {
+  it("formats m:ss.s, rounding down", () => {
+    expect([0, 1.25, 9.99, 60, 75.5, 600.04].map(clock)).toEqual(["0:00.0", "0:01.2", "0:09.9", "1:00.0", "1:15.5", "10:00.0"]);
   });
 });

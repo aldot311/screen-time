@@ -92,7 +92,11 @@ describe("local store", () => {
     expect(isFileKey("campaigns/fall/files/v1/../../../../etc/passwd")).toBe(false);
     expect(isFileKey("campaigns/fall/videos/v1.json")).toBe(false);
     expect(isFileKey("campaigns/fall/files/v1/thumb.jpg")).toBe(true);
-    expect(isFileKey("campaigns/fall/files/v1/thumb.png")).toBe(false);
+    expect(isFileKey("campaigns/fall/files/v1/thumb.png")).toBe(true);
+    expect(isFileKey("campaigns/fall/files/campaign/product-abc123.webp")).toBe(true);
+    expect(isFileKey("campaigns/fall/files/campaign/product.svg")).toBe(false);
+    expect(isFileKey("campaigns/fall/files/product-abc.png")).toBe(false);
+    await expect(saveImageFile("fall", "campaign", "product", new Uint8Array(1), "image/svg+xml")).rejects.toThrow(/Unsupported/);
     await expect(saveImageFile("fall", "v1", "../thumb", new Uint8Array(1))).rejects.toBeInstanceOf(InvalidIdError);
     expect(localFileFromUrl("/api/store/file?path=..%2F..%2Fpackage.json", dir)).toBeNull();
     expect(localFileFromUrl("https://evil.example/x.mp4", dir)).toBeNull();

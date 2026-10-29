@@ -5,8 +5,8 @@ import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
 import { CostGuard, CostLimitError, type FetchLike } from "@/lib/meta";
-import { pickFrames, runVideo } from "./run";
-import { toContractTerms, toSuggestion } from "./prompts";
+import { disclosureFrames, pickFrames, runVideo } from "./run";
+import { disclosurePrompt, parseTermsPrompt, TERMS_SCHEMA, toContractTerms, toOnScreen, toSuggestion, verifyPrompt } from "./prompts";
 import type { Detection } from "@/lib/types";
 
 // Two frames of SAM output for one object, in the documented token format (fixture from @meta-sam/parser's README).
@@ -319,5 +319,198 @@ describe("toContractTerms", () => {
     });
     expect(terms.map((t) => t.rule)).toEqual([null, null, null]);
     expect(toContractTerms(["a"], null)).toEqual([{ text: "a", rule: null }]);
+  });
+});
+
+describe("disclosure prompts", () => {
+  it("lets the terms parser produce a disclosed rule", () => {
+    expect(TERMS_SCHEMA.properties.rules.items.properties.kind.enum).toContain("disclosed");
+    expect(parseTermsPrompt(["Disclose the sponsorship"])).toContain("- disclosed: the creator discloses the sponsorship");
+    const raw = { index: 0, checkable: true, kind: "disclosed", seconds: 0, withinFirstSec: 0, fraction: 0, forSeconds: 0, minTimes: 0 };
+    expect(toContractTerms(["Disclose it"], { rules: [raw] })[0].rule).toEqual({ kind: "disclosed" });
+  });
+
+  it("maps on-screen answers to frame times and drops malformed ones", () => {
+    const times = [0.5, 1.5, 2.5];
+    expect(
+      toOnScreen(
+        { disclosed: true, frames: [{ index: 2, text: " #ad " }, { index: 0, text: "Sponsored  by Alani" }, { index: 5, text: "x" }, { index: 1, text: "" }, { index: 2, text: "dup" }] },
+        times,
+      ),
+    ).toEqual([{ startSec: 0.5, text: "Sponsored by Alani" }, { startSec: 2.5, text: "#ad" }]);
+    expect(toOnScreen({ disclosed: false, frames: [{ index: 0, text: "#ad" }] }, times)).toEqual([]);
+    expect(toOnScreen(null, times)).toEqual([]);
+  });
+
+  it("asks only for text burned into the video, never a platform UI label", () => {
+    const p = disclosurePrompt(6);
+    expect(p).toContain("text overlaid on the video by the creator (caption stickers,");
+    expect(p).toContain('"#partner"');
+    expect(p).not.toMatch(/paid partnership/i);
+  });
+
+  it("tells Muse Spark which image is the reference photo", () => {
+    expect(verifyPrompt("a teal can", "drink can", true)).toMatch(/^The first image is the brand's reference photo/);
+    expect(verifyPrompt("a teal can", "drink can")).not.toContain("reference photo");
+  });
+});
+
+describe("runVideo product photo and disclosure", () => {
+  const PHOTO = "data:image/png;base64,iVBORw0KGgo=";
+
+  // Records every Spark request body; the terms parser answers with a "disclosed" rule when asked to.
+  function recordingApi(opts: { disclosedTerm: boolean; transcript?: string; onScreen?: unknown }) {
+    const bodies: { name?: string; input: { type: string; text?: string; image_url?: string }[] }[] = [];
+    const { fetch: ok } = fakeApi("match");
+    const fetch: FetchLike = async (url, init) => {
+      const path = new URL(url).pathname;
+      if (path === "/v1/asr/transcribe" && opts.transcript) {
+        return Response.json({ transcript: opts.transcript, turns: [{ startMs: 0, endMs: 1000, transcript: opts.transcript }] });
+      }
+      if (path === "/v1/responses") {
+        const body = JSON.parse(String(init?.body));
+        if (body.model !== "sam-3.1") bodies.push({ name: body.text?.format?.name, input: body.input[0].content });
+        if (body.text?.format?.name === "contract_rules" && opts.disclosedTerm) {
+          return sparkReply({
+            rules: [{ index: 0, checkable: true, kind: "disclosed", seconds: 0, withinFirstSec: 0, fraction: 0, forSeconds: 0, minTimes: 0 }],
+          });
+        }
+        if (body.text?.format?.name === "disclosure_check") return sparkReply(opts.onScreen ?? { disclosed: false, frames: [] });
+      }
+      return ok(url, init);
+    };
+    return { fetch, bodies };
+  }
+
+  it("sends the product photo first in each verification and reports it was used", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, bodies } = recordingApi({ disclosedTerm: false });
+    const report = await runVideo({ ...base(dir, src, guard, fetch), productImageUrl: PHOTO, productImageSource: "/api/store/file?path=x" });
+    const verify = bodies.find((b) => b.name === "product_check")!;
+    expect(verify.input[0].text).toMatch(/^The first image is the brand's reference photo/);
+    expect(verify.input[1]).toEqual({ type: "input_image", image_url: PHOTO });
+    expect(verify.input.slice(2).every((p) => p.image_url?.startsWith("data:image/jpeg;base64,"))).toBe(true);
+    expect(report.usedProductPhoto).toBe(true);
+    // The stored photo's URL, never the data URL sent to Muse Spark.
+    expect(report.productImageUrl).toBe("/api/store/file?path=x");
+  }, 30_000);
+
+  it("reports the photo unused when there is none", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, bodies } = recordingApi({ disclosedTerm: false });
+    const report = await runVideo(base(dir, src, guard, fetch));
+    expect(bodies.find((b) => b.name === "product_check")!.input.filter((p) => p.type === "input_image")).toHaveLength(2);
+    expect(report.usedProductPhoto).toBe(false);
+    expect(report.productImageUrl).toBeUndefined();
+  }, 30_000);
+
+  it("skips the on-screen check, and leaves disclosure unchecked, when no term asks for it", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, bodies } = recordingApi({ disclosedTerm: false, transcript: "this is an ad" });
+    const report = await runVideo(base(dir, src, guard, fetch));
+    expect(bodies.map((b) => b.name)).not.toContain("disclosure_check");
+    expect(report.disclosure).toBeUndefined();
+    expect(report.cost.usd).toBeCloseTo(0.06, 10);
+  }, 30_000);
+
+  it("reads frames for #ad when a term asks, and fails the term when nothing is said or shown", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, bodies } = recordingApi({ disclosedTerm: true });
+    const report = await runVideo({ ...base(dir, src, guard, fetch), contractTerms: ["Disclose the sponsorship"] });
+    const check = bodies.find((b) => b.name === "disclosure_check")!;
+    // A 1 s clip has 15 frames: ten evenly spaced ones are all distinct.
+    expect(check.input.filter((p) => p.type === "input_image")).toHaveLength(10);
+    expect(report.disclosure).toEqual({ spoken: [], onScreen: [], onScreenChecked: true });
+    expect(report.terms[0]).toMatchObject({ pass: false, detail: "Not disclosed: no “ad” or “sponsored” said or shown on screen" });
+    // SAM $0.01 + verify $0.02 + transcribe $0.01 + terms $0.02 + disclosure $0.02.
+    expect(report.cost.usd).toBeCloseTo(0.08, 10);
+    expect(await guard.totalSpentUsd()).toBeCloseTo(0.08, 10);
+  }, 30_000);
+
+  it("passes on a spoken or an on-screen disclosure", async () => {
+    const { dir, src, guard } = await setup();
+    const spoken = await runVideo({
+      ...base(dir, src, guard, recordingApi({ disclosedTerm: true, transcript: "hey this is an ad" }).fetch),
+      contractTerms: ["Disclose the sponsorship"],
+    });
+    expect(spoken.disclosure?.spoken.map((m) => m.text)).toEqual(["this is an ad"]);
+    expect(spoken.terms[0]).toMatchObject({ pass: true, detail: "Disclosed: said “this is an ad” at 0:00.2" });
+
+    const shown = await runVideo({
+      ...base(dir, src, guard, recordingApi({ disclosedTerm: true, onScreen: { disclosed: true, frames: [{ index: 0, text: "#ad" }] } }).fetch),
+      videoId: "v2",
+      contractTerms: ["Disclose the sponsorship"],
+    });
+    expect(shown.disclosure?.onScreen).toEqual([{ startSec: 0, text: "#ad" }]);
+    expect(shown.terms[0].pass).toBe(true);
+  }, 30_000);
+
+  it("finishes the report when the frame check fails, marking it unchecked", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = recordingApi({ disclosedTerm: true });
+    const fetch: FetchLike = async (url, init) => {
+      const body = new URL(url).pathname === "/v1/responses" ? JSON.parse(String(init?.body)) : null;
+      if (body?.text?.format?.name === "disclosure_check")
+        return Response.json({ error: { message: "bad", type: "invalid_request_error", code: "x" } }, { status: 400 });
+      return ok(url, init);
+    };
+    const report = await runVideo({ ...base(dir, src, guard, fetch), contractTerms: ["Disclose the sponsorship"] });
+    expect(report.disclosure).toEqual({ spoken: [], onScreen: [], onScreenChecked: false });
+    expect(report.terms[0]).toMatchObject({ pass: null, detail: "Not checked on screen: the frame check failed" });
+
+    // Spoken disclosure still passes when the frame check fails.
+    const { fetch: talk } = recordingApi({ disclosedTerm: true, transcript: "this is an ad" });
+    const failing: FetchLike = async (url, init) => {
+      const body = new URL(url).pathname === "/v1/responses" ? JSON.parse(String(init?.body)) : null;
+      if (body?.text?.format?.name === "disclosure_check") throw new TypeError("network down");
+      return talk(url, init);
+    };
+    const spoken = await runVideo({ ...base(dir, src, guard, failing), videoId: "v2", contractTerms: ["Disclose it"] });
+    expect(spoken.disclosure?.onScreenChecked).toBe(false);
+    expect(spoken.terms[0].pass).toBe(true);
+  }, 30_000);
+
+  it("finishes the report when the budget cannot cover the frame check", async () => {
+    const { dir, src } = await setup();
+    // SAM $0.01 + verify $0.02 + transcribe $0.01 + terms $0.02 = $0.06 fits; the $0.02 frame check does not.
+    const guard = new CostGuard({ maxUsdPerRun: 0.07, maxUsdTotal: 1, ledgerPath: join(dir, "tight-ad.json") });
+    const { fetch, bodies } = recordingApi({ disclosedTerm: true });
+    const report = await runVideo({ ...base(dir, src, guard, fetch), contractTerms: ["Disclose the sponsorship"] });
+    expect(bodies.map((b) => b.name)).not.toContain("disclosure_check");
+    expect(report.disclosure?.onScreenChecked).toBe(false);
+    expect(report.cost.usd).toBeCloseTo(0.06, 10);
+  }, 30_000);
+});
+
+describe("disclosureFrames", () => {
+  const sec = (frames: number[]) => frames.map((f) => Math.round((f / 15) * 100) / 100);
+
+  it("always reads 0.5 s, 1.5 s and 3 s, then spreads the rest evenly", () => {
+    const frames = disclosureFrames(60 * 15); // a 60 s clip
+    expect(frames).toHaveLength(10);
+    // The frames that contain 0.5 s, 1.5 s and 3 s at 15 fps.
+    expect(frames.slice(0, 3)).toEqual([7, 22, 45]);
+    const rest = sec(frames.slice(3));
+    expect(rest[0]).toBeGreaterThan(3);
+    expect(rest.at(-1)!).toBeLessThan(60);
+    expect(rest.at(-1)!).toBeGreaterThanOrEqual(59); // the closing seconds are read, not skipped
+    const gaps = rest.slice(1).map((t, i) => t - rest[i]);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(0.2);
+  });
+
+  it("stays distinct, ordered and inside short clips", () => {
+    const one = disclosureFrames(15); // 1 s
+    expect(one).toEqual([...new Set(one)].sort((a, b) => a - b));
+    expect(one.every((f) => f >= 0 && f < 15)).toBe(true);
+    expect(disclosureFrames(4)).toHaveLength(4);
+    const four = disclosureFrames(4 * 15); // 4 s: opening three, then seven between 3 s and 4 s
+    expect(four.slice(0, 3)).toEqual([7, 22, 45]);
+    expect(four.every((f) => f < 60)).toBe(true);
+    expect(new Set(four).size).toBe(four.length);
+    expect(disclosureFrames(0)).toEqual([]);
+  });
+
+  it("never asks for more than the 50 images the API accepts", () => {
+    expect(disclosureFrames(10 * 60 * 15, 80)).toHaveLength(50);
   });
 });

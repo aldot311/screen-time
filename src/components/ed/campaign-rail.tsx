@@ -25,7 +25,7 @@ const RING: Record<Kind, { bg: string; badge: string; label: string }> = {
 const kindOf = (r: Row): Kind =>
   r.status === "failed"
     ? "stopped"
-    : r.status === "waiting"
+    : r.status === "waiting" || r.status === "uploaded"
       ? "waiting"
       : r.status !== "done"
         ? "running"
