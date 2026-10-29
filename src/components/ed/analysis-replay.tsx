@@ -9,6 +9,7 @@ import { liveFromReport, liveUpTo } from "@/lib/live";
 import { STEPS } from "@/lib/campaign/types";
 import type { VideoReport } from "@/lib/types";
 import { RunStepsEd } from "./run-steps";
+import { ACTION_TILE } from "./action-style";
 
 const STEP_MS = 1600;
 const REDUCED = "(prefers-reduced-motion: reduce)";
@@ -52,10 +53,11 @@ export function AnalysisReplay({ report, videoUrl, brand }: { report: VideoRepor
           setOpen(true);
           dialog.current?.showModal();
         }}
-        className="ed-press inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold text-(--ink) shadow-(--sh-1) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
+        className={ACTION_TILE}
       >
         <ScanSearch className="size-4" aria-hidden />
-        Replay analysis
+        <span className="sm:hidden">Replay</span>
+        <span className="hidden sm:inline">Replay analysis</span>
       </button>
       <dialog
         ref={dialog}

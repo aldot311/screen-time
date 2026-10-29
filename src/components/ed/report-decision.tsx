@@ -12,6 +12,7 @@ import { ApiError } from "@/components/api-error";
 import { Spinner } from "./pending-link";
 import type { Verdict } from "@/components/format";
 import { useFlash } from "./use-flash";
+import { ACTION_TILE } from "./action-style";
 import { usd } from "@/lib/campaign/money";
 
 const n2 = (n: number) => String(Math.round(n * 10) / 10);
@@ -342,18 +343,18 @@ export function ShareReport({ title }: { title: string }) {
     }
   }
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <button
-        type="button"
-        onClick={() => void share()}
-        className="ed-press inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold text-(--ink) shadow-(--sh-1) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
-      >
-        {state === "copied" ? <Check className="size-4" strokeWidth={3} aria-hidden /> : state === "failed" ? <Link2 className="size-4" aria-hidden /> : <Share className="size-4" aria-hidden />}
-        {state === "copied" ? "Link copied" : "Share report"}
-      </button>
-      <p className="text-[13px] leading-snug text-(--ink-3)" aria-live="polite">
-        {state === "failed" ? "Could not copy. Copy the address from the browser bar instead." : "Anyone with the link can view this report."}
-      </p>
-    </div>
+    <button type="button" onClick={() => void share()} className={ACTION_TILE} aria-live="polite">
+      {state === "copied" ? <Check className="size-4" strokeWidth={3} aria-hidden /> : state === "failed" ? <Link2 className="size-4" aria-hidden /> : <Share className="size-4" aria-hidden />}
+      {state === "copied" ? (
+        "Link copied"
+      ) : state === "failed" ? (
+        "Copy the address bar"
+      ) : (
+        <>
+          <span className="sm:hidden">Share</span>
+          <span className="hidden sm:inline">Share report</span>
+        </>
+      )}
+    </button>
   );
 }

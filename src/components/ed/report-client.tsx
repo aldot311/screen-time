@@ -17,6 +17,7 @@ import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decisi
 import { usd } from "@/lib/campaign/money";
 import { AnalysisReplay } from "./analysis-replay";
 import { RunReceiptCard } from "./run-receipt";
+import { ACTION_TILE } from "./action-style";
 import { AgentPanel } from "./agent-panel";
 import { reviewFlags } from "@/lib/campaign/review";
 import type { VideoEntry } from "@/lib/campaign/types";
@@ -520,20 +521,19 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             overrideEndpoint={overrideEndpoint}
           />
           {agentEndpoint && <AgentPanel endpoint={agentEndpoint} agent={agent} creator={creator} />}
-          <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
-            <ShareReport title={`${title} · ${creator}`} />
-            {!synthetic && <AnalysisReplay report={report} videoUrl={videoUrl} brand={brand} />}
-            {proofHref && (
-              <a
-                href={proofHref}
-                target="_blank"
-                rel="noopener"
-                className="ed-press inline-flex h-11 items-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold text-(--ink) shadow-(--sh-1) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
-              >
-                <Clapperboard className="size-4" aria-hidden />
-                Proof clip (MP4)
-              </a>
-            )}
+          <div>
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+              <ShareReport title={`${title} · ${creator}`} />
+              {!synthetic && <AnalysisReplay report={report} videoUrl={videoUrl} brand={brand} />}
+              {proofHref && (
+                <a href={proofHref} target="_blank" rel="noopener" className={ACTION_TILE}>
+                  <Clapperboard className="size-4" aria-hidden />
+                  <span className="sm:hidden">Proof clip</span>
+                  <span className="hidden sm:inline">Proof clip (MP4)</span>
+                </a>
+              )}
+            </div>
+            <p className="mt-2 text-[13px] leading-snug text-(--ink-3)">Anyone with the link can view this report and its proof clip.</p>
           </div>
         </div>
 

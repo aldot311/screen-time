@@ -36,7 +36,8 @@ interface Props {
   noAudio?: boolean;
 }
 
-const RULER = 18;
+// Labels on the first 14 px, the playhead knob on its own row below them, so they never overlap.
+const RULER = 32;
 
 export function ReportLanes({
   durationSec,
