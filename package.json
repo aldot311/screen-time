@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "run-clip": "tsx --tsconfig tsconfig.json scripts/run-clip.mts",
     "accuracy": "tsx --tsconfig tsconfig.json scripts/accuracy.mts",
-    "import-runs": "tsx --tsconfig tsconfig.json scripts/import-runs.mts"
+    "import-runs": "tsx --tsconfig tsconfig.json scripts/import-runs.mts",
+    "test:linux": "sh scripts/test-linux.sh"
   },
   "dependencies": {
     "@meta-sam/parser": "0.1.0",
