@@ -21,8 +21,16 @@ export const tryLimits = (env: Record<string, string | undefined> = process.env)
   perDay: Math.floor(usdFromEnv(env.SCREEN_TIME_TRY_PER_DAY, 25)),
 });
 
+/** Which limit sent a visitor to a replay. Links carry this code, never free text. */
+export type TryLimit = "visitor" | "day";
+
+export const TRY_LIMIT_TEXT: Record<TryLimit, (n: number) => string> = {
+  visitor: (n) => `You have run the sample ${n} times today.`,
+  day: (n) => `Today's ${n} sample runs are used up.`,
+};
+
 export type TryResult =
-  | { mode: "started" | "joined" | "replay"; video: VideoEntry; reason?: string }
+  | { mode: "started" | "joined" | "replay"; video: VideoEntry; reason?: string; limit?: TryLimit }
   | { mode: "unavailable"; status: number; error: string };
 
 async function visitorKey(ip: string): Promise<string> {
@@ -83,17 +91,22 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
   const live = newest(videos).find((v) => (v.status === "running" || v.status === "uploaded") && now.getTime() - Date.parse(v.updatedAt) < JOIN_MS);
   if (live) return { mode: "joined", video: live };
 
-  const replay = (reason: string): TryResult => {
+  const limits = tryLimits();
+  const replay = (limit: TryLimit): TryResult => {
+    const reason = TRY_LIMIT_TEXT[limit](limit === "visitor" ? limits.perVisitor : limits.perDay);
     const done = newest(videos).find((v) => v.status === "done" && v.report);
     return done
-      ? { mode: "replay", video: done, reason }
+      ? { mode: "replay", video: done, reason, limit }
       : { mode: "unavailable", status: 429, error: `${reason} Try again tomorrow, or open the Alani Nu campaign to see finished runs.` };
   };
   const day = now.toISOString().slice(0, 10);
-  const limits = tryLimits();
-  if (!(await takeSlot(`try/${day}/visitor-${await visitorKey(ip)}`, limits.perVisitor)))
-    return replay(`You have run the sample ${limits.perVisitor} times today.`);
-  if (!(await takeSlot(`try/${day}/run`, limits.perDay))) return replay(`Today's ${limits.perDay} sample runs are used up.`);
+  // Once the day is full, one read answers every later request: no slot writes to spam.
+  if (await readDoc(`try/${day}/full.json`)) return replay("day");
+  if (!(await takeSlot(`try/${day}/visitor-${await visitorKey(ip)}`, limits.perVisitor))) return replay("visitor");
+  if (!(await takeSlot(`try/${day}/run`, limits.perDay))) {
+    await createDoc(`try/${day}/full.json`, { at: now.toISOString() });
+    return replay("day");
+  }
 
   const url = await sampleUrl();
   const at = now.toISOString();

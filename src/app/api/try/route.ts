@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     after(() => executeRun(start.campaign, start.video));
   }
   return Response.json(
-    { mode: result.mode, campaignId: result.video.campaignId, videoId: result.video.id, reason: result.reason },
+    { mode: result.mode, campaignId: result.video.campaignId, videoId: result.video.id, reason: result.reason, limit: result.limit },
     { status: result.mode === "started" ? 202 : 200 },
   );
 }

@@ -8,6 +8,7 @@ import { friendlyError } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
 import { feeFor } from "@/lib/campaign/money";
+import { TRY_LIMIT_TEXT, tryLimits } from "@/lib/campaign/try";
 import { RunStepsEd } from "@/components/ed/run-steps";
 import { RunAgain } from "@/components/ed/run-again";
 import { videoPhase } from "@/components/ed/campaign-ui";
@@ -27,8 +28,11 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   // ?t=12.5 opens the report at that second (links from the accuracy page point at a moment).
   const query = await searchParams;
   const t = Number(query.t);
-  // Set by "Try a sample video" when a limit was reached and this is the newest finished sample instead.
-  const limit = typeof query.limit === "string" ? query.limit.slice(0, 120) : null;
+  // Set by "Try a sample video" when a limit was reached and this is the newest finished sample instead: a code mapped
+  // to fixed text, so a link cannot put its own words on a report.
+  const limitCode = query.limit === "visitor" || query.limit === "day" ? query.limit : null;
+  const limits = tryLimits();
+  const limit = limitCode ? TRY_LIMIT_TEXT[limitCode](limitCode === "visitor" ? limits.perVisitor : limits.perDay) : null;
   const { id, videoId } = await params;
   const [campaign, video, showcase, all] = await Promise.all([getCampaign(id), getVideo(id, videoId), loadShowcase(), listCampaigns()]);
   if (!campaign || !video) notFound();

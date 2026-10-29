@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { listVideos, putCampaign, putVideo, saveVideoFile } from "./store";
+import { listVideos, putCampaign, putVideo, readDoc, saveVideoFile } from "./store";
 import { startTry, TRY_ID } from "./try";
 
 let dir = "";
@@ -63,10 +63,13 @@ describe("startTry", () => {
     expect((await startTry("1.1.1.1", later(10))).mode).toBe("started"); // visitor 1, run 2 of 3 today
     await finishAll();
     const capped = await startTry("1.1.1.1", later(20)); // visitor 1 used both of theirs
-    expect(capped).toMatchObject({ mode: "replay", reason: "You have run the sample 2 times today." });
+    expect(capped).toMatchObject({ mode: "replay", reason: "You have run the sample 2 times today.", limit: "visitor" });
     expect((await startTry("3.3.3.3", later(30))).mode).toBe("started"); // run 3 of 3
     await finishAll();
-    expect(await startTry("4.4.4.4", later(40))).toMatchObject({ mode: "replay", reason: "Today's 3 sample runs are used up." });
+    expect(await startTry("4.4.4.4", later(40))).toMatchObject({ mode: "replay", reason: "Today's 3 sample runs are used up.", limit: "day" });
+    // Later requests that day stop at the "full" marker, before any visitor slot is taken.
+    expect(await startTry("5.5.5.5", later(50))).toMatchObject({ mode: "replay", reason: "Today's 3 sample runs are used up." });
+    expect(await readDoc("try/2026-10-29/full.json")).not.toBeNull();
     // A new day starts fresh.
     expect((await startTry("4.4.4.4", new Date("2026-10-30T09:00:00Z"))).mode).toBe("started");
   });

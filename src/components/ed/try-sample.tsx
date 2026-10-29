@@ -18,9 +18,9 @@ export function TrySample({ className, label = "Try a sample video" }: { classNa
     setError(null);
     try {
       const res = await fetch("/api/try", { method: "POST" });
-      const out = (await res.json().catch(() => null)) as { campaignId?: string; videoId?: string; mode?: string; reason?: string; error?: string } | null;
+      const out = (await res.json().catch(() => null)) as { campaignId?: string; videoId?: string; mode?: string; limit?: string; error?: string } | null;
       if (!res.ok || !out?.campaignId || !out.videoId) throw new Error(out?.error ?? `The sample could not start (${res.status}).`);
-      const note = out.mode === "replay" && out.reason ? `?limit=${encodeURIComponent(out.reason)}` : "";
+      const note = out.mode === "replay" && (out.limit === "visitor" || out.limit === "day") ? `?limit=${out.limit}` : "";
       router.push(`/campaigns/${out.campaignId}/videos/${out.videoId}${note}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The sample could not start.");
