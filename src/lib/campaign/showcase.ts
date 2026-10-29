@@ -10,6 +10,9 @@ interface Pick {
   names: Record<string, string>;
 }
 
+/** The campaign the landing page sends people to: the test clips re-run with a fee and the product photo. */
+export const SHOWCASE_CAMPAIGN = "alani-nu-launch";
+
 const HERO: Pick = {
   campaignId: "alani-nu-test-runs",
   videoId: "clip12",

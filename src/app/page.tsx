@@ -1,11 +1,11 @@
 import { ArrowRight, ArrowUpRight, AudioLines, ChevronRight, FileCheck2, ScanSearch, ShieldCheck } from "lucide-react";
-import { loadShowcase, type Showcased } from "@/lib/campaign/showcase";
+import { loadShowcase, SHOWCASE_CAMPAIGN, type Showcased } from "@/lib/campaign/showcase";
 import { LiveReplay } from "@/components/ed/live-replay";
 import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
 import { TopBar } from "@/components/ed/top-bar";
 import { Wordmark } from "@/components/ed/bits";
-import { getVideo } from "@/lib/campaign/store";
+import { getCampaign, getVideo } from "@/lib/campaign/store";
 import { tenths } from "@/components/format";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +66,8 @@ const navLink =
 
 export default async function Landing() {
   const { hero, lookalike } = await loadShowcase();
+  // The campaign with money, the product photo and receipts, when this store has it; else the hero's own campaign.
+  const showcaseCampaign = (await getCampaign(SHOWCASE_CAMPAIGN).catch(() => null)) ? SHOWCASE_CAMPAIGN : hero?.video.campaignId;
   // Lead with the clear case (another brand's tumbler in clip12), then the counted can, then the blurred can Muse
   // Spark judged a different Alani flavor.
   const verdicts = [
@@ -297,14 +299,15 @@ export default async function Landing() {
           <div className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
             <h2 className="ed-display max-w-[20ch] text-[34px] leading-[1.04] sm:text-[48px]">See it on twelve real test videos.</h2>
             <p className="mt-3 max-w-[52ch] text-[16px] leading-[1.6] text-white/70">
-              One Alani Nu campaign: every video with its verdict, its seconds on screen and the moment that proves every
+              One Alani Nu campaign with a $300 fee and the product photo: every video with its verdict, what it pays or
+              holds, its seconds on screen and the moment that proves every
               term.
             </p>
             <PendingLink
-              href={hero ? `/campaigns/${hero.video.campaignId}` : "/campaigns"}
+              href={showcaseCampaign ? `/campaigns/${showcaseCampaign}` : "/campaigns"}
               className="mt-8 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white px-7 text-[16px] font-semibold text-(--ink) shadow-(--sh-2) hover:bg-(--paper) active:bg-(--wash) sm:w-auto"
             >
-              {hero ? "Open the Alani Nu campaign" : "Open the app"} <ArrowRight className="size-[18px]" strokeWidth={2.25} aria-hidden />
+              {showcaseCampaign ? "Open the Alani Nu campaign" : "Open the app"} <ArrowRight className="size-[18px]" strokeWidth={2.25} aria-hidden />
             </PendingLink>
           </div>
         </section>
