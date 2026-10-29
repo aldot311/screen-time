@@ -72,7 +72,14 @@ async function countFrames(path: string, timeoutMs: number): Promise<number> {
   const { stdout } = await runOrThrow([
     "-v", "error", "-nostats", "-i", path, "-map", "0:v:0", "-c", "copy", "-f", "null", "-progress", "pipe:1", "-",
   ], timeoutMs);
-  return parseProgressFrames(stdout);
+  try {
+    return parseProgressFrames(stdout);
+  } catch {
+    // ffmpeg 7 (the Linux build Vercel runs) reports no frame count for a stream copy; decoding counts them. The
+    // normalized video is short and small, so this costs well under a second.
+    const decoded = await runOrThrow(["-v", "error", "-nostats", "-i", path, "-map", "0:v:0", "-f", "null", "-progress", "pipe:1", "-"], timeoutMs);
+    return parseProgressFrames(decoded.stdout);
+  }
 }
 
 /** Scale so the longest edge is at most MAX_EDGE, never upscaling, both sides even (yuv420p needs that).

@@ -66,7 +66,8 @@ describe("normalizeVideo", () => {
   it("applies rotation metadata so a phone clip stays portrait", async () => {
     const land = make("rot-src.mp4", "1280x720");
     const rotated = join(dir, "rot.mp4");
-    execFileSync(ffmpeg, ["-v", "error", "-y", "-i", land, "-c", "copy", "-metadata:s:v:0", "rotate=90", rotated]);
+    // A display matrix, as phones write it (the old "rotate" tag is ignored from ffmpeg 7, which Vercel runs).
+    execFileSync(ffmpeg, ["-v", "error", "-y", "-display_rotation:v:0", "90", "-i", land, "-c", "copy", rotated]);
     const info = await normalizeVideo(rotated, join(dir, "rot.norm.mp4"));
     expect(info).toMatchObject({ width: 540, height: 960, frameCount: FPS });
   });
