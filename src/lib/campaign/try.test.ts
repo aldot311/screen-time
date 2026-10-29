@@ -73,4 +73,11 @@ describe("startTry", () => {
     // A new day starts fresh.
     expect((await startTry("4.4.4.4", new Date("2026-10-30T09:00:00Z"))).mode).toBe("started");
   });
+
+  it("starts one paid run when two visitors arrive together; the other joins it", async () => {
+    await finishAll();
+    const at = new Date("2026-10-31T10:00:00Z");
+    const [a, b] = await Promise.all([startTry("7.7.7.7", at), startTry("8.8.8.8", at)]);
+    expect([a.mode, b.mode].sort()).toEqual(["joined", "started"]);
+  });
 });

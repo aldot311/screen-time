@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
+import { TRY_ID } from "@/lib/campaign/try";
 import { getVideo, updateVideo } from "@/lib/campaign/store";
 
 type Ctx = { params: Promise<{ id: string; videoId: string }> };
@@ -7,7 +8,7 @@ type Ctx = { params: Promise<{ id: string; videoId: string }> };
 const Body = z.object({ decision: z.enum(["pay", "hold"]), reason: z.string().trim().min(3).max(500) });
 
 async function finished(id: string, videoId: string) {
-  if (id === PREVIEW_ID) return Response.json({ error: "The preview campaign is read-only" }, { status: 409 });
+  if (id === PREVIEW_ID || id === TRY_ID) return Response.json({ error: "Sample and preview reports are shared and read-only" }, { status: 409 });
   const video = await getVideo(id, videoId);
   if (!video) return Response.json({ error: "Video not found" }, { status: 404 });
   if (video.status !== "done" || !video.report) return Response.json({ error: "Only a finished report can be decided differently" }, { status: 409 });

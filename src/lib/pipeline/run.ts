@@ -112,6 +112,8 @@ class VideoSpend {
     usd: number | ((r: T) => number),
     fn: () => Promise<T>,
     output: (r: T) => string,
+    /** What a failed call still cost (its kept reservation); defaults to `usd` when that is a fixed amount. */
+    failedUsd?: (err: unknown) => number,
   ): Promise<T> {
     const t0 = performance.now();
     let r: T;
@@ -121,7 +123,8 @@ class VideoSpend {
       // A failed call stays on the receipt with what it was charged (its reservation is kept), so the receipt still
       // adds up to the report's cost when an optional step fails and the run goes on.
       const msg = err instanceof Error ? err.message : String(err);
-      this.calls.push({ ...call, output: `failed: ${msg.slice(0, 160)}`, ms: Math.round(performance.now() - t0), usd: typeof usd === "number" ? usd : 0 });
+      const cost = failedUsd ? failedUsd(err) : typeof usd === "number" ? usd : 0;
+      this.calls.push({ ...call, output: `failed: ${msg.slice(0, 160)}`, ms: Math.round(performance.now() - t0), usd: cost });
       throw err;
     }
     this.calls.push({ ...call, output: output(r), ms: Math.round(performance.now() - t0), usd: typeof usd === "number" ? usd : usd(r) });
@@ -166,6 +169,8 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
         (r) => guard.estimateSamUsd(r.framesProcessed ?? info.frameCount),
         () => samVideo({ fileId, prompt, includeConfidence: true }, client),
         (r) => `${r.framesProcessed ?? info.frameCount} frames processed`,
+        // As below: a 4xx is refunded, anything else keeps its reservation.
+        (err) => (err instanceof MetaApiError && err.status >= 400 && err.status < 500 ? 0 : reserved),
       );
     } catch (err) {
       // A 4xx (bad request, auth, billing, rate limit) is rejected before any frame is processed, so it is

@@ -12,7 +12,7 @@ import { sameHandle } from "@/lib/campaign/roster";
 import { VerdictPill } from "@/components/ed/bits";
 import { PendingLink } from "@/components/ed/pending-link";
 
-import { TRY_LIMIT_TEXT, tryLimits } from "@/lib/campaign/try";
+import { TRY_ID, TRY_LIMIT_TEXT, tryLimits } from "@/lib/campaign/try";
 import { RunStepsEd } from "@/components/ed/run-steps";
 import { RunAgain } from "@/components/ed/run-again";
 import { videoPhase } from "@/components/ed/campaign-ui";
@@ -34,7 +34,8 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   const t = Number(query.t);
   // Set by "Try a sample video" when a limit was reached and this is the newest finished sample instead: a code mapped
   // to fixed text, so a link cannot put its own words on a report.
-  const limitCode = query.limit === "visitor" || query.limit === "day" ? query.limit : null;
+  const { id: routeId } = await params;
+  const limitCode = routeId === TRY_ID && (query.limit === "visitor" || query.limit === "day") ? query.limit : null;
   const limits = tryLimits();
   const limit = limitCode ? TRY_LIMIT_TEXT[limitCode](limitCode === "visitor" ? limits.perVisitor : limits.perDay) : null;
   const { id, videoId } = await params;
@@ -107,9 +108,9 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
             fee={feeFor(campaign, video.creator)}
             startAt={Number.isFinite(t) && t >= 0 ? t : undefined}
             override={video.override}
-            overrideEndpoint={synthetic ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/override`}
+            overrideEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/override`}
             agent={video.agent}
-            agentEndpoint={synthetic ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/agent`}
+            agentEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/agent`}
           />
         ) : (
           <div className="grid gap-x-12 gap-y-8 pt-4 sm:pt-0 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">

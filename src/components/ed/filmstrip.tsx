@@ -46,7 +46,7 @@ export function Filmstrip({
     video.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:0";
     document.body.appendChild(video);
     // A video that cannot load leaves the frames empty; the boxes and labels still show.
-    video.addEventListener("error", () => setDrawn(frames.length), { once: true });
+    video.addEventListener("error", () => !cancelled && setDrawn(frames.length), { once: true });
     video.src = videoUrl;
     let i = 0;
     const next = () => {

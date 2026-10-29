@@ -46,4 +46,20 @@ describe("reviewFlags", () => {
     );
     expect(flags).toEqual(["“2 s in the first 5”: 1.9 s on screen in the first 5 s, against 2 s needed. Close either way."]);
   });
+
+  it("measures 'within the first' from the frames actually seen, like the contract checker, not bridged segments", () => {
+    // Every other frame for five seconds: segments would say 5 s, the frames say about 2.5 s, near a 3 s threshold.
+    const visibleFrames = Array.from({ length: 38 }, (_, i) => i * 2);
+    const flags = reviewFlags(
+      report({
+        metrics: { visibleFrames, segments: [{ startSec: 0, endSec: 5 }] },
+        terms: [term("3 s in the first 5", { kind: "min_seconds_within", seconds: 3, withinFirstSec: 5 }, false)],
+      }),
+    );
+    expect(flags).toEqual(["“3 s in the first 5”: 2.5 s on screen in the first 5 s, against 3 s needed. Close either way."]);
+  });
+
+  it("does not crash on a report without tracks", () => {
+    expect(reviewFlags({ terms: [] } as unknown as VideoReport)).toEqual([]);
+  });
 });

@@ -108,6 +108,17 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
     return replay("day");
   }
 
+  // One start per window: two visitors arriving together get one paid run, and the second joins it.
+  if (!(await createDoc(`try/${day}/start-${Math.floor(now.getTime() / JOIN_MS)}.json`, { at: now.toISOString() }))) {
+    // Someone else is starting it: wait a moment for their entry, then join it.
+    for (let i = 0; i < 8; i++) {
+      const starting = newest(await listVideos(TRY_ID)).find((v) => (v.status === "running" || v.status === "uploaded") && v.createdAt >= new Date(now.getTime() - JOIN_MS).toISOString());
+      if (starting) return { mode: "joined", video: starting };
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    const done = newest(await listVideos(TRY_ID)).find((v) => v.status === "done" && v.report);
+    return done ? { mode: "replay", video: done } : { mode: "unavailable", status: 429, error: "The sample is starting for someone else. Try again in a minute." };
+  }
   const url = await sampleUrl();
   const at = now.toISOString();
   const video = await putVideo({

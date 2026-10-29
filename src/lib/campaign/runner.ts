@@ -12,7 +12,7 @@ import { runVideo } from "@/lib/pipeline/run";
 import { isBlobUrl, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, sniffImageType } from "./schema";
 import { saveVisuals } from "./visuals";
 import { PREVIEW_ID } from "./preview";
-import { getCampaign, getVideo, localFileFromUrl, putVideo, saveVideoFile, withLedgerFile } from "./store";
+import { getCampaign, getVideo, localFileFromUrl, putVideo, saveVideoFile, updateVideo, withLedgerFile } from "./store";
 import type { Campaign, VideoEntry } from "./types";
 
 /** The run route's maxDuration; a "running" entry untouched for longer than this plus a margin was killed mid-run. */
@@ -61,6 +61,7 @@ export async function startRun(campaignId: string, videoId: string, now = Date.n
     live: undefined,
     override: undefined,
     agent: undefined,
+    proofUrl: undefined,
   });
   return { ok: true, campaign, video: running };
 }
@@ -113,7 +114,8 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
     current = await putVideo({ ...current, status: "done", report, error: undefined, live: undefined });
     try {
       const visuals = await saveVisuals(campaign.id, video.id, join(workDir, `${video.id}.mp4`), report, workDir);
-      current = await putVideo({ ...current, ...visuals });
+      // Merged into the stored entry, not written from `current`: a decision saved since the report landed stays.
+      current = (await updateVideo(campaign.id, video.id, (v) => ({ ...v, ...visuals }))) ?? current;
     } catch {
       // No thumbnail or crops; the report stands.
     }

@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { API_KEY_ENV } from "@/lib/meta/http";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
+import { TRY_ID } from "@/lib/campaign/try";
 import { getCampaign, getVideo, updateVideo } from "@/lib/campaign/store";
 import { AGENT_STALE_MS, executeAgent } from "@/lib/agent/run-agent";
 
@@ -10,7 +11,7 @@ export const maxDuration = 300;
 /** Starts the follow-up agent on a finished video (behind the demo password). The video page shows its steps. */
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string; videoId: string }> }) {
   const { id, videoId } = await ctx.params;
-  if (id === PREVIEW_ID) return Response.json({ error: "The preview campaign is read-only" }, { status: 409 });
+  if (id === PREVIEW_ID || id === TRY_ID) return Response.json({ error: "Sample and preview reports are shared and read-only" }, { status: 409 });
   if (!process.env[API_KEY_ENV]) return Response.json({ error: "The Meta API key is not configured" }, { status: 503 });
   const campaign = await getCampaign(id);
   const video = campaign ? await getVideo(id, videoId) : null;

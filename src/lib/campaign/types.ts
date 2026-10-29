@@ -75,4 +75,6 @@ export interface VideoEntry {
   override?: { decision: "pay" | "hold"; reason: string; at: string };
   /** The latest follow-up agent run on this video: its step log, draft note, call and any re-cut awaiting approval. */
   agent?: AgentRun;
+  /** The rendered proof clip (9:16 MP4 with the evidence burned in), made on first request. Cleared on a re-run. */
+  proofUrl?: string;
 }

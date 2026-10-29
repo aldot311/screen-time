@@ -61,12 +61,6 @@ describe("campaignCsv", () => {
     expect(rows[1].endsWith(",pay,450,pay,")).toBe(true);
   });
 
-  it("adds the recommendation and the creator's fee", () => {
-    const v = previewVideos()[0];
-    const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
-    expect(rows[1].endsWith(",pay,450,pay,")).toBe(true);
-  });
-
   it("leaves the recommendation off a video a later one from the same creator replaced", () => {
     const v = previewVideos()[0];
     const older = { ...v, id: "a", createdAt: "2026-10-01T00:00:00Z" };
