@@ -141,7 +141,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
               </p>
 
               <div className="mt-6 rounded-(--r-card) bg-(--wash)/60 p-2 ring-1 ring-(--hair)">
-                <RunStepsEd status={video.status} step={video.step} error={video.error} />
+                <RunStepsEd status={video.status} step={video.step} error={video.error} live={video.live} videoUrl={video.videoUrl} brand={campaign.brand} />
               </div>
 
               {video.status === "failed" && !video.step && video.error && (

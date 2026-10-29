@@ -4,8 +4,25 @@ import { Check, X } from "lucide-react";
 import { STEPS, type StepId, type VideoStatus } from "@/lib/campaign/types";
 import { friendlyError } from "@/components/format";
 import { Spinner } from "./pending-link";
+import type { LiveProgress } from "@/lib/types";
+import { StepFindings } from "./step-findings";
 
-export function RunStepsEd({ status, step, error }: { status: VideoStatus; step: StepId | null; error?: string }) {
+export function RunStepsEd({
+  status,
+  step,
+  error,
+  live,
+  videoUrl,
+  brand = "the brand",
+}: {
+  status: VideoStatus;
+  step: StepId | null;
+  error?: string;
+  /** What the run has found so far: shown under the step that found it. */
+  live?: LiveProgress;
+  videoUrl?: string;
+  brand?: string;
+}) {
   const at = step ? STEPS.findIndex((s) => s.id === step) : status === "running" ? 0 : -1;
   return (
     <ol className="relative space-y-1">
@@ -54,6 +71,11 @@ export function RunStepsEd({ status, step, error }: { status: VideoStatus; step:
               {active && <span className="ml-auto text-[13px] font-medium text-(--ink-2)">Working…</span>}
               {done && <span className="sr-only">done</span>}
             </span>
+            {live && (done || active || failed) && (
+              <div className="mt-2 ml-10 min-w-0 empty:hidden">
+                <StepFindings step={s.id} live={live} videoUrl={videoUrl} brand={brand} />
+              </div>
+            )}
             {failed && error && (
               <p className="mt-2.5 ml-10 max-w-[60ch] rounded-(--r-ctl) bg-(--short-soft) px-3.5 py-2.5 text-[14.5px] leading-[1.5] text-(--short)">
                 {friendlyError(error)}

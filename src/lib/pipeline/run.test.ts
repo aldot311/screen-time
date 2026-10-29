@@ -6,6 +6,7 @@ import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
 import { CostGuard, CostLimitError, type FetchLike } from "@/lib/meta";
 import { disclosureFrames, pickFrames, runVideo } from "./run";
+import type { LiveProgress } from "@/lib/types";
 import { disclosurePrompt, parseTermsPrompt, TERMS_SCHEMA, toContractTerms, toOnScreen, toSuggestion, verifyPrompt } from "./prompts";
 import type { Detection } from "@/lib/types";
 
@@ -104,6 +105,28 @@ describe("runVideo", () => {
     const steps: string[] = [];
     await runVideo({ ...base(dir, src, guard, fakeApi("match").fetch), onStep: (s) => void steps.push(s) });
     expect(steps).toEqual(["normalize", "track", "verify", "listen", "measure", "contract"]);
+  }, 30_000);
+
+  it("reports what each stage found as it goes, and a failing progress callback never stops the run", async () => {
+    const { dir, src, guard } = await setup();
+    const seen: LiveProgress[] = [];
+    const report = await runVideo({
+      ...base(dir, src, guard, fakeApi("match").fetch),
+      onProgress: (p) => {
+        seen.push(p);
+        if (seen.length === 2) throw new Error("store down");
+      },
+    });
+    const last = seen.at(-1)!;
+    // Each update only adds to the last: video, then SAM, then each Muse Spark call, then audio, measure and terms.
+    expect(Object.keys(seen[0])).toEqual(["video"]);
+    expect(seen.map((p) => Object.keys(p).length)).toEqual([...seen.map((p) => Object.keys(p).length)].sort((a, b) => a - b));
+    expect(last.video?.frameCount).toBe(report.info.frameCount);
+    expect(last.searches?.[0].objects).toBe(report.tracks.length);
+    expect(last.searches?.[0].boxes.every((b) => b.frame < report.info.frameCount)).toBe(true);
+    expect(last.checks?.map((c) => c.verdict).sort()).toEqual(report.tracks.map((t) => t.verdict).sort());
+    expect(last.measured?.secondsOnScreen).toBe(report.metrics.secondsOnScreen);
+    expect(last.terms?.map((t) => t.pass)).toEqual(report.terms.map((t) => t.pass));
   }, 30_000);
 
   it("tags every tracked box with its object's verdict, for the overlay", async () => {

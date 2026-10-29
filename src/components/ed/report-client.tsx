@@ -15,6 +15,7 @@ import { Figure, Swatch } from "./bits";
 import { ReportLanes, type Lit } from "./report-lanes";
 import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decision";
 import { usd } from "@/lib/campaign/money";
+import { AnalysisReplay } from "./analysis-replay";
 
 interface Props {
   report: VideoReport;
@@ -482,7 +483,10 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         {/* What to do about it: a recommendation, then a way to send the report to whoever decides. */}
         <div className="-mt-6 space-y-3 sm:-mt-4">
           <PayOrHold verdict={verdict} creator={creator} terms={report.terms} fee={fee} />
-          <ShareReport title={`${title} · ${creator}`} />
+          <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
+            <ShareReport title={`${title} · ${creator}`} />
+            {!synthetic && <AnalysisReplay report={report} videoUrl={videoUrl} brand={brand} />}
+          </div>
         </div>
 
         {/* Contract terms: the whole row plays what it proves. */}

@@ -6,8 +6,10 @@ import { CostGuard, CostLimitError, MetaApiError, samVideo, sparkJson, transcrib
 import { checkTerms, computeMetrics, findDisclosures, findMentions, frameSamples } from "@/lib/metrics";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
+import { evenFrames, filmstripBoxes } from "@/lib/frames";
+export { evenFrames } from "@/lib/frames";
 import type { StepId } from "@/lib/campaign/types";
-import { FPS, type ContractTerm, type Detection, type Disclosure, type Mention, type PromptAttempt, type Track, type TrackVerification, type VerifyVerdict, type VideoReport } from "@/lib/types";
+import { FPS, type ContractTerm, type Detection, type Disclosure, type Mention, type PromptAttempt, type Track, type LiveProgress, type TrackVerification, type VerifyVerdict, type VideoReport } from "@/lib/types";
 import {
   DISCLOSURE_FRAMES,
   DISCLOSURE_OPENING_SEC,
@@ -33,6 +35,7 @@ const SPARK_RESERVE_USD = 0.02;
 export const MAX_PROMPT_RETRIES = 1;
 // Frames Spark sees when it looks for the product the first prompt missed.
 const SUGGEST_FRAMES = 4;
+
 // Verifications budgeted for when deciding whether a retry fits: most clips track one to three objects.
 const RETRY_VERIFY_TRACKS = 3;
 
@@ -65,7 +68,10 @@ export interface RunInput {
   log?: (msg: string) => void;
   /** Called as each of the six steps starts, so a caller can show progress. A throw aborts the run. */
   onStep?: (step: StepId) => void | Promise<void>;
+  /** Called with everything found so far each time a stage adds to it. Best effort: a throw is ignored. */
+  onProgress?: (live: LiveProgress) => void | Promise<void>;
 }
+
 
 // In micro-dollars, like the guard's ledger, so the report total does not pick up float noise.
 const micros = (usd: number) => Math.round(usd * 1e6);
@@ -98,10 +104,20 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   const spend = new VideoSpend(guard);
   const videoPath = join(input.workDir, `${input.videoId}.mp4`);
   const step = async (id: StepId) => input.onStep?.(id);
+  const live: LiveProgress = {};
+  const progress = async (patch: Partial<LiveProgress>) => {
+    Object.assign(live, patch);
+    try {
+      await input.onProgress?.(structuredClone(live));
+    } catch {
+      // Progress is for show; the run goes on without it.
+    }
+  };
 
   await step("normalize");
   log("normalizing");
   const info = await normalizeVideo(input.sourcePath, videoPath);
+  await progress({ video: { frameCount: info.frameCount, durationSec: info.durationSec, width: info.width, height: info.height } });
 
   const attempts: PromptAttempt[] = [];
   // Set when any verification actually sent the product photo.
@@ -127,6 +143,9 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     await spend.adjust(guard.estimateSamUsd(samFrames) - reserved, `sam ${input.videoId} adjust`);
     const parsed = await parseSamVideo(sam.raw, info);
     for (const d of parsed.diagnostics) log(`sam: ${d}`);
+    await progress({
+      searches: [...(live.searches ?? []), { prompt, objects: parsed.tracks.length, samFrames, boxes: filmstripBoxes(parsed.detections, info.frameCount) }],
+    });
 
     await step("verify");
     log(`verifying ${parsed.tracks.length} tracked object(s)`);
@@ -137,14 +156,18 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     );
     const verifications = await Promise.all(
       parsed.tracks.map((t) =>
-        checked.has(t.objectId)
+        (checked.has(t.objectId)
           ? verifyTrack(t, videoPath, { ...input, prompt }, info.frameCount, spend, tag, photo)
           : Promise.resolve<TrackVerification>({
               objectId: t.objectId,
               verdict: "unclear",
               visibility: "partial",
               reason: "Not checked: only the objects on screen longest are checked on a second search.",
-            }),
+            })
+        ).then(async (v) => {
+          await progress({ checks: [...(live.checks ?? []), { prompt, objectId: v.objectId, verdict: v.verdict, reason: v.reason }] });
+          return v;
+        }),
       ),
     );
     const matchIds = new Set(verifications.filter((v) => v.verdict === "match").map((v) => v.objectId));
@@ -209,9 +232,11 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   }
   const mentions = findMentions(turns, input.brandTerms);
   const spoken: Mention[] = findDisclosures(turns);
+  await progress({ heard: { audio: Boolean(wavPath), mentions, disclosures: spoken } });
 
   await step("measure");
   const metrics = computeMetrics(matched, info, mentions);
+  await progress({ measured: { secondsOnScreen: metrics.secondsOnScreen, shareOfVideo: metrics.shareOfVideo, firstSeenSec: metrics.firstSeenSec } });
   await step("contract");
   const terms = await parseTerms(input, spend);
   // Reading the frames for #ad costs a Spark call, so it runs only when a term asks for disclosure.
@@ -227,6 +252,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     }
   }
   const termResults = checkTerms(terms, metrics, frameSamples(matched, info), disclosure);
+  await progress({ terms: termResults.map((t) => ({ text: t.term.text, pass: t.pass, detail: t.detail })) });
 
   return {
     videoId: input.videoId,
@@ -307,10 +333,6 @@ export function pickFrames(detections: Detection[], frameCount: number): Detecti
   return [...new Map(picks.map((d) => [d.frame, d])).values()];
 }
 
-/** Frame indices spread evenly over the video, distinct (a very short clip would otherwise repeat one). */
-export function evenFrames(frameCount: number, n: number): number[] {
-  return [...new Set(Array.from({ length: n }, (_, i) => Math.floor(((i + 0.5) * frameCount) / n)))];
-}
 
 /**
  * About ten frames weighted to the opening, where disclosures usually sit: 0.5 s, 1.5 s and 3 s, then evenly across the

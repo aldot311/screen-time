@@ -133,3 +133,20 @@ export interface VideoReport {
   /** Every tracked box with its object's verdict, so the player can draw the overlay. Older reports lack it. */
   detections?: (Detection & { verdict: VerifyVerdict })[];
 }
+
+/**
+ * What a run has found so far, written as each stage finishes so the run page can show the analysis as it happens.
+ * Every field is real output of that stage; a replay of a finished report builds the same shape from the report.
+ */
+export interface LiveProgress {
+  video?: { frameCount: number; durationSec: number; width: number; height: number };
+  /** One per SAM 3.1 pass: the prompt, how many objects it tracked, and a few of its boxes for the filmstrip. */
+  searches?: { prompt: string; objects: number; samFrames: number; boxes: (Detection & { verdict?: VerifyVerdict })[] }[];
+  /** Muse Spark's call on each tracked object, as each one comes back. */
+  checks?: { prompt: string; objectId: number; verdict: VerifyVerdict; reason: string }[];
+  /** Voice Transcribe: the brand mentions and spoken disclosures heard. `audio` is false when the video has no sound,
+   *  and absent when not known (a replay of an older report). */
+  heard?: { audio?: boolean; mentions: Mention[]; disclosures: Mention[] };
+  measured?: { secondsOnScreen: number; shareOfVideo: number; firstSeenSec: number | null };
+  terms?: { text: string; pass: boolean | null; detail: string }[];
+}

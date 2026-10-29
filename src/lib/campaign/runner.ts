@@ -58,6 +58,7 @@ export async function startRun(campaignId: string, videoId: string, now = Date.n
     step: "normalize",
     error: undefined,
     report: undefined,
+    live: undefined,
   });
   return { ok: true, campaign, video: running };
 }
@@ -65,6 +66,15 @@ export async function startRun(campaignId: string, videoId: string, now = Date.n
 /** Runs the pipeline for a video startRun accepted. Never throws: failures are written to the entry. */
 export async function executeRun(campaign: Campaign, video: VideoEntry): Promise<VideoEntry> {
   let current = video;
+  // Step and progress writes go out one at a time, in order, so a late write never undoes an earlier one.
+  let queue = Promise.resolve();
+  // A failed write rejects its own caller only; the next write still runs.
+  const write = (next: (v: VideoEntry) => VideoEntry | Promise<VideoEntry>) =>
+    (queue = queue
+      .catch(() => undefined)
+      .then(async () => {
+        current = await putVideo(await next(current));
+      }));
   const workDir = await mkdtemp(join(tmpdir(), `st-${video.id}-`));
   try {
     const sourcePath = await localSource(video.sourceUrl ?? video.videoUrl, workDir, campaign.id);
@@ -81,18 +91,21 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
         productImageUrl,
         productImageSource: productImageUrl ? campaign.productImageUrl : undefined,
         guard: new CostGuard({ ...budget(), ledgerPath }),
-        onStep: async (step) => {
-          // Tracking starts right after normalization, so the normalized copy is complete here.
-          if (step === "track") {
-            const normalized = createReadStream(join(workDir, `${video.id}.mp4`));
-            current = { ...current, videoUrl: await saveVideoFile(campaign.id, video.id, normalized, "video/mp4", "normalized") };
-          }
-          current = await putVideo({ ...current, step });
-        },
+        onStep: (step) =>
+          write(async (v) => {
+            // Tracking starts right after normalization, so the normalized copy is complete here.
+            if (step === "track") {
+              const normalized = createReadStream(join(workDir, `${video.id}.mp4`));
+              v = { ...v, videoUrl: await saveVideoFile(campaign.id, video.id, normalized, "video/mp4", "normalized") };
+            }
+            return { ...v, step };
+          }),
+        onProgress: (live) => write((v) => ({ ...v, live })),
       }),
     );
     // Save the paid-for report first; stills are nice to have and are added afterwards if they work.
-    current = await putVideo({ ...current, status: "done", report, error: undefined });
+    await queue.catch(() => undefined);
+    current = await putVideo({ ...current, status: "done", report, error: undefined, live: undefined });
     try {
       const visuals = await saveVisuals(campaign.id, video.id, join(workDir, `${video.id}.mp4`), report, workDir);
       current = await putVideo({ ...current, ...visuals });
@@ -102,6 +115,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
     return current;
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
+    await queue.catch(() => undefined);
     return putVideo({ ...current, status: "failed", error }).catch(() => current);
   } finally {
     await rm(workDir, { recursive: true, force: true });

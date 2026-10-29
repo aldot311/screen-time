@@ -1,4 +1,4 @@
-import type { VideoReport } from "@/lib/types";
+import type { LiveProgress, VideoReport } from "@/lib/types";
 
 // A campaign is one brand brief applied to many creator videos.
 export interface Campaign {
@@ -67,4 +67,6 @@ export interface VideoEntry {
   /** Set when the creator sent the video through a request link: what they agreed to, and the link's one-time id. */
   consent?: { at: string; text: string };
   requestNonce?: string;
+  /** While a run is in progress: what it has found so far, for the live analysis view. Cleared when the run ends. */
+  live?: LiveProgress;
 }
