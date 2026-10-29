@@ -39,10 +39,14 @@ export function StepFindings({ step, live, videoUrl, brand }: { step: StepId; li
       return (
         <div className="space-y-2.5">
           {searches.map((s, i) => (
-            <p key={`${s.prompt}-${i}`} className={line}>
-              {i > 0 && "Then "}SAM 3.1 searched <span className="tabular">{s.samFrames}</span> frames for{" "}
-              <span className="font-semibold text-(--ink)">“{s.prompt}”</span> and tracked {plural(s.objects, "object")}.
-            </p>
+            <div key={`${s.prompt}-${i}`} className="space-y-1.5">
+              <p className={line}>
+                {i > 0 && "Then "}SAM 3.1 searched <span className="tabular">{s.samFrames}</span> frames for{" "}
+                <span className="font-semibold text-(--ink)">“{s.prompt}”</span>{" "}
+                {s.objects ? <>and tracked {plural(s.objects, "object")}.</> : "and found nothing."}
+              </p>
+              {s.next && <p className={`${line} border-l-2 border-(--hair-2) pl-3`}>Muse Spark checked the video: “{s.next}” It suggested another word to search for{i === searches.length - 1 ? "…" : "."}</p>}
+            </div>
           ))}
           {videoUrl && live.video && last.boxes.length > 0 && (
             <Filmstrip videoUrl={videoUrl} frameCount={live.video.frameCount} width={live.video.width} height={live.video.height} boxes={last.boxes} verdicts={verdicts} />

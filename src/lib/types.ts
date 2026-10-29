@@ -141,7 +141,14 @@ export interface VideoReport {
 export interface LiveProgress {
   video?: { frameCount: number; durationSec: number; width: number; height: number };
   /** One per SAM 3.1 pass: the prompt, how many objects it tracked, and a few of its boxes for the filmstrip. */
-  searches?: { prompt: string; objects: number; samFrames: number; boxes: (Detection & { verdict?: VerifyVerdict })[] }[];
+  searches?: {
+    prompt: string;
+    objects: number;
+    samFrames: number;
+    boxes: (Detection & { verdict?: VerifyVerdict })[];
+    /** Muse Spark's reason for suggesting another search word, when it did (the next search names the word). */
+    next?: string;
+  }[];
   /** Muse Spark's call on each tracked object, as each one comes back. */
   checks?: { prompt: string; objectId: number; verdict: VerifyVerdict; reason: string }[];
   /** Voice Transcribe: the brand mentions and spoken disclosures heard. `audio` is false when the video has no sound,

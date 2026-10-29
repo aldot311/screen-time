@@ -10,7 +10,13 @@ export function liveFromReport(r: VideoReport): LiveProgress {
   return {
     video: { frameCount: r.info.frameCount, durationSec: r.info.durationSec, width: r.info.width, height: r.info.height },
     // Only the search the report kept has its boxes; earlier searches are summarized.
-    searches: attempts.map((a) => ({ prompt: a.prompt, objects: a.objects, samFrames: a.samFrames, boxes: a.prompt === r.prompt ? boxes : [] })),
+    searches: attempts.map((a) => ({
+      prompt: a.prompt,
+      objects: a.objects,
+      samFrames: a.samFrames,
+      boxes: a.prompt === r.prompt ? boxes : [],
+      ...("next" in a && a.next ? { next: a.next } : {}),
+    })),
     checks: r.tracks.map((t) => ({ prompt: r.prompt, objectId: t.objectId, verdict: t.verdict, reason: t.reason })),
     heard: { mentions: r.metrics.mentions, disclosures: r.disclosure?.spoken ?? [] },
     measured: { secondsOnScreen: r.metrics.secondsOnScreen, shareOfVideo: r.metrics.shareOfVideo, firstSeenSec: r.metrics.firstSeenSec },

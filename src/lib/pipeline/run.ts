@@ -209,6 +209,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     try {
       const suggestion = await suggestPrompt(videoPath, info.frameCount, input, attempts, spend);
       if (!suggestion) break;
+      await progress({ searches: (live.searches ?? []).map((x, i, all) => (i === all.length - 1 ? { ...x, next: suggestion.reason } : x)) });
       await spend.reserve(estimate, `sam ${input.videoId} retry reserve`);
       const next = await trackAndVerify(suggestion.prompt, fileId, estimate, RETRY_VERIFY_TRACKS);
       attempts.at(-1)!.next = suggestion.reason;
