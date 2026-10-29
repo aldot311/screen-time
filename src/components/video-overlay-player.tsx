@@ -24,10 +24,13 @@ interface Props {
   boxes: OverlayBox[];
   onTime?: (sec: number) => void;
   showBoxes?: boolean;
+  poster?: string;
+  /** Muted, looping, no controls: the landing page's demo. */
+  ambient?: boolean;
 }
 
 export const VideoOverlayPlayer = forwardRef<PlayerHandle, Props>(function VideoOverlayPlayer(
-  { src, width, height, boxes, onTime, showBoxes = true },
+  { src, width, height, boxes, onTime, showBoxes = true, poster, ambient = false },
   ref,
 ) {
   const video = useRef<HTMLVideoElement>(null);
@@ -92,10 +95,14 @@ export const VideoOverlayPlayer = forwardRef<PlayerHandle, Props>(function Video
       <video
         ref={video}
         src={src}
+        poster={poster}
         className="absolute inset-0 size-full object-contain"
-        controls
+        controls={!ambient}
+        autoPlay={ambient}
+        muted={ambient}
+        loop={ambient}
         playsInline
-        preload="metadata"
+        preload={ambient ? "auto" : "metadata"}
       />
       {/* The video is letterboxed inside the 9:16 box; the overlay uses the same aspect so boxes line up. */}
       <div

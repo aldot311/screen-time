@@ -40,7 +40,14 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
 
       <div className="mt-6">
         {video.report && video.status === "done" ? (
-          <ReportView report={video.report} videoUrl={video.videoUrl} creator={video.creator} synthetic={video.synthetic ?? campaign.synthetic} />
+          <ReportView
+            report={video.report}
+            videoUrl={video.videoUrl}
+            creator={video.creator}
+            synthetic={video.synthetic ?? campaign.synthetic}
+            poster={video.thumbUrl}
+            cropUrls={video.cropUrls}
+          />
         ) : (
           <div className="grid gap-10 lg:grid-cols-[minmax(280px,360px)_1fr]">
             <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[10px] bg-ink shadow-2">

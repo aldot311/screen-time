@@ -82,8 +82,8 @@ export function localFileFromUrl(url: string, root = localStoreRoot()): string |
   return isFileKey(key) ? localPath(root, key) : null;
 }
 
-/** Only video files written by saveVideoFile are servable. */
-export const FILE_KEY_RE = /^campaigns\/[a-z0-9-]+\/files\/[a-z0-9-]+\/[a-z0-9-]+\.(mp4|mov)$/;
+/** Only files written by saveVideoFile and saveImageFile are servable. */
+export const FILE_KEY_RE = /^campaigns\/[a-z0-9-]+\/files\/[a-z0-9-]+\/[a-z0-9-]+\.(mp4|mov|jpg)$/;
 export const isFileKey = (key: string) => FILE_KEY_RE.test(key);
 
 let tmpCounter = 0;
@@ -251,12 +251,21 @@ export async function saveVideoFile(
   contentType: string,
   name = "source",
 ): Promise<string> {
+  const ext = EXTENSIONS[contentType];
+  if (!ext) throw new Error(`Unsupported video type ${contentType}`);
+  return saveFile(campaignId, videoId, name, ext, body, contentType);
+}
+
+/** Stores a JPEG still of a video (its thumbnail or a product crop) and returns its URL. */
+export async function saveImageFile(campaignId: string, videoId: string, name: string, body: Uint8Array): Promise<string> {
+  return saveFile(campaignId, videoId, name, "jpg", body, "image/jpeg");
+}
+
+async function saveFile(campaignId: string, videoId: string, name: string, ext: string, body: FileBody, contentType: string) {
   assertId("campaign", campaignId);
   assertId("video", videoId);
   assertId("file", name);
   if (campaignId === PREVIEW_ID) throw new ReadOnlyError();
-  const ext = EXTENSIONS[contentType];
-  if (!ext) throw new Error(`Unsupported video type ${contentType}`);
   return backend().putFile(`campaigns/${campaignId}/files/${videoId}/${name}.${ext}`, body, contentType);
 }
 

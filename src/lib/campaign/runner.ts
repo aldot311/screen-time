@@ -10,6 +10,7 @@ import { API_KEY_ENV } from "@/lib/meta/http";
 import { CostGuard } from "@/lib/meta";
 import { runVideo } from "@/lib/pipeline/run";
 import { isBlobUrl, MAX_VIDEO_BYTES } from "./schema";
+import { saveVisuals } from "./visuals";
 import { PREVIEW_ID } from "./preview";
 import { getCampaign, getVideo, localFileFromUrl, putVideo, saveVideoFile, withLedgerFile } from "./store";
 import type { Campaign, VideoEntry } from "./types";
@@ -87,7 +88,15 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
         },
       }),
     );
-    return await putVideo({ ...current, status: "done", report, error: undefined });
+    // Save the paid-for report first; stills are nice to have and are added afterwards if they work.
+    current = await putVideo({ ...current, status: "done", report, error: undefined });
+    try {
+      const visuals = await saveVisuals(campaign.id, video.id, join(workDir, `${video.id}.mp4`), report, workDir);
+      current = await putVideo({ ...current, ...visuals });
+    } catch {
+      // No thumbnail or crops; the report stands.
+    }
+    return current;
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     return putVideo({ ...current, status: "failed", error }).catch(() => current);

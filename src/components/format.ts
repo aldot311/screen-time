@@ -1,4 +1,4 @@
-import type { ContractRule, Segment, TermResult, VideoReport } from "@/lib/types";
+import { FPS, type ContractRule, type Segment, type TermResult, type VideoMetrics, type VideoReport } from "@/lib/types";
 
 /** 12.4 -> "0:12.4"; whole minutes for long clips. */
 export function timecode(sec: number): string {
@@ -68,4 +68,29 @@ export function friendlyError(error: string | undefined): string | undefined {
     [/\b5\d\d\b|unavailable|overloaded|timed? ?out/i, "Meta's API had a temporary problem. Run it again in a few minutes."],
   ];
   return rules.find(([re]) => re.test(error))?.[1] ?? error;
+}
+
+/** Frames to time ranges, bridging the same 2-frame gaps the metrics bridge. */
+export function framesToSegments(frames: number[]): Segment[] {
+  const sorted = [...new Set(frames)].sort((a, b) => a - b);
+  const out: Segment[] = [];
+  let start = -1;
+  let prev = -1;
+  for (const f of sorted) {
+    if (start >= 0 && f - prev <= 3) {
+      prev = f;
+      continue;
+    }
+    if (start >= 0) out.push({ startSec: start / FPS, endSec: (prev + 1) / FPS });
+    start = prev = f;
+  }
+  if (start >= 0) out.push({ startSec: start / FPS, endSec: (prev + 1) / FPS });
+  return out;
+}
+
+/** Screen time counted so far while a video plays: the detected frames shown before `sec`, so it ends exactly on
+ *  secondsOnScreen. Older reports without visibleFrames fall back to the segments, which include bridged gaps. */
+export function countedBefore(metrics: VideoMetrics, sec: number): number {
+  if (metrics.visibleFrames) return metrics.visibleFrames.filter((f) => f < sec * FPS).length / FPS;
+  return metrics.segments.reduce((sum, s) => sum + Math.max(0, Math.min(s.endSec, sec) - s.startSec), 0);
 }

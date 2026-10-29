@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { listCampaigns, listVideos } from "@/lib/campaign/store";
 import { verdictOf } from "@/components/format";
+import { Thumb } from "@/components/thumb";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Campaigns" };
@@ -15,6 +16,10 @@ export default async function CampaignsPage() {
       const verdicts = videos.map((v) => verdictOf(v.report));
       return {
         c,
+        thumbs: videos
+          .map((v) => v.thumbUrl)
+          .filter((u) => u !== undefined)
+          .slice(0, 4),
         total: videos.length,
         delivered: verdicts.filter((v) => v === "delivered").length,
         short: verdicts.filter((v) => v === "short").length,
@@ -43,18 +48,32 @@ export default async function CampaignsPage() {
       </div>
 
       <ul className="mt-6 divide-y divide-line rounded-[10px] border border-line bg-surface shadow-1 sm:hidden">
-        {rows.map(({ c, total, delivered, short, review, running, stopped }) => (
+        {rows.map(({ c, thumbs, total, delivered, short, review, running, stopped }) => (
           <li key={c.id}>
-            <Link href={`/campaigns/${c.id}`} className="block px-4 py-3">
-              <span className="flex items-center gap-2">
-                <span className="truncate font-medium">{c.name}</span>
-                {c.synthetic && <span className="shrink-0 rounded-full bg-sunken px-2 py-0.5 text-[11px] text-ink-3">Preview data</span>}
-              </span>
-              <span className="mt-0.5 block text-[12px] text-ink-3">
-                {c.brand} · {total} video{total === 1 ? "" : "s"}
-              </span>
-              <span className="mt-2 block">
-                <MixBar delivered={delivered} short={short} review={review} total={total} running={running} stopped={stopped} />
+            <Link href={`/campaigns/${c.id}`} className="flex items-center gap-4 px-4 py-3">
+              <ThumbStack thumbs={thumbs} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="truncate font-medium">{c.name}</span>
+                  {c.synthetic && (
+                    <span className="shrink-0 rounded-full bg-sunken px-2 py-0.5 text-[11px] text-ink-3">
+                      Preview data
+                    </span>
+                  )}
+                </span>
+                <span className="mt-0.5 block text-[12px] text-ink-3">
+                  {c.brand} · {total} video{total === 1 ? "" : "s"}
+                </span>
+                <span className="mt-2 block">
+                  <MixBar
+                    delivered={delivered}
+                    short={short}
+                    review={review}
+                    total={total}
+                    running={running}
+                    stopped={stopped}
+                  />
+                </span>
               </span>
             </Link>
           </li>
@@ -81,21 +100,35 @@ export default async function CampaignsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {rows.map(({ c, total, delivered, short, review, running, stopped }) => (
+            {rows.map(({ c, thumbs, total, delivered, short, review, running, stopped }) => (
               <tr key={c.id} className="hover:bg-sunken/50">
                 <td className="px-4 py-3">
-                  <Link href={`/campaigns/${c.id}`} className="font-medium hover:underline">
-                    {c.name}
-                  </Link>
-                  {c.synthetic && (
-                    <span className="ml-2 rounded-full bg-sunken px-2 py-0.5 text-[11px] text-ink-3">Preview data</span>
-                  )}
-                  <span className="block text-[12px] text-ink-3">{c.brand}</span>
+                  <span className="flex items-center gap-4">
+                    <ThumbStack thumbs={thumbs} />
+                    <span className="min-w-0">
+                      <Link href={`/campaigns/${c.id}`} className="font-medium hover:underline">
+                        {c.name}
+                      </Link>
+                      {c.synthetic && (
+                        <span className="ml-2 rounded-full bg-sunken px-2 py-0.5 text-[11px] text-ink-3">
+                          Preview data
+                        </span>
+                      )}
+                      <span className="block text-[12px] text-ink-3">{c.brand}</span>
+                    </span>
+                  </span>
                 </td>
                 <td className="max-w-[320px] px-4 py-3 text-ink-2">{c.productDescription}</td>
                 <td className="px-4 py-3 text-right tabular">{total}</td>
                 <td className="px-4 py-3">
-                  <MixBar delivered={delivered} short={short} review={review} total={total} running={running} stopped={stopped} />
+                  <MixBar
+                    delivered={delivered}
+                    short={short}
+                    review={review}
+                    total={total}
+                    running={running}
+                    stopped={stopped}
+                  />
                 </td>
               </tr>
             ))}
@@ -117,7 +150,14 @@ export default async function CampaignsPage() {
   );
 }
 
-function MixBar(props: { delivered: number; short: number; review: number; total: number; running: number; stopped: number }) {
+function MixBar(props: {
+  delivered: number;
+  short: number;
+  review: number;
+  total: number;
+  running: number;
+  stopped: number;
+}) {
   const { delivered, short, review, total, running, stopped } = props;
   const w = (n: number) => `${total ? (n / total) * 100 : 0}%`;
   return (
@@ -135,6 +175,20 @@ function MixBar(props: { delivered: number; short: number; review: number; total
           {[running && `${running} in progress`, stopped && `${stopped} stopped`].filter(Boolean).join(", ")}
         </span>
       )}
+    </span>
+  );
+}
+
+// Up to four creator stills fanned out, so a campaign reads as the set of videos it covers.
+function ThumbStack({ thumbs }: { thumbs: string[] }) {
+  if (!thumbs.length) return <Thumb className="w-8" />;
+  return (
+    <span className="flex shrink-0 -space-x-4">
+      {thumbs.map((t, i) => (
+        <span key={t} className="rounded-[6px] ring-2 ring-surface" style={{ zIndex: thumbs.length - i }}>
+          <Thumb src={t} className="w-8" />
+        </span>
+      ))}
     </span>
   );
 }

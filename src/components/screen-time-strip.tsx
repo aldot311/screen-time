@@ -20,6 +20,8 @@ interface Props {
   longest?: Segment | null;
   onSeek?: (sec: number) => void;
   size?: "full" | "mini";
+  /** Draw only what has played so far, so the strip fills in as the video plays (the landing demo). */
+  fillTo?: number;
 }
 
 export function ScreenTimeStrip({
@@ -34,6 +36,7 @@ export function ScreenTimeStrip({
   longest = null,
   onSeek,
   size = "full",
+  fillTo,
 }: Props) {
   const track = useRef<HTMLDivElement>(null);
   const [widthPx, setWidthPx] = useState(800);
@@ -61,6 +64,11 @@ export function ScreenTimeStrip({
   );
 
   const ticks = mini ? [] : rulerTicks(d, Math.max(3, Math.floor(widthPx / 70)));
+  if (fillTo !== undefined) {
+    segments = segments.filter((s) => s.startSec < fillTo).map((s) => ({ ...s, endSec: Math.min(s.endSec, fillTo) }));
+    mentions = mentions.filter((m) => m.startSec <= fillTo);
+    rejected = rejected.filter((s) => s.startSec < fillTo).map((s) => ({ ...s, endSec: Math.min(s.endSec, fillTo) }));
+  }
 
   return (
     <div className={mini ? "w-full" : "w-full select-none"}>
@@ -108,7 +116,7 @@ export function ScreenTimeStrip({
         ))}
         {segments.map((s) => (
           <div
-            key={`${s.startSec}-${s.endSec}`}
+            key={s.startSec}
             className="absolute inset-y-0 bg-lime"
             style={{ left: pct(s.startSec), width: `max(2px, calc(${pct(s.endSec)} - ${pct(s.startSec)}))` }}
           />

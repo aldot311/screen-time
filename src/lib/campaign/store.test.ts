@@ -15,6 +15,7 @@ import {
   putCampaign,
   putVideo,
   ReadOnlyError,
+  saveImageFile,
   saveVideoFile,
   slugify,
 } from "./store";
@@ -89,6 +90,9 @@ describe("local store", () => {
     expect(localPath(dir, "campaigns/../../outside.json")).toBeNull();
     expect(isFileKey("campaigns/fall/files/v1/../../../../etc/passwd")).toBe(false);
     expect(isFileKey("campaigns/fall/videos/v1.json")).toBe(false);
+    expect(isFileKey("campaigns/fall/files/v1/thumb.jpg")).toBe(true);
+    expect(isFileKey("campaigns/fall/files/v1/thumb.png")).toBe(false);
+    await expect(saveImageFile("fall", "v1", "../thumb", new Uint8Array(1))).rejects.toBeInstanceOf(InvalidIdError);
     expect(localFileFromUrl("/api/store/file?path=..%2F..%2Fpackage.json", dir)).toBeNull();
     expect(localFileFromUrl("https://evil.example/x.mp4", dir)).toBeNull();
   });

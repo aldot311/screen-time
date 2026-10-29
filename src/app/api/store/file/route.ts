@@ -4,9 +4,9 @@ import { Readable } from "node:stream";
 import { devOnly, parseRange } from "@/lib/dev/files";
 import { isFileKey, localPath, localStoreRoot } from "@/lib/campaign/store";
 
-const TYPES: Record<string, string> = { mp4: "video/mp4", mov: "video/quicktime" };
+const TYPES: Record<string, string> = { mp4: "video/mp4", mov: "video/quicktime", jpg: "image/jpeg" };
 
-// Serves videos from the local store (dev only) with Range support, so the player can seek.
+// Serves videos and stills from the local store (dev only) with Range support, so the player can seek.
 export async function GET(req: Request) {
   const blocked = devOnly();
   if (blocked) return blocked;

@@ -3,6 +3,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { putCampaign, putVideo, saveVideoFile, slugify } from "@/lib/campaign/store";
+import { saveVisuals } from "@/lib/campaign/visuals";
 import type { VideoReport } from "@/lib/types";
 
 const outDir = process.argv[2] ?? "data/out";
@@ -20,6 +21,11 @@ const BRANDS: Record<string, string> = {
   "stanley-tumbler": "Stanley",
   "new-balance-sneaker": "New Balance",
   "singaraja-can": "Singaraja",
+  // Unbranded stock products: named for what they are.
+  "blue-can": "Blue can",
+  "coffee-cup": "Coffee cup",
+  sneakers: "Canvas sneakers",
+  "water-bottle": "Water bottle",
 };
 
 // Target definitions come from the labels, so prompts and product descriptions match the runs.
@@ -51,7 +57,12 @@ for (const name of await readdir(outDir)) {
     const report: VideoReport = JSON.parse(await readFile(join(outDir, name, rel), "utf8"));
     const clipId = report.videoId;
     const workDir = join(outDir, name, rel.replace(/\/?report\.json$/, ""));
-    const videoUrl = await saveVideoFile(id, clipId, await readFile(join(workDir, `${clipId}.mp4`)), "video/mp4", "normalized");
+    const videoPath = join(workDir, `${clipId}.mp4`);
+    const videoUrl = await saveVideoFile(id, clipId, await readFile(videoPath), "video/mp4", "normalized");
+    const visuals = await saveVisuals(id, clipId, videoPath, report, workDir).catch((err) => {
+      console.warn(`${id}/${clipId}: no stills (${err instanceof Error ? err.message : err})`);
+      return {};
+    });
     await putVideo({
       id: clipId,
       campaignId: id,
@@ -61,6 +72,7 @@ for (const name of await readdir(outDir)) {
       status: "done",
       step: "contract",
       report,
+      ...visuals,
       createdAt: now,
       updatedAt: now,
     });

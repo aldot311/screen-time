@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { getCampaign, listVideos } from "@/lib/campaign/store";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ScreenTimeStrip } from "@/components/screen-time-strip";
+import { Thumb } from "@/components/thumb";
 import { UploadVideos } from "@/components/upload-videos";
 import { VideoStatus } from "@/components/video-status";
 import { friendlyError, seconds, termCounts, timecode, verdictOf } from "@/components/format";
@@ -69,9 +70,12 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                 <li key={v.id}>
                   <Link href={`/campaigns/${campaign.id}/videos/${v.id}`} className="block px-4 py-3">
                     <span className="flex items-center justify-between gap-3">
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{v.creator}</span>
-                        <span className="block truncate text-[12px] text-ink-3">{v.title}</span>
+                      <span className="flex min-w-0 items-center gap-3">
+                        <Thumb src={v.thumbUrl} />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{v.creator}</span>
+                          <span className="block truncate text-[12px] text-ink-3">{v.title}</span>
+                        </span>
                       </span>
                       <span className="shrink-0">
                         <VideoStatus video={v} showReason={false} />
@@ -111,11 +115,14 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                   const href = `/campaigns/${campaign.id}/videos/${v.id}`;
                   return (
                     <tr key={v.id} className="group hover:bg-sunken/50">
-                      <td className="px-4 py-3">
-                        <Link href={href} className="font-medium group-hover:underline">
-                          {v.creator}
+                      <td className="px-4 py-2.5">
+                        <Link href={href} className="flex items-center gap-3">
+                          <Thumb src={v.thumbUrl} />
+                          <span className="min-w-0">
+                            <span className="block font-medium group-hover:underline">{v.creator}</span>
+                            <span className="block max-w-[180px] truncate text-[12px] text-ink-3">{v.title}</span>
+                          </span>
                         </Link>
-                        <span className="block max-w-[200px] truncate text-[12px] text-ink-3">{v.title}</span>
                       </td>
                       <td className="px-4 py-3">
                         {r ? (

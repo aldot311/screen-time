@@ -2,10 +2,10 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Check, CircleHelp, Mic, ScanSearch, X } from "lucide-react";
-import { FPS, type Segment, type TermResult, type VideoReport } from "@/lib/types";
+import type { Segment, TermResult, VideoReport } from "@/lib/types";
 import { ScreenTimeStrip } from "./screen-time-strip";
 import { VideoOverlayPlayer, type PlayerHandle } from "./video-overlay-player";
-import { percent, seconds, termCounts, termWindow, timecode, verdictOf } from "./format";
+import { countedBefore, framesToSegments, percent, seconds, termCounts, termWindow, timecode, verdictOf } from "./format";
 import { VerdictBadge } from "./verdict-badge";
 
 interface Props {
@@ -13,9 +13,12 @@ interface Props {
   videoUrl: string;
   creator?: string;
   synthetic?: boolean;
+  poster?: string;
+  /** A still of each tracked object at its largest, keyed by objectId. */
+  cropUrls?: Record<string, string>;
 }
 
-export function ReportView({ report, videoUrl, synthetic }: Props) {
+export function ReportView({ report, videoUrl, synthetic, poster, cropUrls = {} }: Props) {
   const player = useRef<PlayerHandle>(null);
   const [time, setTime] = useState(0);
   const [focus, setFocus] = useState<TermResult | null>(null);
@@ -44,6 +47,7 @@ export function ReportView({ report, videoUrl, synthetic }: Props) {
           <VideoOverlayPlayer
             ref={player}
             src={videoUrl}
+            poster={poster}
             width={report.info.width}
             height={report.info.height}
             boxes={boxes}
@@ -123,7 +127,14 @@ export function ReportView({ report, videoUrl, synthetic }: Props) {
             {rejectedSegments.length > 0 && <Legend swatch="border border-dashed border-fail" label="Look-alike, not counted" />}
             {focus && termWindow(focus.term.rule) && <Legend swatch="border border-dashed border-ink-3" label="Term window" />}
           </span>
-          <span className="font-mono tabular text-ink-2">{timecode(time)}</span>
+          <span className="flex items-center gap-3 tabular">
+            {time > 0 && (
+              <span className="text-ink-2">
+                <span className="font-medium text-ink">{countedBefore(m, time).toFixed(1)} s</span> counted so far
+              </span>
+            )}
+            <span className="font-mono text-ink-2">{timecode(time)}</span>
+          </span>
         </div>
         <ScreenTimeStrip
           durationSec={report.info.durationSec}
@@ -151,13 +162,25 @@ export function ReportView({ report, videoUrl, synthetic }: Props) {
             <ul className="mt-3 space-y-3">
               {report.tracks.map((t) => (
                 <li key={t.objectId} className="flex gap-3">
-                  <span
-                    className={[
-                      "mt-1 size-3 shrink-0 rounded-[3px]",
-                      t.verdict === "match" ? "bg-lime ring-1 ring-lime-ink/20" : "border-2 border-dashed border-fail",
-                    ].join(" ")}
-                    aria-hidden
-                  />
+                  {cropUrls[t.objectId] ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- stored stills, already small JPEGs
+                    <img
+                      src={cropUrls[t.objectId]}
+                      alt=""
+                      className={[
+                        "h-[72px] w-[54px] shrink-0 rounded-[6px] object-cover",
+                        t.verdict === "match" ? "ring-2 ring-lime" : "ring-2 ring-fail/70 ring-offset-1 ring-offset-surface",
+                      ].join(" ")}
+                    />
+                  ) : (
+                    <span
+                      className={[
+                        "mt-1 size-3 shrink-0 rounded-[3px]",
+                        t.verdict === "match" ? "bg-lime ring-1 ring-lime-ink/20" : "border-2 border-dashed border-fail",
+                      ].join(" ")}
+                      aria-hidden
+                    />
+                  )}
                   <span>
                     <span className="font-medium">
                       {t.verdict === "match" ? "Brand product" : t.verdict === "lookalike" ? "Look-alike, not counted" : "Unclear, not counted"}
@@ -266,22 +289,4 @@ const VISIBILITY = { clear: "label readable", partial: "partly covered", blurred
 
 function longestSegment(segments: Segment[]): Segment | null {
   return segments.reduce<Segment | null>((best, s) => (!best || s.endSec - s.startSec > best.endSec - best.startSec ? s : best), null);
-}
-
-/** Frames to time ranges, bridging the same 2-frame gaps the metrics bridge. */
-function framesToSegments(frames: number[]): Segment[] {
-  const sorted = [...new Set(frames)].sort((a, b) => a - b);
-  const out: Segment[] = [];
-  let start = -1;
-  let prev = -1;
-  for (const f of sorted) {
-    if (start >= 0 && f - prev <= 3) {
-      prev = f;
-      continue;
-    }
-    if (start >= 0) out.push({ startSec: start / FPS, endSec: (prev + 1) / FPS });
-    start = prev = f;
-  }
-  if (start >= 0) out.push({ startSec: start / FPS, endSec: (prev + 1) / FPS });
-  return out;
 }
