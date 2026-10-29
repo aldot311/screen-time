@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Check, Copy, Link2, RotateCcw } from "lucide-react";
 import type { AgentRun } from "@/lib/agent/campaign-agent";
+import { agentRunning } from "@/lib/agent/state";
 import { ApiError } from "@/components/api-error";
 import { Spinner } from "./pending-link";
 import { useFlash } from "./use-flash";
@@ -46,7 +47,8 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
     }
   }
 
-  const running = agent?.status === "running";
+  // A run cut off by the time limit stays "running" in the store; after a while it can be started again.
+  const running = agentRunning(agent);
   const draft = note ?? agent?.note ?? "";
   const shell = "rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair) sm:p-5";
 

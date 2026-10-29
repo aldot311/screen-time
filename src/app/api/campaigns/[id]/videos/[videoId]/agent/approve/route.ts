@@ -9,6 +9,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string; v
   const video = await getVideo(id, videoId);
   if (!video) return Response.json({ error: "Video not found" }, { status: 404 });
   if (!video.agent?.recut) return Response.json({ error: "The agent has not queued a re-cut request for this video" }, { status: 409 });
+  // One approval per queued request: a second click never mints another upload credential.
+  if (video.agent.recut.approvedAt)
+    return Response.json({ error: "Already approved. Make a new link from the campaign's creator list if you need one." }, { status: 409 });
   const secret = linkSecret();
   if (!secret) return Response.json({ error: "Request links are switched off on this deployment." }, { status: 503 });
   const issued = await issueRequest(id, video.creator, secret);

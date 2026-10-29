@@ -10,7 +10,8 @@ import { ffmpeg } from "./index";
 
 export const PROOF_W = 720;
 export const PROOF_H = 1280;
-const PROOF_TIMEOUT_MS = 180_000;
+// Inside the route's 120 s limit, so ffmpeg is stopped (and the work dir cleaned) before the function is.
+const PROOF_TIMEOUT_MS = 100_000;
 
 const COLOR = { ink: "0x14130f", signal: "0xc5f03a", reject: "0xc2392b", voice: "0x5446d0", pass: "0x137a4c", short: "0xc2392b", review: "0x8c5e00" };
 

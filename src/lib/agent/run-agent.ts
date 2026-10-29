@@ -7,8 +7,6 @@ import { getVideo, listVideos, updateVideo, withLedgerFile } from "@/lib/campaig
 import type { Campaign, VideoEntry } from "@/lib/campaign/types";
 import { runAgent, type AgentRun } from "./campaign-agent";
 
-/** An agent run untouched this long was cut off (the function's time limit) and may be started again. */
-export const AGENT_STALE_MS = 6 * 60 * 1000;
 
 export async function executeAgent(campaign: Campaign, video: VideoEntry): Promise<AgentRun> {
   // Step writes go out one at a time, in order; a failed write never blocks the next.

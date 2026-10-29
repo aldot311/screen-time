@@ -525,7 +525,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             override={override}
             overrideEndpoint={overrideEndpoint}
           />
-          {agentEndpoint && <AgentPanel endpoint={agentEndpoint} agent={agent} creator={creator} />}
+          {agentEndpoint && <AgentPanel key={agent?.startedAt ?? "none"} endpoint={agentEndpoint} agent={agent} creator={creator} />}
           <div>
             <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               <ShareReport title={`${title} · ${creator}`} />

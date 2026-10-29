@@ -11,6 +11,7 @@ import { feeFor } from "@/lib/campaign/money";
 import type { Campaign, VideoEntry } from "@/lib/campaign/types";
 
 export const AGENT_MAX_TURNS = 8;
+export { AGENT_STALE_MS, agentRunning } from "./state";
 /** What one Muse Spark turn reserves (as each Spark call in the pipeline). */
 export const AGENT_TURN_USD = 0.02;
 
@@ -150,8 +151,10 @@ export async function runAgent(
     }
   };
   let analyzed = false;
-  // The deterministic verdict of the creator's latest finished video: "pay" is refused unless it is "delivered".
+  // The deterministic verdict of the creator's newest finished video (this one, or a re-cut that already finished):
+  // "pay" is refused unless it is "delivered".
   let latest = video;
+  for (const v of await world.history()) if (v.status === "done" && v.report && v.createdAt > latest.createdAt) latest = v;
 
   const tools: Record<string, (args: Record<string, unknown>) => Promise<string>> = {
     get_report: async () => JSON.stringify(reportFor(campaign, video)),
@@ -167,7 +170,13 @@ export async function runAgent(
       if (!target) return JSON.stringify({ error: "No such video from this creator in this campaign." });
       if (target.status !== "uploaded") return JSON.stringify({ error: `That video is ${target.status}, not waiting.` });
       analyzed = true;
-      const done = await world.analyze(target.id);
+      let done: VideoEntry;
+      try {
+        done = await world.analyze(target.id);
+      } catch (err) {
+        // A failed re-check is the agent's to report, not the end of the follow-up.
+        return JSON.stringify({ error: `The check could not run: ${err instanceof Error ? err.message : String(err)}` });
+      }
       if (done.status === "done" && done.report) latest = done;
       return JSON.stringify(done.status === "done" ? reportFor(campaign, done) : { videoId: done.id, status: done.status, error: done.error });
     },

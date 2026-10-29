@@ -7,6 +7,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { friendlyError, verdictOf } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
+import { agentRunning } from "@/lib/agent/campaign-agent";
 import { feeFor, latestFinished } from "@/lib/campaign/money";
 import { sameHandle } from "@/lib/campaign/roster";
 import { VerdictPill } from "@/components/ed/bits";
@@ -56,7 +57,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   const stalled = phase === "uploaded";
   const running = phase === "running" || phase === "starting";
   // The follow-up agent writes its steps to the video as it works: refresh while it does.
-  const agentWorking = video.agent?.status === "running";
+  const agentWorking = agentRunning(video.agent);
   const synthetic = Boolean(video.synthetic ?? campaign.synthetic);
   const title = humanTitle(video.title);
   // A re-cut from a creator on the roster replaces this video for pay or hold. (A test set's clips from one handle

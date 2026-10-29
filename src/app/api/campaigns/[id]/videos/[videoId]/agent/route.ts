@@ -3,7 +3,8 @@ import { API_KEY_ENV } from "@/lib/meta/http";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
 import { TRY_ID } from "@/lib/campaign/try";
 import { getCampaign, getVideo, updateVideo } from "@/lib/campaign/store";
-import { AGENT_STALE_MS, executeAgent } from "@/lib/agent/run-agent";
+import { executeAgent } from "@/lib/agent/run-agent";
+import { agentRunning } from "@/lib/agent/campaign-agent";
 
 // The agent runs after the response; re-checking a re-cut inside it needs the same time as a run.
 export const maxDuration = 300;
@@ -17,9 +18,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string; v
   const video = campaign ? await getVideo(id, videoId) : null;
   if (!campaign || !video) return Response.json({ error: "Video not found" }, { status: 404 });
   if (video.status !== "done" || !video.report) return Response.json({ error: "The agent follows up on a finished report" }, { status: 409 });
-  const busy = video.agent?.status === "running" && Date.now() - Date.parse(video.updatedAt) < AGENT_STALE_MS;
+  // Checked inside the atomic update, so two clicks at once start one agent.
+  let busy = false;
+  const started = await updateVideo(id, videoId, (v) => {
+    busy = agentRunning(v.agent);
+    return busy ? v : { ...v, agent: { status: "running", startedAt: new Date().toISOString(), steps: [], usd: 0 } };
+  });
   if (busy) return Response.json({ error: "The follow-up agent is already working on this video" }, { status: 409 });
-  const started = await updateVideo(id, videoId, (v) => ({ ...v, agent: { status: "running", startedAt: new Date().toISOString(), steps: [], usd: 0 } }));
   if (!started) return Response.json({ error: "Video not found" }, { status: 404 });
   after(() => executeAgent(campaign, started));
   return Response.json(started.agent, { status: 202 });
