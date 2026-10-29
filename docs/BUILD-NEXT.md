@@ -41,13 +41,14 @@ Aldo approved every item below on 2026-10-29.
     /campaigns/new), then re-score with all five judges until a round finds nothing material.
 
 ## State
-- Items 1-8 done and pushed: money + phone verdict (7abf357), live view + replay (885bc28, 46a3d16), receipt +
-  compiled rules (c3e8dfc), accuracy page + ablation (5d92390), revision request / look flags / override (c499fa6),
-  try a sample (c03eee6, 7f5e7eb), photo beside crop + feature checks (91a5617). Review fixes in d2687c0.
-- Production (screen-time-inky.vercel.app) still runs the build from before item 1; redeploy once the review of
-  items 6-7 is clean (Aldo approved production on 2026-10-29).
-- Production reports predate receipts, feature checks and live progress; re-running the hero clips there would show
-  them (costs about $0.10-0.15 each).
+- Items 1-10 done and pushed (latest b53e071): money + phone verdict, live view + replay, receipt + compiled rules,
+  accuracy page + ablation, revision request / look flags / override, try a sample, photo beside crop + feature
+  checks, follow-up agent (Muse Spark tool calling), proof clip + per-report share card. Production redeployed with
+  all of it on 2026-10-29 (screen-time-inky.vercel.app) and checked: a visitor's sample run goes live end to end.
+- Fixed on the way to production (never seen locally): Vercel's ffmpeg is 7.0.2 (no drawtext, no frame count on a
+  stream copy) and Blob's weak ETags broke every update of a large document. Linux test path: Docker (see memory).
+- Production reports from before tonight have no receipts, feature checks or live progress; re-running the hero
+  clips there would show them (about $0.10 each, needs the demo password).
 - 2026-10-29: the five features plus two deep review rounds are committed (545e7a2) and pushed. Preview:
   https://screen-time-gyxfq1zmq-aldos-projects-dcad187d.vercel.app (Vercel login). Production not deployed (needs Aldo's OK).
 - Accepted low findings: "sponsored by" also matches a creator describing someone else's sponsored video; bulk links
