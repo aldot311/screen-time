@@ -72,6 +72,7 @@ pnpm dev                     # http://localhost:3000
 | `META_MODEL_API_KEY` | Meta Model API key (required for runs) |
 | `SCREEN_TIME_PASSWORD` | 12+ characters; required in production for any change (create, upload, run) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob store; without it, data lives in `data/store` |
+| `BLOB_STORE_HOST` | The store's public host (`<id>.public.blob.vercel-storage.com`); needed for newer Blob tokens, which do not contain the store id |
 | `SCREEN_TIME_MAX_USD_PER_VIDEO` / `SCREEN_TIME_MAX_USD_TOTAL` | Spend caps (default $0.50 / $20) |
 
 From the command line:
