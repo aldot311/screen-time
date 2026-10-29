@@ -16,7 +16,7 @@ export interface RequestClaims {
 
 /** The words the creator agrees to; stored with the video so the consent is on record. */
 export function consentText(brand: string): string {
-  return `I agree that ${brand} may analyse this video with AI (Meta SAM 3.1, Muse Spark and Muse Voice Transcribe) to check the sponsorship terms.`;
+  return `I agree that ${brand} may analyze this video with AI (Meta SAM 3.1, Muse Spark and Muse Voice Transcribe) to check the sponsorship terms.`;
 }
 
 /**

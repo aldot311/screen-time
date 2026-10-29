@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Info } from "lucide-react";
 import { getCampaign, listVideos } from "@/lib/campaign/store";
 import { STEPS } from "@/lib/campaign/types";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -71,7 +72,8 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   const running = rows.filter((r) => r.status === "running" || r.status === "uploaded").length;
   const waiting = rows.filter((r) => r.status === "waiting").length;
   const stopped = rows.filter((r) => r.status === "failed").length;
-  const totalOnScreen = done.reduce((s, r) => s + floor10(r.seconds ?? 0), 0);
+  // Exact per-video values summed once, floored only for display (the campaign list does the same).
+  const totalOnScreen = done.reduce((s, r) => s + (r.seconds ?? 0), 0);
   const totalDuration = done.reduce((s, r) => s + (r.durationSec ?? 0), 0);
   const lookalikes = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict !== "match").length ?? 0), 0);
   const csv = `/api/campaigns/${campaign.id}/export.csv`;
@@ -80,7 +82,32 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     ? `${plural(videos.length, "test video")} from ${oneHandle}`
     : `${plural(videos.length, "video")} from ${plural(handles.size, "creator")}`;
 
-  const rest = [short && `${short} fell short`, review && `${review} need${review === 1 ? "s" : ""} review`].filter(Boolean) as string[];
+  // Name the dominant failure when there is one: which kind of term the misses have in common.
+  const said = `“${campaign.brandTerms[0] ?? campaign.brand}”`;
+  const shortVideos = videos.filter((v) => v.status === "done" && verdictOf(v.report) === "short");
+  const kinds = shortVideos.map((v) => {
+    const failed = (v.report?.terms ?? []).filter((t) => t.pass === false);
+    const voice = failed.filter((t) => t.term.rule?.kind === "mentioned");
+    return {
+      voice: voice.length > 0,
+      silent: voice.some((t) => /\b0 times\b/.test(t.detail)),
+      screen: failed.some((t) => t.term.rule && t.term.rule.kind !== "mentioned"),
+    };
+  });
+  const nVoice = kinds.filter((k) => k.voice).length;
+  const nScreen = kinds.filter((k) => k.screen).length;
+  const allSilent = kinds.every((k) => !k.voice || k.silent);
+  const voicePhrase = allSilent ? `never said ${said}` : `did not say ${said} enough`;
+  let missLine: string | null = null;
+  if (short > 0) {
+    const all = (n: number) => (short === 1 ? "The miss" : n === short ? `All ${short} misses` : `${n} of the ${short} misses`);
+    if (nVoice >= nScreen && nVoice * 2 > short)
+      missLine = `${all(nVoice)} ${voicePhrase}${nVoice === short && nScreen ? `; ${nScreen} were also short on screen time` : ""}.`;
+    else if (nScreen * 2 > short)
+      missLine = `${all(nScreen)} fell short on screen time${nScreen === short && nVoice ? `; ${nVoice} also ${voicePhrase}` : ""}.`;
+    else missLine = `${short} fell short.`;
+  }
+  const reviewLine = review ? `${review} need${review === 1 ? "s" : ""} review.` : null;
   const after = [
     running && `${running} still being checked`,
     waiting && `${waiting} waiting for you to run`,
@@ -122,9 +149,10 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                   </>
                 ) : (
                   <>
-                    <span className="ed-num">{delivered}</span> of <span className="ed-num">{done.length}</span> delivered what the
+                    <span className="ed-num">{delivered}</span> of <span className="ed-num">{videos.length}</span> delivered what the
                     contract asked.
-                    {rest.length > 0 && <span className="text-(--short)"> {rest.join(", ")}.</span>}
+                    {missLine && <span className="text-(--short)"> {missLine}</span>}
+                    {reviewLine && <span className="text-(--review)"> {reviewLine}</span>}
                   </>
                 )}
               </p>
@@ -165,10 +193,13 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
               )}
 
               {campaign.synthetic && (
-                <p className="mt-4 max-w-[70ch] rounded-(--r-inner) bg-(--review-soft) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--review)">
-                  <span className="font-semibold">Preview data.</span> These reports come from hand-checked labels run through the
+                <p className="mt-4 flex max-w-[70ch] gap-2.5 rounded-(--r-inner) bg-(--paper) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--ink-2) ring-1 ring-(--hair-2)">
+                  <Info className="mt-px size-[17px] shrink-0 text-(--ink)" strokeWidth={2.25} aria-hidden />
+                  <span>
+                  <span className="font-semibold text-(--ink)">Preview data.</span> These reports come from hand-checked labels run through the
                   real metrics and contract code, so you can see a report before any live model run. New campaigns run the full
                   Meta pipeline.
+                  </span>
                 </p>
               )}
             </header>

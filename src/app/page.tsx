@@ -4,6 +4,8 @@ import { LiveReplay } from "@/components/ed/live-replay";
 import { PendingLink } from "@/components/ed/pending-link";
 import { TopBar } from "@/components/ed/top-bar";
 import { Wordmark } from "@/components/ed/bits";
+import { getVideo } from "@/lib/campaign/store";
+import { tenths } from "@/components/format";
 
 export const dynamic = "force-dynamic";
 
@@ -38,30 +40,35 @@ const STEPS = [
 ];
 
 // A sample of docs/ACCURACY.md, the weakest rows included on purpose. Each row is one product check (a target) and
-// opens the report it came from, named the way the report names it.
+// opens the report it came from, named the way the report names it. "Measured" is read from that stored report and
+// floored to tenths like every figure in the app; the values here are the fallback when a store lacks the run.
 const SAMPLE = [
   { clip: "clip02", target: "Alani Nu can", campaign: "alani-nu-test-runs", truth: "12.0", measured: "12.0", precision: "100%", recall: "100%" },
-  { clip: "clip12", target: "Alani Nu can", note: "A Stanley tumbler beside it", campaign: "alani-nu-test-runs", truth: "9.8", measured: "10.3", precision: "95%", recall: "100%" },
-  { clip: "clip07", target: "Stanley tumbler", campaign: "stanley-test-runs", truth: "11.0", measured: "11.3", precision: "96%", recall: "99%" },
-  { clip: "clip01", target: "Alani Nu can", note: "The can leaves the frame", campaign: "alani-nu-test-runs", truth: "4.0", measured: "4.9", precision: "79%", recall: "97%", weak: "precision" },
+  { clip: "clip12", target: "Alani Nu can", note: "A Stanley tumbler beside it", campaign: "alani-nu-test-runs", truth: "9.8", measured: "10.2", precision: "95%", recall: "100%" },
+  { clip: "clip07", target: "Stanley tumbler", note: "Stanley test run, with the 3-term contract", campaign: "stanley-test-runs", truth: "11.0", measured: "11.3", precision: "96%", recall: "99%" },
+  { clip: "clip01", target: "Alani Nu can", note: "The can leaves the frame", campaign: "alani-nu-test-runs", truth: "4.0", measured: "4.8", precision: "79%", recall: "97%", weak: "precision" },
   { clip: "clip15", target: "Stanley tumbler", note: "An Alani can in the same shot", campaign: "stanley-test-runs", truth: "3.4", measured: "2.6", precision: "97%", recall: "75%", weak: "recall" },
-  { clip: "clip08", target: "New Balance sneaker", campaign: "new-balance-test-runs", truth: "1.6", measured: "1.5", precision: "100%", recall: "92%" },
+  { clip: "clip08", target: "New Balance sneaker", campaign: "new-balance-test-runs", truth: "1.6", measured: "1.4", precision: "100%", recall: "92%" },
   { clip: "clip05", target: "Alani Nu can", note: "Only a look-alike in shot, must count 0", campaign: "alani-nu-test-runs", truth: "0.0", measured: "0.0", precision: "–", recall: "–" },
 ] as const;
 
 const btnPrimary =
   "inline-flex h-14 items-center justify-center gap-2 rounded-full bg-(--ink) px-7 text-[16px] font-semibold text-white shadow-(--sh-2) hover:bg-black active:bg-black/80 lg:px-6";
+// A text link on a phone (so the replay stays on the first screen), a button from sm up.
 const btnSecondary =
-  "inline-flex h-14 items-center justify-center gap-2 rounded-full bg-(--card) px-7 text-[16px] font-semibold shadow-(--sh-1) ring-1 ring-(--hair) hover:ring-(--hair-2) active:bg-(--wash) lg:px-6";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full text-[15px] font-semibold text-(--ink) underline decoration-(--hair-2) decoration-2 underline-offset-4 active:bg-(--wash) sm:h-14 sm:bg-(--card) sm:px-7 sm:text-[16px] sm:no-underline sm:shadow-(--sh-1) sm:ring-1 sm:ring-(--hair) sm:hover:ring-(--hair-2) lg:px-6";
 const navLink =
   "ed-press hidden h-10 items-center rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) hover:bg-(--wash) hover:text-(--ink) active:bg-(--hair) md:inline-flex";
 
 export default async function Landing() {
   const { hero, lookalike } = await loadShowcase();
+  // Lead with the clear case (another brand's tumbler in clip12), then the counted can, then the blurred can Muse
+  // Spark judged a different Alani flavor.
   const verdicts = [
     ...(hero ? hero.video.report.tracks.map((t) => ({ show: hero, track: t })) : []),
     ...(lookalike ? lookalike.video.report.tracks.map((t) => ({ show: lookalike, track: t })) : []),
-  ];
+  ].sort((a, b) => rank(a) - rank(b));
+  const rows = await measuredRows();
 
   return (
     <>
@@ -89,9 +96,9 @@ export default async function Landing() {
       />
 
       <main className="flex-1">
-        {/* Phone: headline, the replay, then the actions, so the proof is on the first screen. Desktop: copy and
-            actions on the left, the replay beside them. */}
-        <section className="mx-auto grid w-full max-w-[1200px] gap-x-14 gap-y-6 px-4 pt-5 pb-14 sm:gap-y-9 sm:px-6 sm:pt-8 lg:grid-cols-[minmax(0,1fr)_600px] lg:grid-rows-[auto_auto] lg:gap-y-0 lg:px-8 lg:pt-14 lg:pb-24">
+        {/* Phone: headline, intro, the primary action, then the replay, whose top still lands on the first screen.
+            Desktop: copy and actions on the left, the replay beside them. */}
+        <section className="mx-auto grid w-full max-w-[1200px] gap-x-14 gap-y-5 px-4 pt-5 pb-14 sm:gap-y-9 sm:px-6 sm:pt-8 lg:grid-cols-[minmax(0,1fr)_600px] lg:grid-rows-[auto_auto] lg:gap-y-0 lg:px-8 lg:pt-14 lg:pb-24">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:self-end">
             <h1 className="ed-display max-w-[11ch] text-[42px] leading-[0.96] sm:text-[72px] lg:text-[84px]">
               Proof your product was{" "}
@@ -105,6 +112,26 @@ export default async function Landing() {
               <span className="hidden sm:inline">Brands pay creators for screen time they cannot check. </span>
               Screen-Time watches every frame of a sponsored video with Meta SAM 3.1, rejects look-alikes with Muse Spark,
               hears your brand with Muse Voice Transcribe, and checks the contract to the second.
+            </p>
+          </div>
+
+
+          <div className="min-w-0 lg:col-start-1 lg:row-start-2 lg:self-start lg:pt-8">
+            <div className="flex flex-col items-stretch gap-1 sm:flex-row sm:flex-wrap sm:gap-3">
+              <PendingLink href={hero?.href ?? "/campaigns"} className={btnPrimary}>
+                Open a real report <ArrowRight className="size-[18px]" strokeWidth={2.25} aria-hidden />
+              </PendingLink>
+              <PendingLink href="/campaigns" className={btnSecondary}>
+                See every campaign
+              </PendingLink>
+            </div>
+            <p className="mt-5 hidden text-[14px] text-(--ink-3) sm:block">
+              <a href="#accuracy" className="ed-press -mx-2 inline-flex min-h-11 items-center rounded-full px-2 hover:text-(--ink) active:bg-(--wash)">
+                <span>
+                  <span className="font-semibold text-(--ink) tabular">97.7%</span> precision ·{" "}
+                  <span className="font-semibold text-(--ink) tabular">95.6%</span> recall per frame on real test videos
+                </span>
+              </a>
             </p>
           </div>
 
@@ -123,25 +150,6 @@ export default async function Landing() {
               </figcaption>
             </figure>
           )}
-
-          <div className="min-w-0 lg:col-start-1 lg:row-start-2 lg:self-start lg:pt-8">
-            <div className="grid gap-3 sm:flex sm:flex-wrap">
-              <PendingLink href={hero?.href ?? "/campaigns"} className={btnPrimary}>
-                Open a real report <ArrowRight className="size-[18px]" strokeWidth={2.25} aria-hidden />
-              </PendingLink>
-              <PendingLink href="/campaigns" className={btnSecondary}>
-                See every campaign
-              </PendingLink>
-            </div>
-            <p className="mt-5 text-[14px] text-(--ink-3)">
-              <a href="#accuracy" className="ed-press -mx-2 inline-flex min-h-11 items-center rounded-full px-2 hover:text-(--ink) active:bg-(--wash)">
-                <span>
-                  <span className="font-semibold text-(--ink) tabular">97.7%</span> precision ·{" "}
-                  <span className="font-semibold text-(--ink) tabular">95.6%</span> recall per frame on real test videos
-                </span>
-              </a>
-            </p>
-          </div>
         </section>
 
         <section id="how" className="scroll-mt-20 border-t border-(--hair) bg-(--card)">
@@ -209,7 +217,7 @@ export default async function Landing() {
             <h2 className="ed-display max-w-[22ch] text-[34px] leading-[1.04] sm:text-[44px]">Measured frame by frame against hand-checked labels.</h2>
             <p className="mt-5 max-w-[44ch] text-[21px] leading-[1.4] text-(--ink-2) sm:text-[24px]">
               <span className="ed-num text-(--ink)">97.7%</span> precision and <span className="ed-num text-(--ink)">95.6%</span>{" "}
-              recall per frame, over 23 product checks on 20 labelled test videos.
+              recall per frame, over 23 product checks on 20 labeled test videos.
             </p>
             <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-3)">
               Three of the videos show two products, and each product is checked on its own. SAM 3.1 tracking costs
@@ -223,14 +231,14 @@ export default async function Landing() {
                 aria-hidden
               >
                 <span>Product check</span>
-                <span className="text-right">Labelled</span>
+                <span className="text-right">Labeled</span>
                 <span className="text-right">Measured</span>
                 <span className="text-right">Precision</span>
                 <span className="text-right">Recall</span>
                 <span />
               </div>
               <ul className="divide-y divide-(--hair)">
-                {SAMPLE.map((r) => (
+                {rows.map((r) => (
                   <li key={`${r.clip}-${r.target}`}>
                     <PendingLink
                       href={`/campaigns/${r.campaign}/videos/${r.clip}`}
@@ -240,7 +248,7 @@ export default async function Landing() {
                       <span className="min-w-0">
                         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span className="text-[15px] font-semibold">
-                            <span className="ed-tc text-[13px] font-normal text-(--ink-3)">{r.clip}</span> · {r.target} target
+                            <span className="font-medium text-(--ink-3) tabular">{r.clip}</span> · {r.target} target
                           </span>
                           {"weak" in r && <WeakTag label={`Weakest ${r.weak}`} />}
                         </span>
@@ -248,7 +256,7 @@ export default async function Landing() {
                       </span>
                       <ChevronRight className="size-5 self-center text-(--ink-3) md:order-last" strokeWidth={2.25} aria-hidden />
                       <dl className="col-span-2 grid grid-cols-4 gap-2 text-[12px] text-(--ink-3) md:col-span-4 md:col-start-2 md:row-start-1 md:grid-cols-subgrid md:gap-4">
-                        <Stat label="Labelled" value={`${r.truth} s`} />
+                        <Stat label="Labeled" value={`${r.truth} s`} />
                         <Stat label="Measured" value={`${r.measured} s`} strong />
                         <Stat label="Precision" value={r.precision} strong={"weak" in r && r.weak === "precision"} />
                         <Stat label="Recall" value={r.recall} strong={"weak" in r && r.weak === "recall"} />
@@ -309,6 +317,25 @@ export default async function Landing() {
   );
 }
 
+/** What Muse Spark actually said about the blurred can in clip05: a different Alani flavor, not the Peach can. */
+const CARD_NAMES: Record<string, string> = { "clip05-0": "Different Alani flavor (not Peach)" };
+
+function rank({ show, track }: { show: Showcased; track: Showcased["video"]["report"]["tracks"][number] }): number {
+  if (show.video.id === "clip12") return track.verdict === "match" ? 1 : 0;
+  return 2;
+}
+
+/** The sample rows with "Measured" read from each stored report (floored to tenths), falling back to the doc values. */
+async function measuredRows() {
+  return Promise.all(
+    SAMPLE.map(async (r) => {
+      const v = await getVideo(r.campaign, r.clip).catch(() => null);
+      const sec = v?.status === "done" ? v.report?.metrics.secondsOnScreen : undefined;
+      return { ...r, measured: sec === undefined ? r.measured : tenths(sec) };
+    }),
+  );
+}
+
 function Stat({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="md:text-right">
@@ -330,8 +357,8 @@ function WeakTag({ label }: { label: string }) {
 function VerdictCard({ show, track }: { show: Showcased; track: Showcased["video"]["report"]["tracks"][number] }) {
   const match = track.verdict === "match";
   const crop = show.video.cropUrls?.[track.objectId];
-  const name = show.names[track.objectId] ?? "Tracked object";
-  const label = match ? "Counted" : track.verdict === "lookalike" ? "Look-alike · not counted" : "Unclear · not counted";
+  const name = CARD_NAMES[`${show.video.id}-${track.objectId}`] ?? show.names[track.objectId] ?? "Tracked object";
+  const label = match ? "Counted" : "Not counted";
   return (
     <li>
       <PendingLink
@@ -355,7 +382,9 @@ function VerdictCard({ show, track }: { show: Showcased; track: Showcased["video
           <span
             className={[
               "inline-flex h-6 w-fit items-center rounded-full px-2.5 text-[12px] font-semibold",
-              match ? "bg-(--signal) text-(--signal-ink)" : "bg-(--reject-soft) text-(--reject)",
+              match
+                ? "bg-(--signal) text-(--signal-ink)"
+                : "bg-(--card) text-(--reject) outline-[1.5px] -outline-offset-[1.5px] outline-(--reject) outline-dashed",
             ].join(" ")}
           >
             {label}

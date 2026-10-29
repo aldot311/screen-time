@@ -94,14 +94,15 @@ export function UnlockForm() {
             {shown ? <EyeOff className="size-5" strokeWidth={2} aria-hidden /> : <Eye className="size-5" strokeWidth={2} aria-hidden />}
           </button>
         </div>
-        <div aria-live="assertive">
+        {/* The one live region: always rendered, so each new error is announced exactly once. */}
+        <p id={errorId} aria-live="assertive" aria-atomic>
           {error && (
-            <p id={errorId} role="alert" className="mt-2 flex items-start gap-1.5 text-[14px] leading-snug font-medium text-(--short)">
+            <span className="mt-2 flex items-start gap-1.5 text-[14px] leading-snug font-medium text-(--short)">
               <CircleAlert className="mt-px size-[17px] shrink-0" strokeWidth={2.25} aria-hidden />
               {error}
-            </p>
+            </span>
           )}
-        </div>
+        </p>
       </div>
 
       <button

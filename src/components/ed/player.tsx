@@ -49,6 +49,8 @@ interface Props {
   showBoxes?: boolean;
   /** Where the video sits while docked (fixed position, size, radius). */
   dockClassName?: string;
+  /** Open paused on this moment (the report's best frame) instead of frame 0. */
+  initialSec?: number;
 }
 
 const DEFAULT_DOCK =
@@ -81,6 +83,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
     poster,
     showBoxes = true,
     dockClassName = DEFAULT_DOCK,
+    initialSec,
   },
   ref,
 ) {
@@ -90,6 +93,8 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
   // A stop point only counts once the jump to the new start has landed; otherwise a stale frame from before the jump
   // (past the new end) would stop playback at once.
   const stopArmed = useRef(false);
+  // Opened on a best frame: the first plain "play" starts the video from the beginning.
+  const played = useRef(false);
   const [frame, setFrame] = useState(0);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(ambient);
@@ -183,6 +188,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       report(v.currentTime);
     };
     const onPlay = () => {
+      played.current = true;
       setFramed(true);
       setPlaying(true);
       onPlayingChange?.(true);
@@ -191,10 +197,12 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       setPlaying(false);
       onPlayingChange?.(false);
     };
-    // A decoded frame is on screen: drop the poster and draw that frame's boxes.
+    // A decoded frame is on screen: drop the poster and draw that frame's boxes. With an opening moment, go there first
+    // (the poster stays up until that frame has landed).
     const onLoaded = () => {
       setLoaded(true);
-      setFramed(true);
+      if (initialSec && initialSec > 0 && v.currentTime < 0.01 && v.paused) v.currentTime = (Math.floor(initialSec * FPS) + 0.5) / FPS;
+      else setFramed(true);
     };
     if (v.readyState >= 2) onLoaded();
     v.addEventListener("seeked", onSeeked);
@@ -211,6 +219,8 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       v.removeEventListener("loadeddata", onLoaded);
       v.removeEventListener("ended", onPause);
     };
+    // initialSec only matters for the first load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onTime, onPlayingChange]);
 
   const current = useMemo(
@@ -232,6 +242,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
     const v = video.current;
     if (!v) return;
     stopAt.current = null;
+    if (v.paused && !played.current && initialSec) v.currentTime = 0;
     if (v.paused) void v.play().catch(() => undefined);
     else v.pause();
   };
@@ -252,7 +263,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
         <video
           ref={video}
           src={src}
-          poster={loaded ? undefined : poster}
+          poster={framed ? undefined : poster}
           className="absolute inset-0 size-full object-contain"
           autoPlay={ambient}
           muted={muted}
@@ -376,7 +387,7 @@ interface PlacedLabel {
 /**
  * Places one tag per box, counted first: above the box, then below, then inside its top edge, left- or right-aligned,
  * always clamped inside the frame and never on top of another tag. Then finds a spot for the paused play glyph on the
- * vertical centre line that covers no tag (centre, lower, upper), or hides it: the whole frame is still the play button.
+ * vertical center line that covers no tag (center, lower, upper), or hides it: the whole frame is still the play button.
  */
 function layoutLabels(
   current: OverlayBox[],
@@ -402,8 +413,9 @@ function layoutLabels(
 
   order.forEach((b, i) => {
     const match = b.verdict === "match";
-    let text = match ? "Counted" : ambient ? "Not counted" : b.verdict === "lookalike" ? "Look-alike · not counted" : "Unclear · not counted";
-    if (!match && W < 220) text = "Not counted";
+    // Each tag names the model that made the call: SAM 3.1 found the product, Muse Spark rejected the look-alike.
+    let text = match ? "SAM 3.1 · Brand product" : "Muse Spark · Not counted";
+    if (W < 220) text = match ? "SAM 3.1" : "Not counted";
     const w = Math.min(W - pad * 2, text.length * 6.3 + 18);
     const r = boxRects[i];
     const clampX = (x: number) => Math.min(Math.max(x, pad), W - w - pad);

@@ -1,4 +1,4 @@
-// The landing replay's timeline, in the report's encoding at replay scale: one labelled lane per signal. On screen
+// The landing replay's timeline, in the report's encoding at replay scale: one labeled lane per signal. On screen
 // (lime, counted seconds only), Look-alike (hatched red, seen but never counted) and Said aloud (violet). Each lane
 // draws only what the replay has played so far; the playhead runs across all of them. Display only: the landing
 // replay is a loop, not a scrubber.

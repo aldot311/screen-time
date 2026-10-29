@@ -5,7 +5,7 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 // The share card in the Editorial palette: the mark, the headline with lime on "seen." (the one brand use of the
-// signal colour), and the product's own strip below, lime where it was on screen, a dashed red look-alike, a violet
+// signal color), and the product's own strip below, lime where it was on screen, a dashed red look-alike, a violet
 // spoken mention and the playhead.
 const PAPER = "#f7f6f2";
 const INK = "#14130f";

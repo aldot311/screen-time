@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, CircleAlert, Plus } from "lucide-react";
 import { ApiError } from "@/components/api-error";
 import { Spinner } from "@/components/ed/pending-link";
 import { DISPLAY } from "@/components/ed/campaign-ui";
@@ -22,7 +22,7 @@ const REQUIRED: Record<string, string> = {
 };
 
 const INPUT =
-  "block w-full rounded-(--r-ctl) bg-(--card) px-3.5 text-[16px] text-(--ink) shadow-[0_1px_1px_rgb(20_19_15/0.03)] ring-1 ring-(--hair-2) outline-none transition-shadow duration-150 placeholder:text-(--ink-3) focus:ring-2 focus:ring-(--ink) focus-visible:outline-none! aria-invalid:ring-2 aria-invalid:ring-(--short)";
+  "block w-full rounded-(--r-ctl) bg-(--card) px-3.5 text-[16px] text-(--ink) shadow-[0_1px_1px_rgb(20_19_15/0.03)] ring-1 ring-(--hair-2) outline-none transition-shadow duration-150 placeholder:text-[#a8a298] focus:ring-2! focus:ring-(--ink) focus-visible:outline-none! aria-invalid:ring-2! aria-invalid:ring-(--short) aria-invalid:focus:ring-(--short)";
 
 export function NewCampaignForm() {
   const router = useRouter();
@@ -33,8 +33,18 @@ export function NewCampaignForm() {
   const [invalid, setInvalid] = useState<Record<string, string>>({});
   const [terms, setTerms] = useState(EXAMPLE_TERMS.slice(0, 3).join("\n"));
   // On a phone the keyboard needs the room: the sticky Create bar steps aside while a text field has focus.
-  const [typing, setTyping] = useState(false);
-  const isText = (t: EventTarget) => t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement;
+  const [keyboard, setKeyboard] = useState(false);
+  const contract = useRef<HTMLTextAreaElement>(null);
+
+  // On a phone the Create bar steps aside only while the on-screen keyboard is open (the visual viewport shrinks by
+  // more than 150px), not on every focus.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const check = () => setKeyboard(window.innerHeight - vv.height > 150);
+    vv.addEventListener("resize", check);
+    return () => vv.removeEventListener("resize", check);
+  }, []);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -65,7 +75,12 @@ export function NewCampaignForm() {
       brand: get("brand"),
       prompt: get("prompt"),
       productDescription: get("productDescription"),
-      brandTerms: list("brandTerms", /,/),
+      // Blank spoken names default to the brand when a term asks the creator to say it.
+      brandTerms: list("brandTerms", /,/).length
+        ? list("brandTerms", /,/)
+        : list("contractTerms", /\n/).some((t) => /\b(say|says|said|mention|mentions|mentioned|spoken)\b/i.test(t))
+          ? [get("brand")]
+          : [],
       contractTerms: list("contractTerms", /\n/),
     };
     try {
@@ -97,8 +112,6 @@ export function NewCampaignForm() {
       ref={form}
       onSubmit={submit}
       noValidate
-      onFocus={(e) => isText(e.target) && setTyping(true)}
-      onBlur={(e) => isText(e.target) && setTyping(false)}
       className="mt-8 grid gap-x-14 gap-y-9 lg:grid-cols-2"
     >
       <p className="-mt-4 text-[13.5px] text-(--ink-3) lg:col-span-2">
@@ -132,7 +145,7 @@ export function NewCampaignForm() {
             name="productDescription"
             required
             error={invalid.productDescription}
-            hint="Muse Spark checks every find against this and rejects look-alikes from other brands. Colour, shape and logo help most."
+            hint="Muse Spark checks every find against this and rejects look-alikes from other brands. Color, shape and logo help most."
           >
             <textarea
               id="f-productDescription"
@@ -151,11 +164,16 @@ export function NewCampaignForm() {
 
       <div className="min-w-0 space-y-7">
         <Group title="The contract">
-          <Field label="Spoken brand names" name="brandTerms" hint="Comma-separated. Voice Transcribe listens for these in the audio.">
+          <Field
+            label="Spoken brand names"
+            name="brandTerms"
+            hint="Comma-separated. Voice Transcribe listens for these in the audio. Left blank, it listens for the brand name when a term asks the creator to say it."
+          >
             <input id="f-brandTerms" name="brandTerms" placeholder="e.g. Alani, Alani Nu" autoComplete="off" enterKeyHint="next" aria-describedby="f-brandTerms-hint" className={`${INPUT} h-12`} />
           </Field>
           <Field label="Contract terms" name="contractTerms" hint="One per line, in plain English. Muse Spark turns each into a rule that is checked to the frame.">
             <textarea
+              ref={contract}
               id="f-contractTerms"
               name="contractTerms"
               value={terms}
@@ -173,7 +191,16 @@ export function NewCampaignForm() {
                     <button
                       key={t}
                       type="button"
-                      onClick={() => setTerms((s) => (s.trim() ? `${s.trim()}\n${t}` : t))}
+                      onClick={() => {
+                        setTerms((s) => (s.trim() ? `${s.trim()}\n${t}` : t));
+                        // Land the caret after the added line, ready to edit it.
+                        requestAnimationFrame(() => {
+                          const el = contract.current;
+                          if (!el) return;
+                          el.focus();
+                          el.setSelectionRange(el.value.length, el.value.length);
+                        });
+                      }}
                       className="ed-press inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-(--card) py-2 pr-4 pl-3 text-left text-[14px] leading-tight font-medium text-(--ink) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
                     >
                       <Plus className="size-4 shrink-0 text-(--ink-2)" strokeWidth={2.5} aria-hidden />
@@ -187,17 +214,18 @@ export function NewCampaignForm() {
         </Group>
 
         {error && (
-          <div ref={errorNote} role="alert" className="rounded-(--r-inner) bg-(--short-soft) px-4 py-3 text-[14.5px] leading-snug">
+          <div ref={errorNote} role="alert" className="flex items-start gap-1.5 text-[14.5px] leading-snug font-medium text-(--short)">
+            <CircleAlert className="mt-px size-[17px] shrink-0" strokeWidth={2.25} aria-hidden />
             <ApiError message={error} />
           </div>
         )}
 
-        {/* On a phone the submit sits in thumb reach on top of the tab bar (and steps aside for the keyboard); from md
-            up it ends the contract column. */}
+        {/* On a phone the submit sits in thumb reach at the bottom edge (this task flow has no tab bar) and steps aside
+            while the keyboard is open; from md up it ends the contract column. */}
         <div
           className={[
-            "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+58px)] z-30 border-t border-(--hair)/70 bg-[rgb(250_249_246/0.86)] px-4 py-2.5 backdrop-blur-[18px] backdrop-saturate-[1.6] transition-[opacity,translate] duration-200 md:static md:translate-y-0 md:border-0 md:bg-transparent md:p-0 md:opacity-100 md:backdrop-blur-none md:backdrop-saturate-100",
-            typing ? "pointer-events-none translate-y-4 opacity-0 md:pointer-events-auto" : "",
+            "fixed inset-x-0 bottom-0 z-30 border-t border-(--hair)/70 bg-[rgb(250_249_246/0.86)] px-4 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+10px)] backdrop-blur-[18px] backdrop-saturate-[1.6] transition-[opacity,translate] duration-200 md:static md:translate-y-0 md:border-0 md:bg-transparent md:p-0 md:opacity-100 md:backdrop-blur-none md:backdrop-saturate-100",
+            keyboard ? "pointer-events-none translate-y-4 opacity-0 md:pointer-events-auto" : "",
           ].join(" ")}
         >
           <div className="mx-auto flex max-w-[480px] items-center gap-4 md:mx-0 md:max-w-none">
@@ -247,7 +275,8 @@ function Field(props: { label: string; name: string; hint?: string; error?: stri
       )}
       <div className="mt-2">{props.children}</div>
       {props.error && (
-        <p id={`${id}-err`} className="mt-1.5 text-[13.5px] font-medium text-(--short)">
+        <p id={`${id}-err`} className="mt-1.5 flex items-start gap-1.5 text-[14px] leading-snug font-medium text-(--short)">
+          <CircleAlert className="mt-px size-[17px] shrink-0" strokeWidth={2.25} aria-hidden />
           {props.error}
         </p>
       )}

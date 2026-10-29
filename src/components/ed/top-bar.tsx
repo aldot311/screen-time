@@ -1,4 +1,5 @@
 import { ChevronLeft } from "lucide-react";
+import { CurrentLink } from "./top-bar-link";
 import type { ReactNode } from "react";
 import { Wordmark } from "./bits";
 import { PendingLink } from "./pending-link";
@@ -33,13 +34,13 @@ export function TopBar({ back, right, appNav = true }: { back?: { href: string; 
             <nav aria-label="App" className="hidden items-center gap-1 md:flex">
               {/* No link that repeats the back link beside it. */}
               {back?.href !== "/campaigns" && (
-                <PendingLink href="/campaigns" className="inline-flex h-11 items-center rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) [@media(hover:hover)]:hover:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink) active:bg-(--hair)">
+                <CurrentLink href="/campaigns" className="inline-flex h-11 items-center rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) [@media(hover:hover)]:hover:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink) active:bg-(--hair)">
                   Campaigns
-                </PendingLink>
+                </CurrentLink>
               )}
-              <PendingLink href="/campaigns/new" className="inline-flex h-11 items-center rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) [@media(hover:hover)]:hover:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink) active:bg-(--hair)">
-                New campaign
-              </PendingLink>
+              <CurrentLink href="/campaigns/new" className="inline-flex h-11 items-center rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) [@media(hover:hover)]:hover:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink) active:bg-(--hair)">
+                  New campaign
+                </CurrentLink>
             </nav>
           )}
           {right}

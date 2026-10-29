@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
-import { getCampaign, getVideo } from "@/lib/campaign/store";
+import { getCampaign, getVideo, listCampaigns } from "@/lib/campaign/store";
 import { loadShowcase } from "@/lib/campaign/showcase";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { friendlyError } from "@/components/format";
@@ -23,8 +23,12 @@ export async function generateMetadata({ params }: PageProps<"/campaigns/[id]/vi
 
 export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/videos/[videoId]">) {
   const { id, videoId } = await params;
-  const [campaign, video, showcase] = await Promise.all([getCampaign(id), getVideo(id, videoId), loadShowcase()]);
+  const [campaign, video, showcase, all] = await Promise.all([getCampaign(id), getVideo(id, videoId), loadShowcase(), listCampaigns()]);
   if (!campaign || !video) notFound();
+  // When a brand has several campaigns, the back link names which one: "Stanley · Live demo".
+  const sibling = all.filter((c) => c.brand === campaign.brand).length > 1;
+  const short = campaign.name.replace(/^[^:]+:\s*/, "");
+  const backLabel = sibling && short ? `${campaign.brand} · ${short.charAt(0).toUpperCase()}${short.slice(1)}` : campaign.brand;
   // A creator's link submission waits for the brand to start it; the brand's own upload starts by itself. Only poll
   // while something is actually going to change.
   const waiting = video.status === "uploaded" && Boolean(video.consent);
@@ -43,7 +47,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
   return (
     <>
       <AutoRefresh active={running} everyMs={1500} />
-      <TopBar back={{ href: `/campaigns/${campaign.id}`, label: campaign.brand }} />
+      <TopBar back={{ href: `/campaigns/${campaign.id}`, label: backLabel }} />
       <main className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(env(safe-area-inset-bottom)+128px)] sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 lg:pb-24">
         {video.status === "done" && video.report ? (
           <ReportClient
@@ -104,7 +108,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
                 {video.status === "failed"
                   ? "The analysis stopped before it finished."
                   : waiting
-                    ? "Ready to analyse."
+                    ? "Ready to analyze."
                     : video.status === "uploaded"
                       ? "Uploaded. The analysis starts in a moment."
                       : video.status === "done"

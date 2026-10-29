@@ -19,7 +19,7 @@ const HERO: Pick = {
 const LOOKALIKE: Pick = {
   campaignId: "alani-nu-test-runs",
   videoId: "clip05",
-  names: { "0": "Blue-and-white can" },
+  names: { "0": "Different Alani flavor (not Peach)" },
 };
 
 export interface Showcased {

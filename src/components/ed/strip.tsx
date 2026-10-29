@@ -25,6 +25,8 @@ interface Props {
   ruler?: boolean;
   /** Spoken-mention evidence lights violet, everything else ink. */
   evidenceTone?: "ink" | "voice";
+  /** While playing: seconds before this are full lime, after it faded, so the fill grows with playback. */
+  progress?: number | null;
 }
 
 export function Strip({
@@ -42,6 +44,7 @@ export function Strip({
   fillTo,
   ruler = size === "full",
   evidenceTone = "ink",
+  progress = null,
 }: Props) {
   const track = useRef<HTMLDivElement>(null);
   const [widthPx, setWidthPx] = useState(360);
@@ -145,16 +148,28 @@ export function Strip({
               style={span(s.startSec, s.endSec, 3)}
             />
           ))}
-          {segs.map((s) => (
-            <div key={s.startSec} className="absolute inset-y-0 bg-(--signal)" style={span(s.startSec, s.endSec)} />
-          ))}
+          {segs.map((s) =>
+            progress === null || progress >= s.endSec ? (
+              <div key={s.startSec} className="absolute inset-y-0 bg-(--signal)" style={span(s.startSec, s.endSec)} />
+            ) : progress <= s.startSec ? (
+              <div key={s.startSec} className="absolute inset-y-0 bg-(--signal)/35" style={span(s.startSec, s.endSec)} />
+            ) : (
+              <span key={s.startSec}>
+                <div className="absolute inset-y-0 bg-(--signal)" style={span(s.startSec, progress, 0)} />
+                <div className="absolute inset-y-0 bg-(--signal)/35" style={span(progress, s.endSec, 0)} />
+              </span>
+            ),
+          )}
           {evidence.map((s) => (
             <div
               key={`ev-${flashKey}-${s.startSec}-${s.endSec}`}
               className={
-                evidenceTone === "voice"
-                  ? "ed-flash absolute inset-y-0 rounded-[3px] bg-(--voice)/35 shadow-[inset_0_0_0_2px_var(--voice)]"
-                  : "ed-flash absolute inset-y-0 rounded-[3px] shadow-[inset_0_0_0_2px_var(--ink)]"
+                size === "full"
+                  ? evidenceTone === "voice"
+                    ? "ed-flash absolute inset-y-0 rounded-[3px] bg-(--voice)/35 shadow-[inset_0_0_0_2px_var(--voice)]"
+                    : "ed-flash absolute inset-y-0 rounded-[3px] shadow-[inset_0_0_0_2px_var(--ink)]"
+                  : // In the dock: a bar along the bottom edge, not an outline.
+                    `absolute bottom-0 h-[5px] rounded-full ${evidenceTone === "voice" ? "bg-(--voice)" : "bg-(--signal-ink)"}`
               }
               style={span(s.startSec, s.endSec, 6)}
             />
@@ -169,7 +184,7 @@ export function Strip({
           {ments.map((m) => (
             <div
               key={`m-${m.startSec}`}
-              title={`"${m.text}" at ${timecode(m.startSec)}`}
+              title={`Voice Transcribe: "${m.text}" at ${timecode(m.startSec)}`}
               className={size === "mini" ? "absolute inset-y-0 w-[3px] bg-(--voice)" : "absolute bottom-0 h-3/5 w-[3px] rounded-t-[2px] bg-(--voice)"}
               style={{ left: pct(m.startSec) }}
             />

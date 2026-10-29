@@ -7,18 +7,27 @@ import { UnlockForm } from "./unlock-form";
 
 export const metadata: Metadata = { title: "Demo access" };
 
+// Full-bleed on a phone (the page is the surface); a raised card from sm up.
 export default function UnlockPage() {
   return (
     <>
       <TopBar back={{ href: "/campaigns", label: "Campaigns" }} />
       <main className="flex flex-1 items-start justify-center px-4 pt-8 pb-16 sm:items-center sm:px-6 sm:py-16">
-        <div className="w-full max-w-[440px] rounded-[28px] bg-(--card) p-6 shadow-(--sh-3) ring-1 ring-black/[0.04] sm:p-9">
+        <div className="w-full max-w-[440px] sm:rounded-[28px] sm:bg-(--card) sm:p-9 sm:shadow-(--sh-3) sm:ring-1 sm:ring-black/[0.04]">
           <span className="grid size-12 place-items-center rounded-[14px] bg-(--ink) text-white shadow-(--sh-1)">
             <LockKeyhole className="size-[22px]" strokeWidth={2} aria-hidden />
           </span>
-          <h1 className="ed-display mt-6 text-[34px] leading-[1.02] sm:text-[40px]">Demo access</h1>
-          <p className="mt-3 text-[16px] leading-[1.55] text-(--ink-2)">
-            Anyone can read reports. Uploading and analysing videos uses paid Meta API credits, so it needs the demo
+          <h1 className="ed-display mt-6 text-[36px] leading-[1.02] sm:text-[40px]">Demo access</h1>
+          <p className="mt-3 text-[17px] leading-[1.45] font-medium text-(--ink)">
+            Screen-Time checks that your product was{" "}
+            <span className="relative inline-block">
+              <span className="absolute inset-x-[-0.12em] top-[0.12em] bottom-[0.02em] rounded-[0.18em] bg-(--signal)" aria-hidden />
+              <span className="relative">seen</span>
+            </span>{" "}
+            in creator video, to the second.
+          </p>
+          <p className="mt-2 text-[16px] leading-[1.55] text-(--ink-2)">
+            Anyone can read reports. Uploading and analyzing videos uses paid Meta API credits, so it needs the demo
             password.
           </p>
           <Suspense fallback={<FormSkeleton />}>

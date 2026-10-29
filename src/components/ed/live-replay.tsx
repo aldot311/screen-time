@@ -113,7 +113,10 @@ export function LiveReplay({ report, videoUrl, poster, cropUrls = {}, names = {}
         {/* Counter and crops: side by side on a phone, stacked in the right column from sm up. */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-5 gap-y-3 px-2 pt-5 pb-1 sm:col-start-2 sm:row-start-1 sm:grid-cols-1 sm:gap-y-4 sm:px-0 sm:pt-1 sm:pb-0">
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-(--ink-2)">Product on screen</p>
+            <p className="text-[13px] leading-snug font-medium text-(--ink-2)">
+              Product on screen
+              <span className="block text-[12px] font-normal text-(--ink-3)">SAM 3.1 + Muse Spark</span>
+            </p>
             <p className="mt-1 flex items-baseline gap-1">
               <span className="ed-num text-[56px] leading-[0.9] sm:text-[64px]" aria-live="off">
                 <Figure value={counted} />
@@ -167,7 +170,8 @@ export function LiveReplay({ report, videoUrl, poster, cropUrls = {}, names = {}
               <span className="inline-flex items-start gap-1.5">
                 <span className="mt-[3px] inline-block h-3.5 w-[3px] shrink-0 rounded-sm bg-(--voice)" aria-hidden />
                 <span>
-                  Heard &ldquo;{heard.at(-1)!.text}&rdquo; at <span className="ed-tc">{timecode(heard.at(-1)!.startSec)}</span>
+                  <span className="font-medium text-(--ink)">Voice Transcribe</span> heard &ldquo;{heard.at(-1)!.text}&rdquo; at{" "}
+                  <span className="ed-tc">{timecode(heard.at(-1)!.startSec)}</span>
                 </span>
               </span>
             )}

@@ -27,6 +27,7 @@ async function summarize(c: Campaign) {
     running: videos.filter((v) => v.status === "running" || (v.status === "uploaded" && !v.consent)).length,
     waiting: videos.filter((v) => v.status === "uploaded" && v.consent).length,
     stopped: videos.filter((v) => v.status === "failed").length,
+    // Exact per-video values summed once and floored only for display, exactly as the roll-up does.
     seconds: done.reduce((s, v) => s + (v.report?.metrics.secondsOnScreen ?? 0), 0),
   };
 }
@@ -34,11 +35,18 @@ async function summarize(c: Campaign) {
 export default async function CampaignsPage() {
   const cards = await Promise.all((await listCampaigns()).map(summarize));
 
-  // Campaigns that share a brand sit together under the brand; single-campaign brands follow, each card naming its brand.
-  const byBrand = new Map<string, Card[]>();
-  for (const k of cards) byBrand.set(k.c.brand, [...(byBrand.get(k.c.brand) ?? []), k]);
-  const groups = [...byBrand.entries()].filter(([, ks]) => ks.length > 1);
-  const singles = [...byBrand.values()].filter((ks) => ks.length === 1).flat();
+  // Sorted by brand. Brands with one campaign share one grid; a brand with 2+ campaigns gets a quiet label over its own.
+  const sorted = [...cards].sort((a, b) => a.c.brand.localeCompare(b.c.brand) || shortName(a.c).localeCompare(shortName(b.c)));
+  const count = new Map<string, number>();
+  for (const k of sorted) count.set(k.c.brand, (count.get(k.c.brand) ?? 0) + 1);
+  const runs: { brand: string | null; cards: Card[] }[] = [];
+  for (const k of sorted) {
+    const brand = (count.get(k.c.brand) ?? 0) > 1 ? k.c.brand : null;
+    const last = runs.at(-1);
+    if (last && last.brand === brand) last.cards.push(k);
+    else runs.push({ brand, cards: [k] });
+  }
+  let n = 0;
 
   return (
     <>
@@ -49,10 +57,10 @@ export default async function CampaignsPage() {
             <h1 className={`${DISPLAY} text-[38px] leading-none sm:text-[56px]`}>Campaigns</h1>
             <p className="mt-2 max-w-[60ch] text-[15px] text-(--ink-2)">One product brief, checked across every creator video it paid for.</p>
           </div>
-          {/* Phones have New in the tab bar; the header offers it from md up. */}
+          {/* Phones have New in the tab bar and tablets in the top bar; the big button is for desktop. */}
           <PendingLink
             href="/campaigns/new"
-            className="hidden h-11 shrink-0 items-center gap-1.5 rounded-full bg-(--ink) pr-4 pl-3.5 text-[15px] font-semibold text-white shadow-(--sh-2) active:bg-black/85 md:inline-flex [@media(hover:hover)]:hover:bg-black"
+            className="hidden h-11 shrink-0 items-center gap-1.5 rounded-full bg-(--ink) pr-4 pl-3.5 text-[15px] font-semibold text-white shadow-(--sh-2) active:bg-black/85 lg:inline-flex [@media(hover:hover)]:hover:bg-black"
           >
             <Plus className="size-[18px]" strokeWidth={2.5} aria-hidden />
             New campaign
@@ -72,40 +80,30 @@ export default async function CampaignsPage() {
           </div>
         )}
 
-        {groups.map(([brand, ks], gi) => (
-          <section key={brand} aria-labelledby={`brand-${gi}`} className="mt-8">
-            <h2 id={`brand-${gi}`} className={`${DISPLAY} flex items-baseline gap-2 text-[22px]`}>
-              {brand}
-              <span className="font-(family-name:--font-body) text-[14px] font-medium! tracking-normal! text-(--ink-3)">{plural(ks.length, "campaign")}</span>
-            </h2>
-            <ul className="mt-3 grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
-              {ks.map((k, i) => (
-                <li key={k.c.id}>
-                  <CampaignCard k={k} eager={gi === 0 && i < 4} showBrand={false} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-
-        {singles.length > 0 && (
-          <section aria-label={groups.length ? "Other brands" : "All campaigns"} className={groups.length ? "mt-10" : "mt-7"}>
-            {groups.length > 0 && <h2 className={`${DISPLAY} text-[22px]`}>Other brands</h2>}
-            <ul className={`grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3 ${groups.length ? "mt-3" : ""}`}>
-              {singles.map((k, i) => (
-                <li key={k.c.id}>
-                  <CampaignCard k={k} eager={!groups.length && i < 4} showBrand />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <div className="mt-7 space-y-7">
+          {runs.map((run, ri) => (
+            <section key={`${run.brand ?? "solo"}-${ri}`} aria-label={run.brand ? `${run.brand} campaigns` : undefined}>
+              {run.brand && (
+                <h2 className="mb-2.5 text-[13px] font-semibold text-(--ink-3)">
+                  {run.brand} · {plural(run.cards.length, "campaign")}
+                </h2>
+              )}
+              <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+                {run.cards.map((k) => (
+                  <li key={k.c.id}>
+                    <CampaignCard k={k} eager={n++ < 6} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       </main>
     </>
   );
 }
 
-function CampaignCard({ k, eager, showBrand }: { k: Card; eager: boolean; showBrand: boolean }) {
+function CampaignCard({ k, eager }: { k: Card; eager: boolean }) {
   return (
     <PendingLink
       href={`/campaigns/${k.c.id}`}
@@ -116,13 +114,13 @@ function CampaignCard({ k, eager, showBrand }: { k: Card; eager: boolean; showBr
       <span className="flex min-w-0 flex-1 flex-col py-0.5">
         <span className="flex items-start gap-2">
           <span className="min-w-0 flex-1">
-            {showBrand && <span className="block truncate text-[13px] font-semibold text-(--ink-3)">{k.c.brand}</span>}
-            <span className={`${DISPLAY} block truncate text-[21px] leading-tight`}>{shortName(k.c)}</span>
+            <span className={`${DISPLAY} block truncate text-[21px] leading-tight`}>{k.c.brand}</span>
+            <span className="mt-0.5 block truncate text-[14px] text-(--ink-2)">{shortName(k.c)}</span>
           </span>
           <ChevronRight className="mt-1 size-5 shrink-0 text-(--ink-3)" strokeWidth={2.25} aria-hidden />
         </span>
         {k.c.synthetic && (
-          <span className="mt-1.5 inline-flex h-6 w-fit items-center rounded-full bg-(--review-soft) px-2.5 text-[12px] font-semibold text-(--review)">
+          <span className="mt-1.5 inline-flex h-6 w-fit items-center rounded-full bg-(--wash) px-2.5 text-[12px] font-semibold text-(--ink-2) ring-1 ring-(--hair)">
             Preview data
           </span>
         )}
@@ -133,11 +131,11 @@ function CampaignCard({ k, eager, showBrand }: { k: Card; eager: boolean; showBr
             <span className="text-(--ink-2)">{plural(k.total, "video")}, none checked yet</span>
           ) : (
             <span className="font-semibold">
-              <span className="ed-num">{k.delivered}</span> of <span className="ed-num">{k.done}</span> delivered
+              <span className="ed-num">{k.delivered}</span> of <span className="ed-num">{k.total}</span> delivered
             </span>
           )}
         </span>
-        {k.done > 0 && <MixBar delivered={k.delivered} short={k.short} review={k.review} />}
+        {k.total > 0 && <MixBar k={k} />}
         <span className="mt-1.5 flex flex-wrap gap-x-3 text-[12.5px] text-(--ink-2) tabular">
           {k.done > 0 && <span className="text-(--ink-3)">{seconds(k.seconds)} on screen</span>}
           {k.short > 0 && <span>{k.short} fell short</span>}
@@ -151,29 +149,23 @@ function CampaignCard({ k, eager, showBrand }: { k: Card; eager: boolean; showBr
   );
 }
 
-/**
- * The verdict mix. With at least one delivery it is a split bar (pass, fail, review in proportion). With none it is an
- * empty neutral track ending in a red (or amber) cap, so "0 of N" differs from "N of N" in shape, not only colour.
- */
-function MixBar({ delivered, short, review }: { delivered: number; short: number; review: number }) {
-  const label = `${delivered} delivered, ${short} fell short, ${review} need review`;
-  if (delivered === 0)
-    return (
-      <span className="mt-2 flex h-2 items-center gap-[3px]" role="img" aria-label={label}>
-        <span className="h-full flex-1 rounded-l-full bg-(--wash) shadow-[inset_0_0_0_1px_var(--hair)]" />
-        {review > 0 && <span className="h-full w-3 bg-(--review) last:rounded-r-full" />}
-        {short > 0 && <span className="h-full w-5 rounded-r-full bg-(--short)" />}
-      </span>
-    );
+/** Every video in proportion: delivered green, fell short red, needs review amber, anything not judged yet neutral. */
+function MixBar({ k }: { k: Card }) {
+  const other = k.total - k.delivered - k.short - k.review;
   const parts = [
-    { n: delivered, c: "bg-(--pass)" },
-    { n: short, c: "bg-(--short)" },
-    { n: review, c: "bg-(--review)" },
+    { n: k.delivered, c: "bg-(--pass)", key: "d" },
+    { n: k.short, c: "bg-(--short)", key: "s" },
+    { n: k.review, c: "bg-(--review)", key: "r" },
+    { n: other, c: "bg-(--hair-2)", key: "o" },
   ].filter((p) => p.n > 0);
   return (
-    <span className="mt-2 flex h-2 gap-[3px] overflow-hidden rounded-full" role="img" aria-label={label}>
+    <span
+      className="mt-2 flex h-2 gap-[3px] overflow-hidden rounded-full"
+      role="img"
+      aria-label={`${k.delivered} delivered, ${k.short} fell short, ${k.review} need review${other ? `, ${other} not judged yet` : ""}`}
+    >
       {parts.map((p) => (
-        <span key={p.c} className={`h-full ${p.c}`} style={{ flex: p.n }} />
+        <span key={p.key} className={`h-full ${p.c}`} style={{ flex: p.n }} />
       ))}
     </span>
   );

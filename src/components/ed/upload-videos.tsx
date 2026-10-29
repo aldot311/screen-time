@@ -128,11 +128,11 @@ export function UploadVideos({ campaignId, mode }: Props) {
       aria-labelledby="add-videos-title"
       className="lg:rounded-(--r-card) lg:bg-(--card) lg:p-5 lg:shadow-(--sh-1) lg:ring-1 lg:ring-(--hair)"
     >
-      <h2 id="add-videos-title" className="ed-display text-[20px] font-semibold! tracking-[-0.022em]!">
+      <h2 id="add-videos-title" className="ed-display text-[20px] font-semibold! tracking-[-0.022em]! max-lg:sr-only">
         Add creator videos
       </h2>
 
-      <label htmlFor="creator-handle" className="mt-4 block text-[14px] font-semibold">
+      <label htmlFor="creator-handle" className="mt-1 block lg:mt-4 text-[14px] font-semibold">
         Creator
       </label>
       <div className="mt-1.5">

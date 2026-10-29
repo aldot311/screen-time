@@ -11,7 +11,7 @@ import { PendingLink } from "./pending-link";
 
 /** Whether a path shows the tab bar (exported so pages can leave room for it). */
 export function showsTabBar(path: string): boolean {
-  return path === "/campaigns" || path === "/campaigns/new";
+  return path === "/campaigns";
 }
 
 export function TabBar() {

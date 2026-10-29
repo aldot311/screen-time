@@ -103,8 +103,11 @@ export function CampaignList({ rows }: { rows: Row[] }) {
   }
 
   return (
-    <div ref={top} className="scroll-mt-[calc(env(safe-area-inset-top)+68px)]">
-      {segments.length > 1 && (
+    <div ref={top} className="scroll-mt-[calc(env(safe-area-inset-top)+64px)]">
+      {/* Under three videos the cards are the whole story; a filter would only add chrome. From three up it sticks under
+          the header so it stays in reach while scrolling a long list. */}
+      {rows.length >= 3 && segments.length > 1 && (
+        <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-20 -mx-4 bg-(--paper) px-4 pt-2 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
         <div
           ref={group}
           role="radiogroup"
@@ -134,14 +137,15 @@ export function CampaignList({ rows }: { rows: Row[] }) {
             );
           })}
         </div>
+        </div>
       )}
 
       <p className="sr-only" aria-live="polite">
         {active === "all" ? `Showing all ${rows.length}` : `Showing ${shown.length} ${FILTERS.find((f) => f.id === active)?.label}`}
       </p>
-      <ul key={active} className="mt-4 grid gap-3 md:grid-cols-2">
+      <ul key={active} className="mt-2 grid gap-3 md:grid-cols-2">
         {shown.map((r, i) => (
-          <li key={r.id} id={`v-${r.id}`} className="scroll-mt-[calc(env(safe-area-inset-top)+72px)]">{r.status === "waiting" ? <WaitingCard r={r} /> : <CreatorCard r={r} eager={i < 4} />}</li>
+          <li key={r.id} id={`v-${r.id}`} className="scroll-mt-[calc(env(safe-area-inset-top)+72px)]">{r.status === "waiting" ? <WaitingCard r={r} /> : <CreatorCard r={r} eager={i < 12} />}</li>
         ))}
       </ul>
     </div>
