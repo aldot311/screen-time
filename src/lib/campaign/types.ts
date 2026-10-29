@@ -1,4 +1,5 @@
 import type { LiveProgress, VideoReport } from "@/lib/types";
+import type { AgentRun } from "@/lib/agent/campaign-agent";
 
 // A campaign is one brand brief applied to many creator videos.
 export interface Campaign {
@@ -72,4 +73,6 @@ export interface VideoEntry {
   /** A manager's own decision when it differs from the recommendation, with the reason, kept beside the original
    *  result. Cleared when the video is run again. */
   override?: { decision: "pay" | "hold"; reason: string; at: string };
+  /** The latest follow-up agent run on this video: its step log, draft note, call and any re-cut awaiting approval. */
+  agent?: AgentRun;
 }

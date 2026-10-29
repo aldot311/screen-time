@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
-import { getCampaign, getVideo, listCampaigns } from "@/lib/campaign/store";
+import { getCampaign, getVideo, listCampaigns, listVideos } from "@/lib/campaign/store";
 import { loadShowcase } from "@/lib/campaign/showcase";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { friendlyError } from "@/components/format";
+import { friendlyError, verdictOf } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
-import { feeFor } from "@/lib/campaign/money";
+import { feeFor, latestFinished } from "@/lib/campaign/money";
+import { sameHandle } from "@/lib/campaign/roster";
+import { VerdictPill } from "@/components/ed/bits";
+import { PendingLink } from "@/components/ed/pending-link";
+
 import { TRY_LIMIT_TEXT, tryLimits } from "@/lib/campaign/try";
 import { RunStepsEd } from "@/components/ed/run-steps";
 import { RunAgain } from "@/components/ed/run-again";
@@ -50,8 +54,15 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   const waiting = phase === "waiting";
   const stalled = phase === "uploaded";
   const running = phase === "running" || phase === "starting";
+  // The follow-up agent writes its steps to the video as it works: refresh while it does.
+  const agentWorking = video.agent?.status === "running";
   const synthetic = Boolean(video.synthetic ?? campaign.synthetic);
   const title = humanTitle(video.title);
+  // A re-cut from a creator on the roster replaces this video for pay or hold. (A test set's clips from one handle
+  // are separate tests, not re-cuts, so they never say this.)
+  const onRoster = campaign.creators?.some((c) => sameHandle(c.handle, video.creator)) ?? false;
+  const newer = onRoster && video.status === "done" ? latestFinished(await listVideos(id)).get(video.creator.toLowerCase()) : undefined;
+  const replacedBy = newer && newer.id !== video.id && newer.createdAt > video.createdAt ? newer : undefined;
 
   // Plain names for the tracked objects where the showcase has them; elsewhere the report names them from the brief.
   const names =
@@ -63,9 +74,20 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
 
   return (
     <>
-      <AutoRefresh active={running} everyMs={1500} />
+      <AutoRefresh active={running || agentWorking} everyMs={1500} />
       <TopBar back={{ href: `/campaigns/${campaign.id}`, label: backLabel }} />
       <main className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(env(safe-area-inset-bottom)+128px)] sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 lg:pb-24">
+        {replacedBy && (
+          <p role="status" className="mt-3 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-(--r-inner) bg-(--wash) px-4 py-3 text-[14px] leading-snug text-(--ink-2) sm:mt-0">
+            <span>
+              <span className="font-semibold text-(--ink)">{video.creator} sent a re-cut.</span> It decides pay or hold now:
+            </span>
+            <VerdictPill verdict={verdictOf(replacedBy.report)} />
+            <PendingLink href={`/campaigns/${id}/videos/${replacedBy.id}`} className="inline-flex min-h-11 items-center font-semibold text-(--ink) underline decoration-(--hair-2) underline-offset-4">
+              Open the re-cut
+            </PendingLink>
+          </p>
+        )}
         {limit && (
           <p role="status" className="mt-3 mb-4 rounded-(--r-inner) bg-(--wash) px-4 py-3 text-[14px] leading-snug text-(--ink-2) sm:mt-0">
             <span className="font-semibold text-(--ink)">{limit}</span> This is the newest sample run; tap Replay analysis to watch every step it took.
@@ -86,6 +108,8 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
             startAt={Number.isFinite(t) && t >= 0 ? t : undefined}
             override={video.override}
             overrideEndpoint={synthetic ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/override`}
+            agent={video.agent}
+            agentEndpoint={synthetic ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/agent`}
           />
         ) : (
           <div className="grid gap-x-12 gap-y-8 pt-4 sm:pt-0 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">

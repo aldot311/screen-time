@@ -60,6 +60,7 @@ export async function startRun(campaignId: string, videoId: string, now = Date.n
     report: undefined,
     live: undefined,
     override: undefined,
+    agent: undefined,
   });
   return { ok: true, campaign, video: running };
 }

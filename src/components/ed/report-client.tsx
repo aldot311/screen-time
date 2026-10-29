@@ -17,6 +17,7 @@ import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decisi
 import { usd } from "@/lib/campaign/money";
 import { AnalysisReplay } from "./analysis-replay";
 import { RunReceiptCard } from "./run-receipt";
+import { AgentPanel } from "./agent-panel";
 import { reviewFlags } from "@/lib/campaign/review";
 import type { VideoEntry } from "@/lib/campaign/types";
 
@@ -39,6 +40,9 @@ interface Props {
   /** A manager's own decision, and where to save one (absent on the preview). */
   override?: VideoEntry["override"];
   overrideEndpoint?: string;
+  /** The follow-up agent's latest run, and where to start one (absent on the preview). */
+  agent?: VideoEntry["agent"];
+  agentEndpoint?: string;
 }
 
 /** Fields the backend is adding to the report: the photo the run actually compared with, and whether the on-screen
@@ -79,7 +83,7 @@ const Range = ({ a, b }: { a: number; b: number }) => (
   </Tc>
 );
 
-export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint }: Props) {
+export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint, agent, agentEndpoint }: Props) {
   const extras = report as VideoReport & ReportExtras;
   // Only the photo this run used: a photo added to the campaign later was not part of this check.
   const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
@@ -513,6 +517,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             override={override}
             overrideEndpoint={overrideEndpoint}
           />
+          {agentEndpoint && <AgentPanel endpoint={agentEndpoint} agent={agent} creator={creator} />}
           <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
             <ShareReport title={`${title} · ${creator}`} />
             {!synthetic && <AnalysisReplay report={report} videoUrl={videoUrl} brand={brand} />}
