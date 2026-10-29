@@ -41,6 +41,9 @@ Aldo approved every item below on 2026-10-29.
     /campaigns/new), then re-score with all five judges until a round finds nothing material.
 
 ## State
+- Items 1-4 done and pushed (7abf357 money + phone verdict, 885bc28/46a3d16 live view + replay, c3e8dfc receipt +
+  compiled rules + money review fixes). Production was deployed once (screen-time-inky.vercel.app) before them;
+  redeploy production after the next review is clean (Aldo approved production on 2026-10-29).
 - 2026-10-29: the five features plus two deep review rounds are committed (545e7a2) and pushed. Preview:
   https://screen-time-gyxfq1zmq-aldos-projects-dcad187d.vercel.app (Vercel login). Production not deployed (needs Aldo's OK).
 - Accepted low findings: "sponsored by" also matches a creator describing someone else's sponsored video; bulk links
