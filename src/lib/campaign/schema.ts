@@ -9,6 +9,14 @@ const lines = (max: number, maxItems: number) =>
     .max(maxItems)
     .transform((xs) => xs.filter(Boolean));
 
+/** A fee in US dollars: up to a million, at most cents. */
+export const Fee = z
+  .number()
+  .finite()
+  .min(0)
+  .max(1_000_000)
+  .transform((n) => Math.round(n * 100) / 100);
+
 export const NewCampaign = z.object({
   name: text(120),
   brand: text(80),
@@ -16,6 +24,7 @@ export const NewCampaign = z.object({
   productDescription: text(400),
   brandTerms: lines(60, 20),
   contractTerms: lines(300, 20),
+  fee: Fee.optional(),
 });
 export type NewCampaign = z.infer<typeof NewCampaign>;
 

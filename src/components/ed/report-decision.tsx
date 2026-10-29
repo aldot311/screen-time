@@ -8,6 +8,7 @@ import { Check, CircleHelp, Copy, Hand, Link2, Share } from "lucide-react";
 import type { TermResult } from "@/lib/types";
 import type { Verdict } from "@/components/format";
 import { useFlash } from "./use-flash";
+import { usd } from "@/lib/campaign/money";
 
 const n2 = (n: number) => String(Math.round(n * 10) / 10);
 const s = (n: number) => `${n2(n)} s`;
@@ -36,16 +37,48 @@ export function fixWords(t: TermResult): string {
 
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 
-export function PayOrHold({ verdict, creator, terms }: { verdict: Verdict; creator: string; terms: TermResult[] }) {
+/** "Pay", "Hold", "Review": the decision word for a verdict, used where space is short. */
+export function decisionWord(verdict: Verdict): string {
+  return verdict === "delivered" ? "Pay" : verdict === "short" ? "Hold" : "Review";
+}
+
+/** A missed term in a few words, for the phone's verdict line: "Never said “Alani Nu”", "On screen too late". */
+export function missWords(t: TermResult, brand: string): string {
+  const r = t.term.rule;
+  switch (r?.kind) {
+    case "mentioned":
+      return /\b0 times\b/.test(t.detail) ? `Never said “${brand}”` : `Said “${brand}” too few times`;
+    case "disclosed":
+      return "Sponsorship not disclosed";
+    case "min_seconds_total":
+      return "Not on screen long enough";
+    case "min_seconds_within":
+    case "first_seen_before":
+      return "On screen too late";
+    case "min_continuous":
+      return "No shot held long enough";
+    case "min_area":
+      return "Product too small in frame";
+    default:
+      return t.term.text;
+  }
+}
+
+export function PayOrHold({ verdict, creator, terms, fee = null }: { verdict: Verdict; creator: string; terms: TermResult[]; fee?: number | null }) {
   const [copied, flash] = useFlash();
   if (verdict === "pending") return null;
   const missed = terms.filter((t) => t.pass === false);
   const unsure = terms.filter((t) => t.pass === null);
+  const amount = fee === null ? "" : ` ${usd(fee)}`;
 
   const tone = {
-    delivered: { chip: "bg-(--pass-soft) text-(--pass)", Icon: Check, title: "Recommendation: pay" },
-    short: { chip: "bg-(--short-soft) text-(--short)", Icon: Hand, title: `Hold: ask ${creator} to fix ${missed.length === 1 ? "one thing" : `${missed.length} things`}` },
-    review: { chip: "bg-(--review-soft) text-(--review)", Icon: CircleHelp, title: "Review before paying" },
+    delivered: { chip: "bg-(--pass-soft) text-(--pass)", Icon: Check, title: `Recommendation: pay${amount}` },
+    short: {
+      chip: "bg-(--short-soft) text-(--short)",
+      Icon: Hand,
+      title: `Hold${amount}: ask ${creator} to fix ${missed.length === 1 ? "one thing" : `${missed.length} things`}`,
+    },
+    review: { chip: "bg-(--review-soft) text-(--review)", Icon: CircleHelp, title: `Review before paying${amount}` },
   }[verdict];
 
   const note = `Hi ${creator}, thanks for the video. Before we pay, could you ${

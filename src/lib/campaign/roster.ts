@@ -19,6 +19,19 @@ export function removeCreator(campaign: Campaign, handle: string): Campaign {
   return { ...campaign, creators: (campaign.creators ?? []).filter((c) => !sameHandle(c.handle, handle)) };
 }
 
+/** Sets a creator's own fee (null clears it, so the campaign's fee applies). A handle not on the roster changes nothing. */
+export function setCreatorFee(campaign: Campaign, handle: string, fee: number | null): Campaign {
+  return {
+    ...campaign,
+    creators: (campaign.creators ?? []).map((c) => {
+      if (!sameHandle(c.handle, handle)) return c;
+      const next = { ...c, fee: fee ?? undefined };
+      if (fee === null) delete next.fee;
+      return next;
+    }),
+  };
+}
+
 /** Records the latest request sent to a creator, adding them to the roster if they are not on it. */
 export function recordRequest(campaign: Campaign, handle: string, request: NonNullable<CampaignCreator["request"]>, now = new Date()): Campaign {
   const withCreator = addCreators(campaign, [handle], now);

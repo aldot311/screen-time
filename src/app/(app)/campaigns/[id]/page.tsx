@@ -16,6 +16,8 @@ import { creatorEntry, DISPLAY, LiveDot, plural, shortName, videoPhase } from "@
 import { UploadVideos } from "@/components/ed/upload-videos";
 import { CampaignCover } from "@/components/ed/product-photo";
 import { CampaignCreators } from "@/components/ed/campaign-creators";
+import { FeeEditor } from "@/components/ed/fee-editor";
+import { feeFor, payout, payoutLine } from "@/lib/campaign/money";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +69,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
       segments: r ? r.metrics.segments : [],
       mentions: r ? r.metrics.mentions : [],
       rejected: r ? framesToSegments((r.detections ?? []).filter((d) => d.verdict !== "match").map((d) => d.frame)) : [],
+      fee: feeFor(campaign, v.creator),
     };
   });
 
@@ -113,7 +116,14 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
     else missLine = `${short} fell short.`;
   }
   const reviewLine = review ? `${review} need${review === 1 ? "s" : ""} review.` : null;
-  const creators = (campaign.creators ?? []).map((c) => creatorEntry(c, videos, campaign.id, now));
+  const creators = (campaign.creators ?? []).map((c) => ({
+    ...creatorEntry(c, videos, campaign.id, now),
+    fee: feeFor(campaign, c.handle),
+    feeInherited: c.fee === undefined,
+  }));
+  // Money is per creator (their latest finished video). A one-handle test campaign has no creators to pay, so it says
+  // nothing rather than "Pay 1 creator"; each card still shows what its verdict pays or holds.
+  const money = oneHandle && videos.length > 1 ? null : payoutLine(payout(campaign, videos));
   const mode = process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct";
   const creatorsSection =
     canUpload || creators.length > 0 ? <CampaignCreators campaignId={campaign.id} entries={creators} editable={canUpload} /> : null;
@@ -153,6 +163,14 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                 </p>
               </CampaignCover>
 
+              {(canUpload || campaign.fee !== undefined) && (
+                <div className="mt-3 flex min-h-11 flex-wrap items-center gap-x-1 text-[14px] text-(--ink-2)">
+                  <span>Fee per video</span>
+                  <FeeEditor endpoint={`/api/campaigns/${campaign.id}`} fee={campaign.fee ?? null} label="Campaign fee per video" editable={canUpload} />
+                  {canUpload && <span className="hidden text-[13px] text-(--ink-3) sm:inline">· a creator&rsquo;s own fee overrides it</span>}
+                </div>
+              )}
+
               <p className={`${DISPLAY} mt-5 max-w-[24ch] text-[24px] leading-[1.15] font-medium! sm:text-[30px]`}>
                 {videos.length === 0 ? (
                   <>No videos yet. Add the first one to see if it delivered.</>
@@ -173,6 +191,11 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                   </>
                 )}
               </p>
+              {money && (
+                <p className="mt-2 text-[17px] leading-snug font-semibold text-(--ink) tabular" aria-label={`Money: ${money}`}>
+                  {money}
+                </p>
+              )}
               {done.length > 0 && after.length > 0 && <p className="mt-2 text-[15px] text-(--ink-2)">Plus {after.join(", ")}.</p>}
 
               {done.length > 0 && (

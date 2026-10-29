@@ -1,7 +1,11 @@
 // Campaign roll-up as CSV, one row per video.
 import { disclosureWhere } from "@/lib/metrics/rules";
 import type { VideoReport } from "@/lib/types";
-import type { VideoEntry } from "./types";
+import { verdictOf } from "@/components/format";
+import { decisionOf, feeFor } from "./money";
+import type { Campaign, VideoEntry } from "./types";
+
+type Fees = Pick<Campaign, "fee" | "creators">;
 
 export const CSV_HEADER = [
   "creator",
@@ -21,6 +25,8 @@ export const CSV_HEADER = [
   "disclosed",
   "disclosed_where",
   "product_photo_used",
+  "recommendation",
+  "fee_usd",
 ];
 
 type Cell = string | number | null;
@@ -41,9 +47,10 @@ export function csvCell(value: Cell): string {
 
 const round = (n: number, digits: number) => Math.round(n * 10 ** digits) / 10 ** digits;
 
-export function videoRow(v: VideoEntry): Cell[] {
+export function videoRow(v: VideoEntry, fees: Fees = {}): Cell[] {
   const r = v.report;
   if (!r) return [v.creator, v.title, v.status, ...Array<Cell>(CSV_HEADER.length - 3).fill(null)];
+  const decision = v.status === "done" ? decisionOf(verdictOf(r)) : null;
   const m = r.metrics;
   const count = (pass: boolean | null) => r.terms.filter((t) => t.pass === pass).length;
   return [
@@ -63,6 +70,8 @@ export function videoRow(v: VideoEntry): Cell[] {
     round(r.cost.usd, 4),
     ...disclosureCells(r),
     r.usedProductPhoto ? "yes" : "no",
+    decision,
+    decision ? feeFor(fees, v.creator) : null,
   ];
 }
 
@@ -75,6 +84,7 @@ function disclosureCells(r: VideoReport): [Cell, Cell] {
   return d.onScreenChecked === false ? ["not checked", null] : ["no", null];
 }
 
-export function campaignCsv(videos: VideoEntry[]): string {
-  return [CSV_HEADER, ...videos.map(videoRow)].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
+/** One row per video; `fees` (the campaign) adds what each recommendation pays or holds. */
+export function campaignCsv(videos: VideoEntry[], fees: Fees = {}): string {
+  return [CSV_HEADER, ...videos.map((v) => videoRow(v, fees))].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }

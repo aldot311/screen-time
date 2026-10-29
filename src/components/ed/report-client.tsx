@@ -13,7 +13,8 @@ import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
 import { Figure, Swatch } from "./bits";
 import { ReportLanes, type Lit } from "./report-lanes";
-import { PayOrHold, ShareReport } from "./report-decision";
+import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decision";
+import { usd } from "@/lib/campaign/money";
 
 interface Props {
   report: VideoReport;
@@ -27,6 +28,8 @@ interface Props {
   poster?: string;
   /** Preview reports: numbers from hand labels, no boxes, no audio. */
   synthetic?: boolean;
+  /** The agreed fee for this video, when one is set: what the verdict pays or holds. */
+  fee?: number | null;
 }
 
 /** Fields the backend is adding to the report: the photo the run actually compared with, and whether the on-screen
@@ -67,7 +70,7 @@ const Range = ({ a, b }: { a: number; b: number }) => (
   </Tc>
 );
 
-export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false }: Props) {
+export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null }: Props) {
   const extras = report as VideoReport & ReportExtras;
   // Only the photo this run used: a photo added to the campaign later was not part of this check.
   const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
@@ -305,6 +308,16 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
   const found = m.secondsOnScreen > 0;
   const n = report.terms.length;
   const failedTerms = report.terms.filter((t) => t.pass === false);
+  const phoneReason =
+    verdict === "delivered"
+      ? n
+        ? `${n === 1 ? "The contract term" : `All ${n} contract terms`} met`
+        : "Delivered"
+      : verdict === "short"
+        ? `${missWords(failedTerms[0], brand)}${failedTerms.length > 1 ? ` · ${failedTerms.length - 1} more` : ""}`
+        : n
+          ? `${plural(counts.unchecked, "term")} to check by eye`
+          : "No contract terms to check";
   const headline =
     verdict === "delivered"
       ? `${brand} was on screen, and the contract was met.`
@@ -355,12 +368,23 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
   return (
     <div className="grid gap-x-8 gap-y-4 sm:gap-y-8 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-x-12">
       {/* Player on a paper card: first on a phone, sized so the verdict and its chips fit the first screen; sticky from tablet up. */}
+      {/* Phones: the decision comes first, above the video, so the answer is on screen before anything plays. */}
+      {verdict !== "pending" && (
+        <p className={`flex min-h-12 items-center gap-2.5 rounded-(--r-card) px-3 py-2 text-[14.5px] leading-snug md:hidden ${tone.card}`}>
+          <span className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold tabular ${tone.badge}`}>
+            <tone.Icon className="size-4" strokeWidth={3} aria-hidden />
+            {decisionWord(verdict)}
+            {fee !== null && ` ${usd(fee)}`}
+          </span>
+          <span className="min-w-0 text-(--ink-2)">{phoneReason}</span>
+        </p>
+      )}
       <div className="min-w-0 md:sticky md:top-[76px] md:self-start">
         <div
           ref={stage}
           className="relative rounded-(--r-card) bg-(--wash) p-3 shadow-[inset_0_0_0_1px_var(--hair)] sm:p-4 md:max-h-[calc(100svh-120px)] lg:p-5"
         >
-          <div className="relative mx-auto w-[min(100%,calc(min(52svh,calc(100svh-370px))*0.5625))] sm:w-[min(100%,calc(min(56svh,calc(100svh-380px))*0.5625))] md:w-[min(100%,calc((100svh-160px)*0.5625))]">
+          <div className="relative mx-auto w-[min(100%,calc(min(52svh,calc(100svh-420px))*0.5625))] sm:w-[min(100%,calc(min(56svh,calc(100svh-380px))*0.5625))] md:w-[min(100%,calc((100svh-160px)*0.5625))]">
             <Player
               ref={player}
               src={videoUrl}
@@ -457,7 +481,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
 
         {/* What to do about it: a recommendation, then a way to send the report to whoever decides. */}
         <div className="-mt-6 space-y-3 sm:-mt-4">
-          <PayOrHold verdict={verdict} creator={creator} terms={report.terms} />
+          <PayOrHold verdict={verdict} creator={creator} terms={report.terms} fee={fee} />
           <ShareReport title={`${title} · ${creator}`} />
         </div>
 

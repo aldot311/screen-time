@@ -13,6 +13,7 @@ import { PendingLink, Spinner } from "./pending-link";
 import { CampaignRunButton } from "./campaign-run-button";
 import { DISPLAY } from "./campaign-ui";
 import { useFlash } from "./use-flash";
+import { FeeEditor } from "./fee-editor";
 
 export type CreatorStatus =
   "none" | "sent" | "expired" | "waiting" | "uploaded" | "starting" | "running" | "delivered" | "short" | "review" | "stopped";
@@ -26,6 +27,9 @@ export interface CreatorEntry {
   videoId?: string;
   href?: string;
   videos: number;
+  /** The fee for this creator's video: their own, else the campaign's (inherited), else null. */
+  fee?: number | null;
+  feeInherited?: boolean;
 }
 
 type Made = {
@@ -419,6 +423,17 @@ function CreatorRow({
 
       <span className={`ml-auto flex shrink-0 items-center gap-1.5 ${canRun ? "max-sm:pb-3" : ""}`}>
         {canRun && <CampaignRunButton campaignId={campaignId} videoId={e.videoId!} />}
+
+        {!confirm && (
+          <FeeEditor
+            endpoint={`/api/campaigns/${campaignId}/creators`}
+            extra={{ handle: e.handle }}
+            fee={e.fee ?? null}
+            inherited={e.feeInherited}
+            label={`Fee for ${e.handle}`}
+            editable={editable}
+          />
+        )}
 
         {canLink && !confirm && (
           <button

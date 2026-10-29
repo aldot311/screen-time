@@ -20,6 +20,12 @@ describe("csvCell", () => {
     expect(csvCell("@aldo.tile")).toBe("@aldo.tile");
     expect(csvCell(-1)).toBe("-1");
   });
+
+  it("adds the recommendation and the creator's fee", () => {
+    const v = previewVideos()[0];
+    const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
+    expect(rows[1].endsWith(",pay,450")).toBe(true);
+  });
 });
 
 describe("campaignCsv", () => {
@@ -29,10 +35,10 @@ describe("campaignCsv", () => {
     const rows = csv.trimEnd().split("\r\n");
     expect(rows).toHaveLength(3);
     expect(rows[0]).toBe(CSV_HEADER.join(","));
-    // clip01: frames 18..77 of 167, all three terms checked, the mention term fails (the preview has no audio).
+    // clip01: frames 18..77 of 167, all three terms checked and met.
     // Preview reports predate disclosure checks and product photos.
-    expect(rows[1]).toBe("@aldo.tile,clip01.mp4 (synthetic preview),done,4,35.9,1.2,4,56.2,0,3,0,0,0,0,not checked,,no");
-    expect(rows[2]).toBe('@aldo.tile,"a, b",uploaded,,,,,,,,,,,,,,');
+    expect(rows[1]).toBe("@aldo.tile,clip01.mp4 (synthetic preview),done,4,35.9,1.2,4,56.2,0,3,0,0,0,0,not checked,,no,pay,");
+    expect(rows[2]).toBe('@aldo.tile,"a, b",uploaded,,,,,,,,,,,,,,,,');
   });
 
   it("writes whether and where the sponsorship was disclosed, and whether the product photo was used", () => {
@@ -47,9 +53,15 @@ describe("campaignCsv", () => {
       withReport({ disclosure: { spoken: [], onScreen: [], onScreenChecked: false } }),
     ]);
     const rows = csv.trimEnd().split("\r\n");
-    expect(CSV_HEADER.slice(-3)).toEqual(["disclosed", "disclosed_where", "product_photo_used"]);
-    expect(rows[1].endsWith(",yes,said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5,yes")).toBe(true);
-    expect(rows[2].endsWith(",no,,no")).toBe(true);
-    expect(rows[3].endsWith(",not checked,,no")).toBe(true);
+    expect(CSV_HEADER.slice(-5)).toEqual(["disclosed", "disclosed_where", "product_photo_used", "recommendation", "fee_usd"]);
+    expect(rows[1].endsWith(",yes,said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5,yes,pay,")).toBe(true);
+    expect(rows[2].endsWith(",no,,no,pay,")).toBe(true);
+    expect(rows[3].endsWith(",not checked,,no,pay,")).toBe(true);
+  });
+
+  it("adds the recommendation and the creator's fee", () => {
+    const v = previewVideos()[0];
+    const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
+    expect(rows[1].endsWith(",pay,450")).toBe(true);
   });
 });

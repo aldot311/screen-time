@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { Creator } from "@/lib/campaign/schema";
+import { Creator, Fee } from "@/lib/campaign/schema";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
 import { getCampaign, updateCampaign } from "@/lib/campaign/store";
-import { addCreators, removeCreator } from "@/lib/campaign/roster";
+import { addCreators, removeCreator, setCreatorFee } from "@/lib/campaign/roster";
 
 const Add = z.object({ handles: z.array(Creator).min(1).max(50) });
 const Remove = z.object({ handle: Creator });
+const SetFee = z.object({ handle: Creator, fee: Fee.nullable() });
 
 async function editable(id: string) {
   if (id === PREVIEW_ID) return Response.json({ error: "The preview campaign is read-only" }, { status: 409 });
@@ -31,5 +32,16 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const parsed = Remove.safeParse(await req.json().catch(() => undefined));
   if (!parsed.success) return Response.json({ error: "Name the creator to remove" }, { status: 400 });
   const updated = await updateCampaign(campaign.id, (c) => removeCreator(c, parsed.data.handle));
+  return updated ? Response.json(updated) : Response.json({ error: "Campaign not found" }, { status: 404 });
+}
+
+/** Sets one creator's fee per video: { handle, fee: 300 }, or { handle, fee: null } to fall back to the campaign's. */
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const campaign = await editable((await ctx.params).id);
+  if (campaign instanceof Response) return campaign;
+  const parsed = SetFee.safeParse(await req.json().catch(() => undefined));
+  if (!parsed.success) return Response.json({ error: "Enter a fee from $0 to $1,000,000" }, { status: 400 });
+  const { handle, fee } = parsed.data;
+  const updated = await updateCampaign(campaign.id, (c) => setCreatorFee(c, handle, fee));
   return updated ? Response.json(updated) : Response.json({ error: "Campaign not found" }, { status: 404 });
 }

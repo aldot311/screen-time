@@ -74,6 +74,14 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
       return;
     }
 
+    const feeText = get("fee").replace(/[$,\s]/g, "");
+    const fee = feeText === "" ? undefined : Number(feeText);
+    if (fee !== undefined && (!Number.isFinite(fee) || fee < 0 || fee > 1_000_000)) {
+      setError("Enter the fee per video as an amount from $0 to $1,000,000, or leave it empty.");
+      requestAnimationFrame(() => document.getElementById("f-fee")?.focus());
+      return;
+    }
+
     setPhase({ kind: "creating" });
     setError(null);
     const list = (k: string, sep: RegExp) =>
@@ -93,6 +101,7 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
           ? [get("brand")]
           : [],
       contractTerms: picked.terms,
+      fee,
     };
     try {
       const res = await fetch("/api/campaigns", {
@@ -201,6 +210,18 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
             hint="Comma-separated. Voice Transcribe listens for these in the audio. Left blank, it listens for the brand name when a term asks the creator to say it."
           >
             <input id="f-brandTerms" name="brandTerms" placeholder="e.g. Alani, Alani Nu" autoComplete="off" enterKeyHint="next" aria-describedby="f-brandTerms-hint" className={`${INPUT} h-12`} />
+          </Field>
+          <Field
+            label="Fee per video"
+            name="fee"
+            hint="What you pay a creator for one delivered video, in US dollars. Reports then say how much each verdict pays or holds. You can set a different fee per creator later."
+          >
+            <span className="relative block max-w-[200px]">
+              <span aria-hidden className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[16px] text-(--ink-3)">
+                $
+              </span>
+              <input id="f-fee" name="fee" inputMode="decimal" placeholder="300" autoComplete="off" enterKeyHint="done" aria-describedby="f-fee-hint" className={`${INPUT} h-12 pl-8 tabular`} />
+            </span>
           </Field>
         </Group>
 

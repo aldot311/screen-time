@@ -16,6 +16,7 @@ import { PendingLink, Spinner } from "./pending-link";
 import { Strip } from "./strip";
 import { CampaignThumb } from "./campaign-ui";
 import { CampaignRunButton } from "./campaign-run-button";
+import { usd } from "@/lib/campaign/money";
 
 export interface Row {
   id: string;
@@ -45,6 +46,8 @@ export interface Row {
   segments: Segment[];
   mentions: Mention[];
   rejected: Segment[];
+  /** The fee for this creator's video, when one is set: shown as what the verdict pays or holds. */
+  fee?: number | null;
 }
 
 type Filter = "all" | "delivered" | "short" | "review";
@@ -184,6 +187,11 @@ function CreatorCard({ r, eager }: { r: Row; eager: boolean }) {
           <>
             <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
               <VerdictPill verdict={r.verdict} />
+              {r.fee != null && r.verdict !== "pending" && (
+                <span className="text-[12.5px] font-semibold whitespace-nowrap text-(--ink) tabular">
+                  {r.verdict === "delivered" ? "Pay" : r.verdict === "short" ? "Hold" : "Review"} {usd(r.fee)}
+                </span>
+              )}
               {r.verdict === "delivered" && r.terms > 0 && (
                 <span className="text-[12.5px] font-medium whitespace-nowrap text-(--ink-2) tabular">
                   All {r.terms} terms met

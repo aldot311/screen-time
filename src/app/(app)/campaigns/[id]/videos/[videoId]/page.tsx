@@ -7,6 +7,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { friendlyError } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
+import { feeFor } from "@/lib/campaign/money";
 import { RunStepsEd } from "@/components/ed/run-steps";
 import { RunAgain } from "@/components/ed/run-again";
 import { videoPhase } from "@/components/ed/campaign-ui";
@@ -67,6 +68,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
             brand={campaign.brand}
             poster={video.thumbUrl}
             synthetic={synthetic}
+            fee={feeFor(campaign, video.creator)}
           />
         ) : (
           <div className="grid gap-x-12 gap-y-8 pt-4 sm:pt-0 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">

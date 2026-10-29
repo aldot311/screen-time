@@ -17,6 +17,8 @@ export interface Campaign {
   /** The creators the brand expects videos from, in the order added. Their status comes from the videos (matched by
    *  handle) and the request links sent. */
   creators?: CampaignCreator[];
+  /** What the brand pays a creator for one delivered video, in US dollars, unless the creator has their own fee. */
+  fee?: number;
 }
 
 export interface CampaignCreator {
@@ -25,6 +27,8 @@ export interface CampaignCreator {
   /** The latest request link made for this creator, if any. Never the link itself: campaign records live in a public
    *  store at a predictable path, and the link is the creator's upload credential. To copy a link again, make a new one. */
   request?: { nonce: string; sentAt: string; expiresAt: string };
+  /** This creator's fee for one delivered video, in US dollars; overrides the campaign's fee. */
+  fee?: number;
 }
 
 export type StepId = "normalize" | "track" | "verify" | "listen" | "measure" | "contract";
