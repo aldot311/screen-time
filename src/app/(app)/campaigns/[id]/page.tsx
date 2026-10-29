@@ -176,7 +176,13 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                 </div>
               )}
 
-              <p className={`${DISPLAY} mt-5 max-w-[24ch] text-[24px] leading-[1.15] font-medium! sm:text-[30px]`}>
+              {/* The decision in money leads; the sentence below says why. */}
+              {money && (
+                <p className="mt-5 text-[19px] leading-snug font-semibold text-(--ink) tabular sm:text-[22px]" aria-label={`Money: ${money}`}>
+                  {money}
+                </p>
+              )}
+              <p className={`${DISPLAY} ${money ? "mt-2" : "mt-5"} max-w-[24ch] text-[24px] leading-[1.15] font-medium! sm:text-[30px]`}>
                 {videos.length === 0 ? (
                   <>No videos yet. Add the first one to see if it delivered.</>
                 ) : done.length === 0 ? (
@@ -196,11 +202,6 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                   </>
                 )}
               </p>
-              {money && (
-                <p className="mt-2 text-[17px] leading-snug font-semibold text-(--ink) tabular" aria-label={`Money: ${money}`}>
-                  {money}
-                </p>
-              )}
               {done.length > 0 && after.length > 0 && <p className="mt-2 text-[15px] text-(--ink-2)">Plus {after.join(", ")}.</p>}
 
               {done.length > 0 && (

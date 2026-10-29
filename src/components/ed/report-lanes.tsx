@@ -177,7 +177,7 @@ export function ReportLanes({
               </span>
               <div className="relative overflow-hidden rounded-[7px] bg-(--wash) shadow-[inset_0_0_0_1px_var(--hair)]" style={{ height: l.h }}>
                 {l.empty && (
-                  <span className="absolute inset-y-0 left-2.5 flex items-center text-[12px] font-medium text-(--ink-3)" aria-hidden>
+                  <span className="absolute inset-y-0 right-2.5 z-10 flex items-center text-[12px] font-medium text-(--ink-3)" aria-hidden>
                     {l.empty}
                   </span>
                 )}

@@ -13,14 +13,15 @@ async function png(node: React.ReactElement, height: number): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-/** The top band: the verdict pill and "Brand · 10.2 s on screen · @creator". */
-export function topBand(word: string, pill: string, line: string): Promise<Buffer> {
+/** The top band: the verdict pill, why ("Missed: Say the brand name at least once"), and "Brand · 10.2 s on screen · @creator". */
+export function topBand(word: string, pill: string, line: string, reason: string): Promise<Buffer> {
   return png(
-    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", padding: "30px 32px", background: "rgba(20,19,15,0.82)", fontFamily: "Geist", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", padding: "28px 32px", background: "rgba(20,19,15,0.82)", fontFamily: "Geist", gap: 12 }}>
       <div style={{ display: "flex", alignSelf: "flex-start", padding: "6px 16px", borderRadius: 10, background: pill, color: "#fff", fontSize: 40 }}>{word}</div>
-      <div style={{ display: "flex", color: "rgba(255,255,255,0.92)", fontSize: 27 }}>{line}</div>
+      <div style={{ display: "flex", color: "#fff", fontSize: 27 }}>{reason}</div>
+      <div style={{ display: "flex", color: "rgba(255,255,255,0.75)", fontSize: 23 }}>{line}</div>
     </div>,
-    176,
+    210,
   );
 }
 

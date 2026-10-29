@@ -156,8 +156,8 @@ export function LiveReplay({ report, videoUrl, poster, cropUrls = {}, names = {}
                     <span className="block font-semibold [overflow-wrap:anywhere]">
                       {names[t.objectId] ?? (match ? "Brand product" : "Another product")}
                     </span>
-                    <span className={`mt-0.5 block font-medium ${match ? "text-(--pass)" : "text-(--reject)"}`}>
-                      {match ? "Counted" : "Rejected"}
+                    <span className={`mt-0.5 block font-medium ${match ? "text-(--ink)" : "text-(--reject)"}`}>
+                      {match ? "Counted" : "Not counted"}
                     </span>
                   </span>
                 </li>

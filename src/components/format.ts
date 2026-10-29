@@ -1,3 +1,4 @@
+import { sizeFactor } from "@/lib/metrics/compute";
 import { FPS, type ContractRule, type Segment, type TermResult, type VideoMetrics, type VideoReport } from "@/lib/types";
 
 /** 12.4 -> "0:12.4"; whole minutes for long clips. */
@@ -130,4 +131,9 @@ export function ruleReading(rule: ContractRule | null): string {
     case "disclosed":
       return "#ad on screen, or “ad” / “sponsored” said aloud";
   }
+}
+
+/** The prominence to show: scaled by size, as new runs store it (older reports are scaled here). */
+export function prominenceOf(m: VideoMetrics): number {
+  return Math.round((m.prominenceSized ? m.prominenceScore : m.prominenceScore * sizeFactor(m.avgAreaFraction)) * 10) / 10;
 }

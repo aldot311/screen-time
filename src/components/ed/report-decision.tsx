@@ -109,7 +109,7 @@ export function PayOrHold({
   const amount = fee === null ? "" : ` ${usd(fee)}`;
 
   const tone = {
-    delivered: { chip: "bg-(--pass-soft) text-(--pass)", Icon: Check, title: `Recommendation: pay${amount}` },
+    delivered: { chip: "bg-(--pass-soft) text-(--pass)", Icon: Check, title: flags.length ? `Pay${amount}, after a look` : `Recommendation: pay${amount}` },
     short: {
       chip: "bg-(--short-soft) text-(--short)",
       Icon: Hand,
@@ -128,8 +128,9 @@ export function PayOrHold({
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-semibold text-(--ink-3)">Pay or hold · a recommendation, you decide</p>
           <h2 id="pay-h" className="ed-display mt-0.5 scroll-mt-28 text-[21px] leading-tight sm:text-[23px]">
-            {tone.title}
+            {override ? `${override.decision === "pay" ? "Pay" : "Hold"}${amount} · your call` : tone.title}
           </h2>
+          {override && <p className="mt-0.5 text-[14px] text-(--ink-3) line-through decoration-(--ink-3)/40">{tone.title}</p>}
           {verdict === "delivered" && (
             <p className="mt-1.5 max-w-[60ch] text-[14.5px] leading-[1.5] text-(--ink-2)">
               Every contract term was met, each with the second that proves it below. Nothing here moves money; you pay as you normally do.
@@ -219,10 +220,7 @@ function Override({ endpoint, override, recommended }: { endpoint: string; overr
   if (override) {
     return (
       <div className="mt-3 rounded-(--r-inner) bg-(--wash) px-3.5 py-3">
-        <p className="text-[14px] text-(--ink)">
-          <span className="font-semibold">Your decision: {override.decision === "pay" ? "Pay" : "Hold"}</span>
-          <span className="text-(--ink-2)"> · Screen-Time recommended {recommended === "pay" ? "pay" : "hold"}</span>
-        </p>
+        <p className="text-[14px] font-semibold text-(--ink)">Why you decided differently</p>
         <p className="mt-1 text-[14px] leading-[1.45] text-(--ink-2)">&ldquo;{override.reason}&rdquo;</p>
         <p className="mt-1 text-[12.5px] text-(--ink-3)">
           {new Date(override.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC · the report
@@ -251,7 +249,7 @@ function Override({ endpoint, override, recommended }: { endpoint: string; overr
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="ed-press mt-3 inline-flex h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-(--ink) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
+        className="ed-press mt-3 ml-0 inline-flex h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-(--ink) ring-1 ring-(--hair-2) active:bg-(--wash) sm:ml-2 [@media(hover:hover)]:hover:ring-(--ink-3)"
       >
         Decide differently
       </button>

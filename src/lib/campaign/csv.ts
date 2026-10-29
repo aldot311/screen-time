@@ -1,7 +1,7 @@
 // Campaign roll-up as CSV, one row per video.
 import { disclosureWhere } from "@/lib/metrics/rules";
 import type { VideoReport } from "@/lib/types";
-import { verdictOf } from "@/components/format";
+import { prominenceOf, verdictOf } from "@/components/format";
 import { decisionOf, feeFor, latestFinished } from "./money";
 import type { Campaign, VideoEntry } from "./types";
 
@@ -64,7 +64,7 @@ export function videoRow(v: VideoEntry, fees: Fees = {}, latest = true): Cell[] 
     round(m.shareOfVideo * 100, 1),
     m.firstSeenSec === null ? null : round(m.firstSeenSec, 2),
     round(m.longestRunSec, 2),
-    m.prominenceScore,
+    prominenceOf(m),
     m.mentions.length,
     count(true),
     count(false),

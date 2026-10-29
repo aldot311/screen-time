@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ChevronRight, Plus } from "lucide-react";
 import { listCampaigns, listVideos } from "@/lib/campaign/store";
 import { TRY_ID } from "@/lib/campaign/try";
+import { payout, payoutLine } from "@/lib/campaign/money";
 import type { Campaign } from "@/lib/campaign/types";
 import { seconds, verdictOf } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
@@ -19,7 +20,8 @@ async function summarize(c: Campaign) {
   const verdicts = done.map((v) => verdictOf(v.report));
   return {
     c,
-    thumbs: videos.map((v) => v.thumbUrl).filter((u): u is string => u !== undefined),
+    // The product photo leads when the campaign has one, so a campaign reads as its product at a glance.
+    thumbs: [c.productImageUrl, ...videos.map((v) => v.thumbUrl)].filter((u): u is string => typeof u === "string"),
     total: videos.length,
     done: done.length,
     delivered: verdicts.filter((v) => v === "delivered").length,
@@ -30,6 +32,11 @@ async function summarize(c: Campaign) {
     stopped: videos.filter((v) => v.status === "failed").length,
     // Exact per-video values summed once and floored only for display, exactly as the roll-up does.
     seconds: done.reduce((s, v) => s + (v.report?.metrics.secondsOnScreen ?? 0), 0),
+    // The same money line as the campaign page (videos for a test set from one handle, creators otherwise).
+    money: (() => {
+      const oneHandle = videos.length > 1 && new Set(videos.map((v) => v.creator)).size === 1 && !c.creators?.length;
+      return oneHandle ? payoutLine(payout(c, videos, { perVideo: true }), "video") : payoutLine(payout(c, videos));
+    })(),
   };
 }
 
@@ -138,6 +145,7 @@ function CampaignCard({ k, eager }: { k: Card; eager: boolean }) {
           )}
         </span>
         {k.total > 0 && <MixBar k={k} />}
+        {k.money && <span className="mt-1.5 block text-[13.5px] font-semibold text-(--ink) tabular">{k.money}</span>}
         <span className="mt-1.5 flex flex-wrap gap-x-3 text-[12.5px] text-(--ink-2) tabular">
           {k.done > 0 && <span className="text-(--ink-3)">{seconds(k.seconds)} on screen</span>}
           {k.short > 0 && <span>{k.short} fell short</span>}

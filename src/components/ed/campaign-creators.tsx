@@ -231,7 +231,9 @@ export function CampaignCreators({ campaignId, entries, editable }: { campaignId
           </ul>
         ) : (
           <p className="px-4 py-5 text-[14.5px] text-(--ink-2)">
-            No creators yet. {editable ? "Add the handles you expect videos from; each one can get a request link to send their cut." : ""}
+            {editable
+              ? "Videos uploaded here count without a list. Add the creators you expect videos from to send each a request link."
+              : "No creators listed for this campaign."}
           </p>
         )}
 

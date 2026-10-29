@@ -82,7 +82,18 @@ export function prominenceScore(p: { share: number; avgArea: number; centreRatio
     w.area * clamp01(p.avgArea / AREA_SATURATION) +
     w.centre * clamp01(p.centreRatio) +
     w.earliness * clamp01(p.earliness);
-  return Math.round(score * 1000) / 10;
+  return Math.round(score * sizeFactor(p.avgArea) * 1000) / 10;
+}
+
+/** Below this average share of the frame a product is small, however long it is on screen. */
+export const SMALL_AREA = 0.03;
+
+/**
+ * 1 for a product at least SMALL_AREA of the frame, falling with the square root below it: a can the size of a
+ * thumbnail on screen the whole time is not "clearly featured" (round-5 judge: 0.5% of the frame scored 62).
+ */
+export function sizeFactor(avgArea: number): number {
+  return Math.sqrt(clamp01(avgArea / SMALL_AREA));
 }
 
 /**
@@ -111,6 +122,7 @@ export function computeMetrics(detections: Detection[], info: VideoInfo, mention
     prominenceScore: samples.length
       ? prominenceScore({ share, avgArea: avgAreaFraction, centreRatio: centerWeightedSec / seconds, earliness })
       : 0,
+    prominenceSized: true,
     segments,
     mentions: sortedMentions,
     visibleFrames: samples.map((s) => s.frame),

@@ -399,7 +399,7 @@ function VerdictCard({ show, track }: { show: Showcased; track: Showcased["video
             className={[
               "inline-flex h-6 w-fit items-center rounded-full px-2.5 text-[12px] font-semibold",
               match
-                ? "bg-(--signal) text-(--signal-ink)"
+                ? "bg-(--ink) text-white"
                 : "bg-(--card) text-(--reject) outline-[1.5px] -outline-offset-[1.5px] outline-(--reject) outline-dashed",
             ].join(" ")}
           >

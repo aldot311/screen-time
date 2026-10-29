@@ -65,6 +65,8 @@ export interface VideoMetrics {
   avgAreaFraction: number; // mean over frames where visible
   centerWeightedSec: number; // seconds weighted by closeness to frame centre
   prominenceScore: number; // 0..100
+  /** Set on reports whose prominence is already scaled by size (sizeFactor); older ones are scaled when shown. */
+  prominenceSized?: true;
   segments: Segment[];
   mentions: Mention[];
   /** Frame indices actually detected on screen (segments also cover bridged gaps). Older reports lack it. */

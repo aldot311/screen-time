@@ -40,7 +40,7 @@ export default function AccuracyPage() {
   const clips = new Set(verified.rows.map((r) => r.clip)).size;
   return (
     <>
-      <TopBar back={{ href: "/", label: "Screen-Time" }} />
+      <TopBar back={{ href: "/", label: "Home" }} />
       <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-24 sm:px-6 lg:pt-12">
         <h1 className={`${DISPLAY} text-[38px] leading-[1.02] sm:text-[56px]`}>Measured, not claimed.</h1>
         <p className="mt-3 max-w-[62ch] text-[16px] leading-[1.55] text-(--ink-2)">
@@ -56,47 +56,6 @@ export default function AccuracyPage() {
             The same runs, scored twice: once counting every object SAM 3.1 tracked for the prompt, once counting only the objects Muse Spark
             confirmed as the brand&rsquo;s product. No model was run again for this.
           </p>
-          {/* The full table from sm up; phones get the before/after cards below, which carry the same numbers. */}
-          <div className="mt-4 hidden overflow-x-auto rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair) sm:block">
-            <table className="w-full min-w-[560px] text-left text-[14px] tabular">
-              <thead className="text-[12.5px] text-(--ink-3)">
-                <tr className="border-b border-(--hair)">
-                  <th scope="col" className="px-4 py-3 font-semibold">
-                    Pipeline
-                  </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
-                    Precision
-                  </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
-                    Recall
-                  </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
-                    F1
-                  </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
-                    Avg. error per clip
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-semibold">
-                    Seconds counted where the product isn&rsquo;t
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {[sam, verified].map((s) => (
-                  <tr key={s.mode} className={s.mode === "verified" ? "font-semibold text-(--ink)" : "text-(--ink-2)"}>
-                    <th scope="row" className="px-4 py-3 font-semibold">
-                      {LABEL[s.mode]}
-                    </th>
-                    <td className="px-3 py-3">{pct(s.precision)}</td>
-                    <td className="px-3 py-3">{pct(s.recall)}</td>
-                    <td className="px-3 py-3">{pct(s.f1)}</td>
-                    <td className="px-3 py-3">{s.meanAbsErrorSec.toFixed(2)} s</td>
-                    <td className="px-4 py-3">{s.falseSecondsOnEmptyClips.toFixed(1)} s</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Before and after Muse Spark">
             {[
               { label: "Precision", a: pct(sam.precision), b: pct(verified.precision), fa: Number(sam.precision), fb: Number(verified.precision) },
@@ -123,7 +82,8 @@ export default function AccuracyPage() {
           <p className="mt-3 max-w-[62ch] text-[14.5px] leading-[1.55] text-(--ink-2)">
             Without the second model, a can of a different Alani flavor alone adds {sam.falseSecondsOnEmptyClips.toFixed(1)} s of &ldquo;screen time&rdquo; the brand
             never got, and a Stanley cup held beside the can is counted as the can. Muse Spark rejects them and cuts the average error from {sam.meanAbsErrorSec.toFixed(2)} s to{" "}
-            {verified.meanAbsErrorSec.toFixed(2)} s, at the cost of {((Number(sam.recall) - Number(verified.recall)) * 100).toFixed(1)} points of recall.
+            {verified.meanAbsErrorSec.toFixed(2)} s, at the cost of {((Number(sam.recall) - Number(verified.recall)) * 100).toFixed(1)} points of recall
+            ({pct(sam.recall)} → {pct(verified.recall)}; F1 {pct(sam.f1)} → {pct(verified.f1)}).
           </p>
         </section>
 
@@ -137,7 +97,8 @@ export default function AccuracyPage() {
             <span className="font-semibold text-(--ink) tabular">
               {Math.round((objects.hosted.accuracy ?? 0) * objects.hosted.objects)} of {objects.hosted.objects}
             </span>{" "}
-            clearly visible objects correctly: no look-alike counted, no product missed. Four objects too blurred to judge are left out.
+            objects that could be judged correctly: no look-alike counted, no product missed. Four more were too blurred for a person to
+            judge either, so they are not scored (in the app, an object Muse Spark cannot make out is never counted).
           </p>
         </section>
 

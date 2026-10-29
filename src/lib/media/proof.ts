@@ -9,6 +9,8 @@ import { verdictOf } from "@/components/format";
 import { ffmpeg } from "./index";
 
 export const PROOF_W = 720;
+/** Bumped when the clip's look changes, so clips rendered before are made again. */
+export const PROOF_STYLE = 2;
 export const PROOF_H = 1280;
 // Inside the route's 120 s limit, so ffmpeg is stopped (and the work dir cleaned) before the function is.
 const PROOF_TIMEOUT_MS = 100_000;
@@ -29,6 +31,12 @@ export function proofWords(r: VideoReport, text: ProofText) {
     word: verdict === "delivered" ? "DELIVERED" : verdict === "short" ? "FELL SHORT" : verdict === "review" ? "NEEDS REVIEW" : "NOT RUN",
     pill: verdict === "delivered" ? "#137a4c" : verdict === "short" ? "#c2392b" : "#8c5e00",
     line: `${text.brand} · ${tenths(r.metrics.secondsOnScreen)} s on screen · ${text.creator}`,
+    // Why, in one line: the first missed term, or that every term was met.
+    reason: (() => {
+      const missed = r.terms.filter((t) => t.pass === false);
+      if (missed.length) return `Missed: ${missed[0].term.text}${missed.length > 1 ? ` (+${missed.length - 1} more)` : ""}`;
+      return r.terms.length === 1 ? "The contract term was met" : r.terms.length ? `All ${r.terms.length} contract terms met` : "No contract terms set";
+    })(),
     footer: "Checked frame by frame · Meta SAM 3.1 + Muse Spark · Screen-Time",
     mention: (said: string) => `“${said}” said`,
   };
@@ -86,7 +94,7 @@ export async function renderProof(videoPath: string, outPath: string, r: VideoRe
   const words = proofWords(r, text);
   const top = join(workDir, "top.png");
   const foot = join(workDir, "footer.png");
-  await writeFile(top, await topBand(words.word, words.pill, words.line));
+  await writeFile(top, await topBand(words.word, words.pill, words.line, words.reason));
   await writeFile(foot, await footer(words.footer));
   const labels = await Promise.all(
     r.metrics.mentions.map(async (men, i) => {

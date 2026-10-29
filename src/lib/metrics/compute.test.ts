@@ -98,6 +98,7 @@ describe("computeMetrics", () => {
       avgAreaFraction: 0,
       centerWeightedSec: 0,
       prominenceScore: 0,
+      prominenceSized: true,
       segments: [],
       mentions: [],
       visibleFrames: [],
@@ -187,5 +188,16 @@ describe("zero-area detections", () => {
     expect(m.secondsOnScreen).toBeCloseTo(1 / 15);
     expect(m.firstSeenSec).toBeCloseTo(2 / 15);
     expect(frameSamples([det(5, { areaFraction: 0 })], info(30))).toEqual([]);
+  });
+});
+
+describe("size factor", () => {
+  it("leaves a product at 3% of the frame or more alone, and pulls a thumbnail-sized one down", async () => {
+    const { sizeFactor } = await import("./compute");
+    expect(sizeFactor(0.05)).toBe(1);
+    expect(sizeFactor(0.03)).toBe(1);
+    expect(sizeFactor(0.005)).toBeCloseTo(0.408, 3);
+    // The round-5 case: a can at about 0.5% of the frame, on screen most of the video, no longer reads as featured.
+    expect(prominenceScore({ share: 0.9, avgArea: 0.005, centreRatio: 0.8, earliness: 0.9 })).toBeLessThan(35);
   });
 });

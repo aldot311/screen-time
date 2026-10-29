@@ -45,9 +45,7 @@ export default async function ReportCard({ params }: { params: Promise<{ id: str
       <div style={{ width: "100%", height: "100%", display: "flex", background: PAPER, color: INK, padding: 56, gap: 48 }}>
         {still ? (
           <img src={still} alt="" width={290} height={518} style={{ borderRadius: 28, objectFit: "cover", border: `6px solid ${SIGNAL}` }} />
-        ) : (
-          <div style={{ display: "flex", width: 290, height: 518, borderRadius: 28, background: WASH }} />
-        )}
+        ) : null}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 30, fontWeight: 600, fontFamily: display ? "Display" : undefined }}>
             <div style={{ display: "flex", position: "relative", width: 46, height: 46, borderRadius: 13, background: INK }}>

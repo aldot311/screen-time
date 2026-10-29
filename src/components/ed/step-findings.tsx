@@ -11,8 +11,8 @@ const tc = (s: number) => timecode(s).replace(/\.0$/, "");
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 const VERDICT: Record<VerifyVerdict, { label: string; cls: string }> = {
-  match: { label: "Brand product", cls: "bg-(--signal) text-(--signal-ink)" },
-  lookalike: { label: "Look-alike, rejected", cls: "border border-dashed border-(--reject) bg-(--card) text-(--reject)" },
+  match: { label: "Counted", cls: "bg-(--ink) text-white" },
+  lookalike: { label: "Not counted · look-alike", cls: "border border-dashed border-(--reject) bg-(--card) text-(--reject)" },
   unclear: { label: "Unclear, not counted", cls: "bg-(--wash) text-(--ink-2)" },
 };
 
@@ -61,7 +61,7 @@ export function StepFindings({ step, live, videoUrl, brand }: { step: StepId; li
         <ul className="space-y-2">
           {checks.map((c, i) => (
             <li key={`${c.prompt}-${c.objectId}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="text-[12.5px] font-semibold text-(--ink-3) tabular">Object {c.objectId + 1}</span>
+              <span className="text-[12.5px] font-semibold text-(--ink-3) tabular">Object {i + 1}</span>
               <span className={`inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold ${VERDICT[c.verdict].cls}`}>
                 {VERDICT[c.verdict].label}
               </span>

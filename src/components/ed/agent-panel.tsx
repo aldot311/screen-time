@@ -5,7 +5,7 @@
 // without the brand: the note is an editable draft, and a re-cut request becomes a link only when approved here.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Check, Copy, Link2, RotateCcw } from "lucide-react";
+import { Bot, Check, ChevronDown, Copy, Link2, RotateCcw } from "lucide-react";
 import type { AgentRun } from "@/lib/agent/campaign-agent";
 import { agentRunning } from "@/lib/agent/state";
 import { ApiError } from "@/components/api-error";
@@ -70,7 +70,7 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
             </p>
           )}
 
-          {agent && agent.steps.length > 0 && (
+          {agent && agent.steps.length > 0 && agent.status !== "done" && (
             <ol className="mt-3 space-y-2" aria-label="What the agent did" aria-live="polite">
               {agent.steps.map((s, i) => (
                 <li key={i} className="grid grid-cols-[20px_1fr] gap-2 text-[13.5px] leading-[1.45]">
@@ -168,9 +168,28 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
                   )}
                 </div>
               )}
-              <p className="text-[12.5px] text-(--ink-3) tabular">
-                {agent.steps.length} steps · ${agent.usd.toFixed(2)} of Muse Spark
-              </p>
+              <details className="group">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[13px] font-semibold text-(--ink-2) [&::-webkit-details-marker]:hidden">
+                  How it got there: {agent.steps.length} steps · ${agent.usd.toFixed(2)} of Muse Spark
+                  <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+            {agent.steps.length > 0 && (
+              <ol className="mt-2 space-y-2" aria-label="What the agent did">
+                {agent.steps.map((s, i) => (
+                  <li key={i} className="grid grid-cols-[20px_1fr] gap-2 text-[13.5px] leading-[1.45]">
+                    <Check className="mt-[3px] size-4 text-(--pass)" strokeWidth={3} aria-hidden />
+                    <span className="min-w-0">
+                      <span className="font-semibold text-(--ink)">{TOOL_LABEL[s.tool] ?? s.tool}</span>
+                      {s.tool === "recommend_payout" && typeof s.args?.decision === "string" && (
+                        <span className="text-(--ink-2)"> · {s.args.decision}</span>
+                      )}
+                      {s.tool === "analyze_video" && <span className="block text-(--ink-3)">{s.result.slice(0, 140)}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+              </details>
             </div>
           )}
 

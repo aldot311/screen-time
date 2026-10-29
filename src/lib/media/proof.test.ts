@@ -31,5 +31,6 @@ describe("proof clip filter", () => {
     expect(w.word).toBe("DELIVERED");
     expect(w.line).toBe("Alani Nu · 1.2 s on screen · @maya");
     expect(w.mention("Alani")).toBe("“Alani” said");
+    expect(w.reason).toBe("The contract term was met");
   });
 });

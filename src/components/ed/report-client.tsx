@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Check, ChevronDown, CircleHelp, Clapperboard, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
 import { FPS, type Disclosure, type Segment, type TermResult, type VideoReport } from "@/lib/types";
-import { countedBefore, framesToSegments, percent, ruleReading, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
+import { countedBefore, framesToSegments, percent, prominenceOf, ruleReading, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
 import { Figure, Swatch } from "./bits";
@@ -379,7 +379,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         attempts[attempts.length - 1].matched ? "found it" : "still found nothing"
       }.`
     : null;
-  const objectName = (id: number, match: boolean) => names[id] ?? (match ? `${brand} ${report.prompt}` : `Another ${report.prompt}`);
+  // A rejected object is named as what it is not: Muse Spark's reason under it says what it is.
+  const objectName = (id: number, match: boolean) => names[id] ?? (match ? `${brand} ${report.prompt}` : `Not the ${brand} product`);
   const hasMatchTrack = report.tracks.some((t) => t.verdict === "match");
   const isOn = (key: string) => active === key && playing;
 
@@ -419,7 +420,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
           ref={stage}
           className="relative rounded-(--r-card) bg-(--wash) p-3 shadow-[inset_0_0_0_1px_var(--hair)] sm:p-4 md:max-h-[calc(100svh-120px)] lg:p-5"
         >
-          <div className="relative mx-auto w-[min(100%,calc(min(52svh,calc(100svh-420px))*0.5625))] sm:w-[min(100%,calc(min(56svh,calc(100svh-380px))*0.5625))] md:w-[min(100%,calc((100svh-160px)*0.5625))]">
+          <div className="relative mx-auto w-[min(100%,calc(min(36svh,calc(100svh-420px))*0.5625))] sm:w-[min(100%,calc(min(56svh,calc(100svh-380px))*0.5625))] md:w-[min(100%,calc((100svh-160px)*0.5625))]">
             <Player
               ref={player}
               src={videoUrl}
@@ -788,7 +789,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             <MetricRow
               label="Prominence"
               hint="Above 50 means clearly featured; from time on screen, size, centering and how early it appears."
-              value={`${Math.round(m.prominenceScore)}`}
+              value={`${Math.round(prominenceOf(m))}`}
               suffix="/ 100"
               caption={largestMatch ? <Tc>{timecode(largestMatch.t)}</Tc> : undefined}
               on={isOn("num-prom")}
@@ -1127,7 +1128,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                         if (el instanceof HTMLDetailsElement) el.open = true;
                       }}
                       className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
-                      Every Meta API call, ${report.cost.usd.toFixed(2)}
+                      Every Meta API call, ${report.cost.usd.toFixed(3)}
                     </a>
                   ) : (
                     <>Meta API cost ${report.cost.usd.toFixed(2)}</>
