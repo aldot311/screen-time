@@ -16,6 +16,13 @@ What we learned:
 - The SAM prompt matters: "tumbler" found nothing; "cup" found the Stanley at 96–100% precision.
 - The verifier first rejected unbranded sneakers as "unclear" for having no visible logo; the instruction now judges
   only the features the brand describes. It still rejects real look-alikes (leather dress shoes among the sneakers).
+- clip01's 79% precision is the can leaving the frame: SAM keeps tracking a 13–32 px sliver at the left edge for
+  about a second (frames 78–92) after the labels mark it gone. The tracking is right; whether a sliver should count
+  is a contract question, so the threshold was not tuned to this test set.
+- Prompt recovery (added after these runs): with the weak prompt "tumbler", clip06 found nothing; Muse Spark looked at
+  four frames, said the tumbler was held up to the camera and suggested "cup", and the second SAM pass found it for
+  10.1 s, the same as the hand-tuned prompt. Negative controls: the empty clip and the look-alike clip got "not
+  visible" from Spark and no second SAM pass. Cost of the three runs: $0.36.
 - Test-set API cost: about $3.50 of reserved spend for 23 targets, including verification and transcription.
 
 ```
