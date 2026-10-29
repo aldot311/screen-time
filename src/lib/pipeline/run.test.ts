@@ -6,7 +6,7 @@ import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
 import { CostGuard, CostLimitError, type FetchLike } from "@/lib/meta";
 import { pickFrames, runVideo } from "./run";
-import { toContractTerms } from "./prompts";
+import { toContractTerms, toSuggestion } from "./prompts";
 import type { Detection } from "@/lib/types";
 
 // Two frames of SAM output for one object, in the documented token format (fixture from @meta-sam/parser's README).
@@ -169,6 +169,111 @@ describe("runVideo", () => {
     await expect(runVideo(base(dir, src, tiny, fetch))).rejects.toBeInstanceOf(CostLimitError);
     expect(paths).toEqual([]);
   }, 30_000);
+});
+
+// SAM finds nothing for the brand's prompt; Muse Spark suggests `suggestion`; SAM finds the product with "cup".
+function agentApi(suggestion: { visible: boolean; prompt: string; reason: string }): { fetch: FetchLike; samPrompts: string[] } {
+  const samPrompts: string[] = [];
+  const { fetch: ok } = fakeApi("match");
+  const empty = sse([
+    { type: "response.created" },
+    { type: "response.output_text.done", ...lane, text: "" },
+    { type: "response.completed", response: { status: "completed", usage: { video_frames_processed: 15 } } },
+  ] as { type: string }[]);
+  const fetch: FetchLike = async (url, init) => {
+    if (new URL(url).pathname === "/v1/responses") {
+      const body = JSON.parse(String(init?.body));
+      if (body.model === "sam-3.1") {
+        const prompt = body.input[0].content[0].text;
+        samPrompts.push(prompt);
+        return new Response(prompt === "cup" ? samStream(15) : empty, { status: 200 });
+      }
+      if (body.text?.format?.name === "prompt_suggestion") return sparkReply(suggestion);
+    }
+    return ok(url, init);
+  };
+  return { fetch, samPrompts };
+}
+
+describe("runVideo prompt recovery", () => {
+  it("retries SAM once with Muse Spark's suggestion when the first prompt finds nothing", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, samPrompts } = agentApi({ visible: true, prompt: "Cup", reason: "The tumbler is held like a cup." });
+    const report = await runVideo({ ...base(dir, src, guard, fetch), prompt: "tumbler" });
+
+    expect(samPrompts).toEqual(["tumbler", "cup"]);
+    expect(report.prompt).toBe("cup");
+    expect(report.promptAttempts).toEqual([
+      { prompt: "tumbler", objects: 0, matched: 0, samFrames: 15, next: "The tumbler is held like a cup." },
+      { prompt: "cup", objects: 1, matched: 1, samFrames: 15 },
+    ]);
+    expect(report.metrics.secondsOnScreen).toBeCloseTo(2 / 15);
+    // Two SAM passes $0.02 + suggestion $0.02 + verify $0.02 + transcribe $0.01 + terms $0.02.
+    expect(report.cost).toEqual({ samFrames: 30, usd: 0.09 });
+    expect(await guard.totalSpentUsd()).toBeCloseTo(0.09, 10);
+  }, 30_000);
+
+  it("does not pay for a second SAM pass when the product is not in the video", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, samPrompts } = agentApi({ visible: false, prompt: "", reason: "No teal can appears." });
+    const report = await runVideo({ ...base(dir, src, guard, fetch), prompt: "tumbler" });
+    expect(samPrompts).toEqual(["tumbler"]);
+    expect(report.prompt).toBe("tumbler");
+    expect(report.promptAttempts).toBeUndefined();
+    expect(report.metrics.secondsOnScreen).toBe(0);
+  }, 30_000);
+
+  it("skips the retry when the budget could not also cover the rest of the run, and still finishes", async () => {
+    const { dir, src } = await setup();
+    const guard = new CostGuard({ maxUsdPerRun: 0.08, maxUsdTotal: 1, ledgerPath: join(dir, "tight.json") });
+    const { fetch, samPrompts } = agentApi({ visible: true, prompt: "cup", reason: "r" });
+    const report = await runVideo({ ...base(dir, src, guard, fetch), prompt: "tumbler" });
+    expect(samPrompts).toEqual(["tumbler"]);
+    expect(report.terms).toHaveLength(1);
+    expect(report.cost.usd).toBeCloseTo(0.04, 10); // SAM + transcribe + terms, no suggestion
+  }, 30_000);
+
+  it("keeps the first pass when the recovery call fails", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: agent } = agentApi({ visible: true, prompt: "cup", reason: "r" });
+    const fetch: FetchLike = async (url, init) => {
+      const body = new URL(url).pathname === "/v1/responses" ? JSON.parse(String(init?.body)) : null;
+      if (body?.text?.format?.name === "prompt_suggestion")
+        return Response.json({ error: { message: "down", type: "server_error", code: "x" } }, { status: 400 });
+      return agent(url, init);
+    };
+    const report = await runVideo({ ...base(dir, src, guard, fetch), prompt: "tumbler" });
+    expect(report.prompt).toBe("tumbler");
+    expect(report.promptAttempts).toBeUndefined();
+    expect(report.terms).toHaveLength(1);
+  }, 30_000);
+
+  it("ignores a suggestion that repeats the prompt already tried", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, samPrompts } = agentApi({ visible: true, prompt: " Tumbler ", reason: "It is a tumbler." });
+    await runVideo({ ...base(dir, src, guard, fetch), prompt: "tumbler" });
+    expect(samPrompts).toEqual(["tumbler"]);
+  }, 30_000);
+
+  it("never asks for a suggestion when the first prompt finds the product", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, paths } = fakeApi("match");
+    const report = await runVideo(base(dir, src, guard, fetch));
+    expect(paths.filter((p) => p === "/v1/responses")).toHaveLength(3);
+    expect(report.promptAttempts).toBeUndefined();
+  }, 30_000);
+});
+
+describe("toSuggestion", () => {
+  it("accepts a short new prompt and rejects the rest", () => {
+    expect(toSuggestion({ visible: true, prompt: "Water Bottle!", reason: "r" }, ["bottle"])).toEqual({ prompt: "water bottle", reason: "r" });
+    expect(toSuggestion({ visible: false, prompt: "cup", reason: "" }, [])).toBeNull();
+    expect(toSuggestion({ visible: true, prompt: "", reason: "" }, [])).toBeNull();
+    expect(toSuggestion({ visible: true, prompt: "a very long noun phrase", reason: "" }, [])).toBeNull();
+    expect(toSuggestion({ visible: true, prompt: "CUP", reason: "" }, ["cup"])).toBeNull();
+    expect(toSuggestion(null, [])).toBeNull();
+    expect(toSuggestion({ rules: [] }, [])).toBeNull();
+  });
 });
 
 describe("pickFrames", () => {

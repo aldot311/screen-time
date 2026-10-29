@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   // Forwarded browser logs were feeding a dev reload loop (each page load logged, rebuilt, reloaded).
   logging: { browserToTerminal: false },
   devIndicators: false,
+  // ffmpeg-static finds its binary next to its own file; bundling it rewrote that path to /ROOT/... and every in-app
+  // run failed at "Prepare video". Load it with Node's require instead, and ship the binary with the routes that run.
+  serverExternalPackages: ["ffmpeg-static"],
+  outputFileTracingIncludes: {
+    "/api/campaigns/**": ["./node_modules/ffmpeg-static/ffmpeg"],
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -90,6 +90,16 @@ export interface TermResult {
   detail: string;
 }
 
+/** One SAM pass: the prompt it tracked, what it found, and why another prompt was tried after it. */
+export interface PromptAttempt {
+  prompt: string;
+  objects: number; // objects SAM tracked
+  matched: number; // of those, confirmed as the brand's product
+  samFrames: number;
+  /** Muse Spark's reason for trying another prompt next. */
+  next?: string;
+}
+
 export interface VideoReport {
   videoId: string;
   info: VideoInfo;
@@ -98,6 +108,8 @@ export interface VideoReport {
   metrics: VideoMetrics;
   terms: TermResult[];
   cost: { samFrames: number; usd: number };
+  /** Present when the first prompt found nothing and Muse Spark suggested another, in order; `prompt` is the one used. */
+  promptAttempts?: PromptAttempt[];
   /** Every tracked box with its object's verdict, so the player can draw the overlay. Older reports lack it. */
   detections?: (Detection & { verdict: VerifyVerdict })[];
 }

@@ -159,6 +159,24 @@ export function ReportView({ report, videoUrl, synthetic, poster, cropUrls = {} 
             <h3 className="flex items-center gap-2 text-[13px] font-semibold">
               <ScanSearch className="size-4 text-ink-3" aria-hidden /> What the tracker found
             </h3>
+            {report.promptAttempts && report.promptAttempts.length > 1 && (
+              <ol className="mt-3 space-y-1.5 rounded-[8px] border border-line bg-sunken/60 px-3 py-2.5 text-[13px] text-ink-2">
+                {report.promptAttempts.map((a, i) => (
+                  <li key={a.prompt} className="flex gap-2">
+                    <span className="font-mono text-[12px] text-ink-3 tabular">{i + 1}</span>
+                    <span>
+                      SAM searched for <span className="font-medium text-ink">&ldquo;{a.prompt}&rdquo;</span>:{" "}
+                      {a.matched
+                        ? `found the product${a.objects > a.matched ? ` among ${a.objects} objects` : ""}.`
+                        : a.objects
+                          ? `${a.objects} object${a.objects === 1 ? "" : "s"}, none the product.`
+                          : "nothing."}
+                      {a.next && <span className="block text-ink-3">Muse Spark looked at the video and suggested another word: {a.next}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
             <ul className="mt-3 space-y-3">
               {report.tracks.map((t) => (
                 <li key={t.objectId} className="flex gap-3">

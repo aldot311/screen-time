@@ -1,4 +1,4 @@
-import type { ContractRule, ContractTerm, TrackVerification } from "@/lib/types";
+import type { ContractRule, ContractTerm, PromptAttempt, TrackVerification } from "@/lib/types";
 
 export type VerifyOutput = Omit<TrackVerification, "objectId">;
 
@@ -25,6 +25,43 @@ export function verifyPrompt(productDescription: string, samPrompt: string): str
     `unmistakable, "partial" if covered or cut off, "blurred" if motion or focus hides it.`,
     `Give a one-sentence reason a brand manager would understand.`,
   ].join(" ");
+}
+
+export const SUGGEST_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["visible", "prompt", "reason"],
+  properties: {
+    visible: { type: "boolean" },
+    prompt: { type: "string" },
+    reason: { type: "string" },
+  },
+} as const;
+
+export function suggestPromptText(productDescription: string, attempts: PromptAttempt[]): string {
+  const tried = attempts
+    .map((a) => `"${a.prompt}" (tracked ${a.objects} object${a.objects === 1 ? "" : "s"}, ${a.matched} of them the product)`)
+    .join("; ");
+  return [
+    `SAM 3.1 is a video segmentation model that finds objects from a short noun phrase naming a common object`,
+    `category, like "cup", "bottle", "can", "shoe" or "bag". It searched this creator video for the brand's product,`,
+    `${productDescription}, with these prompts and did not find it: ${tried}.`,
+    `Look at these frames from the video. Set "visible" to true only if that exact product appears in at least one`,
+    `frame. If it does, give in "prompt" one different noun phrase of one to three words, the plainest everyday name`,
+    `for the object's shape, that SAM is likelier to recognise (a tumbler held like a cup is a "cup"). Never repeat a`,
+    `tried prompt and never use a brand name. If it is not visible, set "prompt" to an empty string.`,
+    `Give a one-sentence reason a brand manager would understand.`,
+  ].join(" ");
+}
+
+/** A usable new prompt from the model's answer, or null: not visible, empty, too long, or already tried. */
+export function toSuggestion(output: unknown, tried: string[]): { prompt: string; reason: string } | null {
+  const o = output as { visible?: unknown; prompt?: unknown; reason?: unknown } | null;
+  if (!o || o.visible !== true || typeof o.prompt !== "string") return null;
+  const prompt = o.prompt.trim().toLowerCase().replace(/[^a-z0-9 -]/g, "").replace(/\s+/g, " ");
+  const words = prompt.split(" ").filter(Boolean).length;
+  if (!prompt || words > 3 || tried.some((t) => t.trim().toLowerCase() === prompt)) return null;
+  return { prompt, reason: typeof o.reason === "string" ? o.reason : "" };
 }
 
 const KINDS = [
