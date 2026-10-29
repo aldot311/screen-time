@@ -35,7 +35,7 @@ export function LiveDemo({ report, videoUrl, poster, cropUrls = {}, names = {} }
   }, [report.detections]);
 
   return (
-    <div className="rounded-[14px] border border-line bg-surface p-3 shadow-2 sm:p-4">
+    <div className="rounded-[14px] border border-line bg-surface p-3 shadow-1 sm:p-4">
       <div className="grid gap-4 sm:grid-cols-[minmax(0,240px)_1fr]">
         <div className="mx-auto w-full max-w-[240px]">
           <VideoOverlayPlayer
@@ -52,8 +52,8 @@ export function LiveDemo({ report, videoUrl, poster, cropUrls = {}, names = {} }
         <div className="flex min-w-0 flex-col">
           <p className="text-[12px] font-medium text-ink-3">Brand product on screen</p>
           <p className="mt-0.5 flex items-baseline gap-2">
-            <span className="text-[48px] font-semibold leading-none tracking-[-0.04em] tabular" aria-live="off">
-              {counted.toFixed(1)}
+            <span className="text-[48px] font-semibold leading-none tracking-[-0.04em]" aria-live="off">
+              <Figure value={counted} />
             </span>
             <span className="text-[15px] text-ink-2">
               s of <span className="tabular">{report.info.durationSec.toFixed(1)}</span>
@@ -78,7 +78,7 @@ export function LiveDemo({ report, videoUrl, poster, cropUrls = {}, names = {} }
                   key={t.objectId}
                   className={[
                     "flex items-center gap-3 rounded-[10px] border p-2 transition-[opacity,transform] duration-300",
-                    match ? "border-lime-ink/15 bg-lime-soft" : "border-fail/20 bg-fail-soft",
+                    match ? "border-line bg-surface" : "border-fail/20 bg-fail-soft",
                     seen ? "opacity-100" : "translate-y-1 opacity-0",
                   ].join(" ")}
                 >
@@ -90,7 +90,7 @@ export function LiveDemo({ report, videoUrl, poster, cropUrls = {}, names = {} }
                   )}
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{names[t.objectId] ?? (match ? "Brand product" : "Another product")}</span>
-                    <span className={`block text-[12px] font-medium ${match ? "text-lime-ink" : "text-fail"}`}>
+                    <span className={`block text-[12px] font-medium ${match ? "text-pass" : "text-fail"}`}>
                       {match ? "Counted" : "Rejected by Muse Spark, not counted"}
                     </span>
                   </span>
@@ -149,4 +149,15 @@ function settlesAt(t: TermResult, metrics: VideoMetrics, durationSec: number): n
     return nth === undefined ? end : (nth + 1) / FPS;
   }
   return t.evidence.at(-1)?.endSec ?? end;
+}
+
+/** "6.9" with tabular digits (so the counter does not jitter) but a proportional point, which Geist would otherwise
+ *  set as wide as a digit ("6 . 9"). */
+function Figure({ value }: { value: number }) {
+  const [whole, tenth] = value.toFixed(1).split(".");
+  return (
+    <>
+      <span className="tabular">{whole}</span>.<span className="tabular">{tenth}</span>
+    </>
+  );
 }

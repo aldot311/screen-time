@@ -212,7 +212,7 @@ A near-monochrome ink-on-paper palette with one committed signal colour, one sec
 - **Focus Blue** (focus): the 2px focus outline and the text caret. It has no other role.
 
 ### Named Rules
-**The One Meaning Rule.** Lime marks seconds the product was on screen and nothing else: no lime buttons, badges, progress, selection or decoration. If a lime pixel does not point to a counted second, remove it.
+**The One Meaning Rule.** Lime marks seconds the product was on screen and nothing else: no lime buttons, badges, progress, selection or decoration. If a lime pixel does not point to a counted second, remove it. Two brand exceptions, both pictures of the measurement: the mark, and on the landing page and share card a flat lime block behind the word "seen." (no tilt or pen texture, 2px corners, like a strip segment). Nothing else on the landing page uses lime outside real data: "Counted" is a verdict (pass) colour.
 
 **The Verdict Owns Judgement Rule.** Pass, fail and unsure are the only colours that judge. Loading and in-progress states use ink and neutral greys, never lime or a verdict tone.
 
@@ -220,7 +220,7 @@ A near-monochrome ink-on-paper palette with one committed signal colour, one sec
 
 ## Typography
 
-**Display Font:** none (the system has no display tier)
+**Display Font:** none in the app. The landing page alone has a display tier in Geist semibold: the H1 at 44px (phone) and 60px, line-height 1.02, -0.035em; section heads at 30px, -0.025em; and the replay counter at 48px, -0.04em, with tabular digits and a proportional decimal point (so "6.9" never reads "6 . 9").
 **Body Font:** Geist (with ui-sans-serif, system-ui)
 **Label/Mono Font:** Geist Mono (with ui-monospace), for timecodes only
 
@@ -297,7 +297,7 @@ Corners are gently rounded and scale with the size of the object: 2px for swatch
 ### Navigation
 - **Header:** sticky, 52px tall, a white surface at 90% with a blur and a bottom hairline. The wordmark sits at the left, then text nav links (ink-2, 6px by 10px padding, 6px corners, sunken fill and ink text on hover). The Meta and Aetrai credit line in 12px ink-3 is hidden below 640px.
 - **Breadcrumbs:** 13px ink-3 with slash separators. Links turn ink and underline on hover.
-- **Wordmark:** a 22 by 14px glyph of the strip itself (a sunken track with a lime stretch and one violet tick), followed by "Screen-Time" in Geist semibold. This is the single permitted lime use outside measured data, because the mark is a picture of the measurement.
+- **Wordmark:** a 24 by 16px glyph of the strip itself (an ink tile with 4px corners, a lime stretch and a white playhead through it), followed by "Screen-Time" in Geist semibold at 15px (17px on the landing page). The same glyph is the favicon (src/app/icon.svg). The mark is a picture of the measurement, which is why lime is allowed in it.
 
 ### Contract term row
 A full-width button laid out as a three-column grid: a 24px round verdict dot (wash plus icon), the term text in medium with the detail line in ink-2, and a right-aligned 12px "Jump to 0:02.6" or "See the first 5 s" action. Hover and focus fill the row with sunken and draw the term's window and evidence on the strip. Clicking seeks the player to the proving second.
@@ -343,3 +343,12 @@ An 8px-tall, 160px-wide pill track in sunken, split into pass, fail and unsure p
 - **Don't** add shadows beyond rest and player, or lift cards on hover.
 - **Don't** introduce new hues. The palette is ink, neutrals, lime, violet, the three verdict tones and focus blue.
 - **Don't** set durations or counts in Geist Mono.
+
+## Landing page (src/app/page.tsx)
+Persuade mode in the same world: the same ground, type and colour roles, with its own brief at `.impeccable/surfaces/src-app-page.md`.
+- **Hero:** the H1 and an intro that names the three Meta models, an ink primary button and a white secondary one. No eyebrow pill.
+- **Live replay (signature on the landing page):** a real report replayed muted and looping in a white card (shadow-1; the player inside keeps the one heavy shadow). The strip fills only up to the playhead, the counter adds up detected frames as they play, each tracked object appears with its crop when first seen (counted in pass, rejected in a fail-soft card), and contract terms tick from a dashed circle to their verdict at the moment they are earned.
+- **How it works:** a pipeline list, not cards: 24px sunken step dots with a Geist number, joined by a hairline (down the left on a phone, across the top on a wide screen); the model name sits under each step in ink-3.
+- **Verdicts:** real Muse Spark crops with pass or fail pills and the model's quoted reason.
+- **Accuracy:** the figures in a 20px sentence, then a compact evidence table (tabular, right-aligned) that includes the weakest rows and links to every result. No hero metric row.
+- **Share card:** src/app/opengraph-image.tsx: the mark, the H1 and a strip.

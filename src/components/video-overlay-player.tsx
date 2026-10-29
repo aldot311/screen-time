@@ -127,7 +127,11 @@ export const VideoOverlayPlayer = forwardRef<PlayerHandle, Props>(function Video
             >
               <span
                 className={[
-                  "absolute -top-5 left-[-2px] whitespace-nowrap rounded-[3px] px-1.5 py-px text-[11px] font-medium leading-4",
+                  "absolute whitespace-nowrap rounded-[3px] px-1.5 py-px text-[11px] font-medium leading-4",
+                  // Keep the label inside the frame: hang it from the right edge of a box on the right half, and
+                  // inside the top of a box that touches the top.
+                  (b.box.x1 + b.box.x2) / 2 > width * 0.55 ? "right-[-2px]" : "left-[-2px]",
+                  b.box.y1 < height * 0.03 ? "top-0" : "-top-5",
                   match ? "bg-lime text-lime-ink" : "bg-fail text-white",
                 ].join(" ")}
               >

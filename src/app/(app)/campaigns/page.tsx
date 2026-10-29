@@ -19,7 +19,7 @@ export default async function CampaignsPage() {
         thumbs: videos
           .map((v) => v.thumbUrl)
           .filter((u) => u !== undefined)
-          .slice(0, 4),
+          .slice(0, 3),
         total: videos.length,
         delivered: verdicts.filter((v) => v === "delivered").length,
         short: verdicts.filter((v) => v === "short").length,
@@ -179,16 +179,20 @@ function MixBar(props: {
   );
 }
 
-// Up to four creator stills fanned out, so a campaign reads as the set of videos it covers.
+// Up to three creator stills fanned out, so a campaign reads as the set of videos it covers.
 function ThumbStack({ thumbs }: { thumbs: string[] }) {
-  if (!thumbs.length) return <Thumb className="w-8" />;
+  // A fixed-width slot, so campaign names line up whether a row has one still or several.
   return (
-    <span className="flex shrink-0 -space-x-4">
-      {thumbs.map((t, i) => (
-        <span key={t} className="rounded-[6px] ring-2 ring-surface" style={{ zIndex: thumbs.length - i }}>
-          <Thumb src={t} className="w-8" />
-        </span>
-      ))}
+    <span className="flex w-14 shrink-0 -space-x-5">
+      {thumbs.length ? (
+        thumbs.map((t, i) => (
+          <span key={t} className="rounded-[6px] ring-2 ring-surface" style={{ zIndex: thumbs.length - i }}>
+            <Thumb src={t} className="w-8" />
+          </span>
+        ))
+      ) : (
+        <Thumb className="w-8" />
+      )}
     </span>
   );
 }

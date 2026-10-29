@@ -163,7 +163,7 @@ export function ReportView({ report, videoUrl, synthetic, poster, cropUrls = {} 
               <ol className="mt-3 space-y-1.5 rounded-[8px] border border-line bg-sunken/60 px-3 py-2.5 text-[13px] text-ink-2">
                 {report.promptAttempts.map((a, i) => (
                   <li key={a.prompt} className="flex gap-2">
-                    <span className="font-mono text-[12px] text-ink-3 tabular">{i + 1}</span>
+                    <span className="text-[12px] font-medium text-ink-3 tabular">{i + 1}</span>
                     <span>
                       SAM searched for <span className="font-medium text-ink">&ldquo;{a.prompt}&rdquo;</span>:{" "}
                       {a.matched
@@ -171,7 +171,11 @@ export function ReportView({ report, videoUrl, synthetic, poster, cropUrls = {} 
                         : a.objects
                           ? `${a.objects} object${a.objects === 1 ? "" : "s"}, none the product.`
                           : "nothing."}
-                      {a.next && <span className="block text-ink-3">Muse Spark looked at the video and suggested another word: {a.next}</span>}
+                      {a.next && report.promptAttempts![i + 1] && (
+                        <span className="block text-ink-3">
+                          Muse Spark watched the video and suggested &ldquo;{report.promptAttempts![i + 1].prompt}&rdquo;: {a.next}
+                        </span>
+                      )}
                     </span>
                   </li>
                 ))}
@@ -187,7 +191,7 @@ export function ReportView({ report, videoUrl, synthetic, poster, cropUrls = {} 
                       alt=""
                       className={[
                         "h-[72px] w-[54px] shrink-0 rounded-[6px] object-cover",
-                        t.verdict === "match" ? "ring-2 ring-lime" : "ring-2 ring-fail/70 ring-offset-1 ring-offset-surface",
+                        t.verdict === "match" ? "ring-2 ring-lime" : "outline-2 outline-offset-1 outline-dashed outline-fail",
                       ].join(" ")}
                     />
                   ) : (

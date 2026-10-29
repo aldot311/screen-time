@@ -19,7 +19,6 @@
 
   --lime: #c8f031; /* on-screen time */
   --lime-ink: #2f3a00; /* text on lime */
-  --lime-soft: #eef9c8;
   --violet: #6e56cf; /* spoken mentions */
   --violet-soft: #ece8fb;
 
@@ -46,7 +45,6 @@
   --color-line-strong: var(--line-strong);
   --color-lime: var(--lime);
   --color-lime-ink: var(--lime-ink);
-  --color-lime-soft: var(--lime-soft);
   --color-violet: var(--violet);
   --color-violet-soft: var(--violet-soft);
   --color-pass: var(--pass);

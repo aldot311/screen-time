@@ -35,11 +35,14 @@ const STEPS = [
   },
 ];
 
-const FIGURES = [
-  { value: "97.7%", label: "precision", note: "when it says the product is on screen, it is" },
-  { value: "95.6%", label: "recall", note: "of the frames the product was really there" },
-  { value: "23", label: "test targets", note: "cans, a tumbler, sneakers, a bottle, a cup" },
-  { value: "$0.20", label: "per 1,000 frames", note: "SAM 3.1 tracking on Meta's API" },
+// A sample of docs/ACCURACY.md, weakest rows included.
+const SAMPLE = [
+  { clip: "clip02", product: "Alani Nu can", truth: "12.0", measured: "12.0", precision: "100%", recall: "100%" },
+  { clip: "clip12", product: "Alani Nu can, tumbler beside it", truth: "9.8", measured: "10.3", precision: "95%", recall: "100%" },
+  { clip: "clip07", product: "Stanley tumbler", truth: "11.0", measured: "11.3", precision: "96%", recall: "99%" },
+  { clip: "clip15", product: "Stanley tumbler (weakest recall)", truth: "3.4", measured: "2.6", precision: "97%", recall: "75%" },
+  { clip: "clip08", product: "New Balance sneaker", truth: "1.6", measured: "1.5", precision: "100%", recall: "92%" },
+  { clip: "clip05", product: "Look-alike can, must not count", truth: "0.0", measured: "0.0", precision: "–", recall: "–" },
 ];
 
 export default async function Landing() {
@@ -71,26 +74,23 @@ export default async function Landing() {
       <main className="flex-1">
         <section className="mx-auto grid max-w-[1180px] items-center gap-x-14 gap-y-10 px-5 pt-10 pb-20 sm:px-8 lg:grid-cols-[1fr_560px] lg:pt-16">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[12px] text-ink-2 shadow-1">
-              <span className="size-1.5 rounded-full bg-pass" aria-hidden />
-              Built on Meta SAM 3.1, Muse Spark and Muse Voice Transcribe
-            </p>
-            <h1 className="mt-6 max-w-[14ch] text-[44px] leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-[60px]">
+            <h1 className="max-w-[14ch] text-[44px] leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-[60px]">
               Proof your product was{" "}
               <span className="relative inline-block">
-                <span className="absolute inset-x-[-0.08em] top-[0.18em] bottom-[0.02em] -rotate-1 rounded-[4px] bg-lime" aria-hidden />
+                {/* The one brand use of lime: the word that means "on screen", marked the way the strip marks it. */}
+                <span className="absolute inset-x-[-0.06em] top-[0.2em] bottom-[0.04em] rounded-[2px] bg-lime" aria-hidden />
                 <span className="relative">seen.</span>
               </span>
             </h1>
             <p className="mt-6 max-w-[52ch] text-[17px] leading-[1.6] text-ink-2">
-              Brands pay creators for screen time they cannot check. Screen-Time watches every frame of a sponsored
-              video, boxes your product, rejects look-alikes, hears your brand name, and checks the contract to the
-              second.
+              Brands pay creators for screen time they cannot check. Screen-Time uses Meta SAM 3.1, Muse Spark and Muse
+              Voice Transcribe to watch every frame of a sponsored video, box your product, reject look-alikes, hear
+              your brand name, and check the contract to the second.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 href={hero?.href ?? "/campaigns"}
-                className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-5 py-3 text-[15px] font-medium text-white shadow-2 hover:bg-ink/90"
+                className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-5 py-3 text-[15px] font-medium text-white shadow-1 hover:bg-ink/90"
               >
                 Open a real report <ArrowRight className="size-4" aria-hidden />
               </Link>
@@ -135,16 +135,21 @@ export default async function Landing() {
               Upload a creator&rsquo;s video and say what you are looking for. Every number in the report links to the
               second that proves it.
             </p>
-            <ol className="mt-12 grid gap-px overflow-hidden rounded-[12px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+            <ol className="relative mt-12 grid gap-8 lg:grid-cols-4 lg:gap-10">
+              {/* The hairline that joins the steps: down the left on a phone, across the top on a wide screen. */}
+              <span className="absolute top-3 bottom-3 left-3 w-px bg-line lg:top-3 lg:right-0 lg:bottom-auto lg:left-3 lg:h-px lg:w-auto" aria-hidden />
               {STEPS.map((s, i) => (
-                <li key={s.title} className="bg-surface p-6">
-                  <span className="flex items-center justify-between">
-                    <s.icon className="size-5 text-ink" aria-hidden />
-                    <span className="font-mono text-[12px] text-ink-3 tabular">0{i + 1}</span>
+                <li key={s.title} className="relative grid grid-cols-[24px_1fr] gap-x-4 lg:block">
+                  <span className="relative grid size-6 place-items-center rounded-full border border-line bg-sunken text-[12px] font-semibold text-ink-2 tabular">
+                    {i + 1}
                   </span>
-                  <h3 className="mt-8 text-[17px] font-semibold tracking-[-0.01em]">{s.title}</h3>
-                  <p className="mt-0.5 text-[12px] font-medium text-violet">{s.model}</p>
-                  <p className="mt-3 text-ink-2">{s.text}</p>
+                  <span className="lg:mt-5 lg:block">
+                    <h3 className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.01em]">
+                      <s.icon className="size-4 text-ink-3" aria-hidden /> {s.title}
+                    </h3>
+                    <p className="mt-0.5 text-[12px] font-medium text-ink-3">{s.model}</p>
+                    <p className="mt-2 text-ink-2">{s.text}</p>
+                  </span>
                 </li>
               ))}
             </ol>
@@ -178,23 +183,42 @@ export default async function Landing() {
             <h2 className="max-w-[26ch] text-[30px] leading-[1.15] font-semibold tracking-[-0.025em]">
               Measured frame by frame against hand-checked labels.
             </h2>
-            <dl className="mt-12 grid grid-cols-2 gap-y-10 lg:grid-cols-4 lg:divide-x lg:divide-line">
-              {FIGURES.map((f) => (
-                <div key={f.label} className="pr-6 lg:px-8 lg:first:pl-0">
-                  <dt className="sr-only">{f.label}</dt>
-                  <dd>
-                    <span className="block text-[44px] leading-none font-semibold tracking-[-0.04em] tabular">{f.value}</span>
-                    <span className="mt-3 block font-medium">{f.label}</span>
-                    <span className="mt-0.5 block text-[13px] text-ink-3">{f.note}</span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-12 max-w-[70ch] text-ink-2">
-              21 vertical clips: 15 filmed with real products, 6 stock, plus a look-alike can that must be rejected and
-              a clip with no product at all. Both scored 0 seconds, as they should.{" "}
+            <p className="mt-4 max-w-[62ch] text-[20px] leading-[1.45] text-ink-2">
+              <span className="font-semibold text-ink tabular">97.7%</span> precision and{" "}
+              <span className="font-semibold text-ink tabular">95.6%</span> recall per frame across 23 clip and product
+              targets, at <span className="font-semibold text-ink tabular">$0.20</span> per 1,000 frames tracked.
+            </p>
+            <div className="mt-10 overflow-x-auto rounded-[10px] border border-line shadow-1">
+              <table className="w-full min-w-[620px] text-left">
+                <thead className="border-b border-line bg-ground text-[12px] text-ink-3">
+                  <tr>
+                    <th className="px-4 py-2.5 font-medium">Clip</th>
+                    <th className="px-4 py-2.5 font-medium">Product</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Labelled</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Measured</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Precision</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Recall</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {SAMPLE.map((r) => (
+                    <tr key={r.clip}>
+                      <td className="px-4 py-2.5 text-ink-2">{r.clip}</td>
+                      <td className="px-4 py-2.5">{r.product}</td>
+                      <td className="px-4 py-2.5 text-right tabular">{r.truth} s</td>
+                      <td className="px-4 py-2.5 text-right tabular">{r.measured} s</td>
+                      <td className="px-4 py-2.5 text-right tabular">{r.precision}</td>
+                      <td className="px-4 py-2.5 text-right tabular">{r.recall}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-6 max-w-[70ch] text-ink-2">
+              21 vertical clips: 15 filmed with real products, 6 stock, including a look-alike can that must be rejected
+              and a clip with no product at all. Both scored 0 seconds, as they should.{" "}
               <a href={`${REPO}/blob/main/docs/ACCURACY.md`} className="font-medium text-ink underline decoration-line-strong hover:decoration-ink">
-                Read the full results
+                All 23 results
               </a>
               .
             </p>
@@ -205,7 +229,7 @@ export default async function Landing() {
           <h2 className="text-[24px] font-semibold tracking-[-0.02em]">See it on real creator videos.</h2>
           <Link
             href={hero ? `/campaigns/${hero.video.campaignId}` : "/campaigns"}
-            className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-5 py-3 text-[15px] font-medium text-white shadow-2 hover:bg-ink/90"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-5 py-3 text-[15px] font-medium text-white shadow-1 hover:bg-ink/90"
           >
             {hero ? "Open the Alani Nu campaign" : "Open the app"} <ArrowRight className="size-4" aria-hidden />
           </Link>
@@ -235,8 +259,8 @@ function VerdictCard({ show, track }: { show: Showcased; track: Showcased["video
           )}
           <span
             className={[
-              "absolute top-3 left-3 rounded-[4px] px-1.5 py-0.5 text-[12px] font-semibold",
-              match ? "bg-lime text-lime-ink" : "bg-fail text-white",
+              "absolute top-3 left-3 rounded-full px-2 py-0.5 text-[12px] font-semibold",
+              match ? "bg-pass-soft text-pass" : "bg-fail-soft text-fail",
             ].join(" ")}
           >
             {match ? "Counted" : track.verdict === "lookalike" ? "Not counted" : "Unclear, not counted"}
