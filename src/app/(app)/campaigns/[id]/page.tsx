@@ -237,7 +237,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                 <p className="mt-4 flex max-w-[70ch] gap-2.5 rounded-(--r-inner) bg-(--paper) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--ink-2) ring-1 ring-(--hair-2)">
                   <Info className="mt-px size-[17px] shrink-0 text-(--ink)" strokeWidth={2.25} aria-hidden />
                   <span>
-                  <span className="font-semibold text-(--ink)">Preview data.</span> These reports come from hand-checked labels run through the
+                  <span className="font-semibold text-(--ink)">Preview data.</span> These reports come from checked labels run through the
                   real metrics and contract code, so you can see a report before any live model run. New campaigns run the full
                   Meta pipeline.
                   </span>

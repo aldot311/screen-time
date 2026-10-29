@@ -52,7 +52,7 @@ Back to the campaign roll-up: thumbnails, strips, verdicts. Click *Export CSV*.
 
 **2:45–3:00 · Why you can trust it** (depth, close)
 Landing page, accuracy section.
-> "Measured frame by frame against hand-checked labels: 97.7% precision, 95.6% recall. About ten to fifteen cents a
+> "Measured frame by frame against checked labels: 97.7% precision, 95.6% recall. About ten to fifteen cents a
 > video. Screen-Time: proof your product was seen."
 
 ## Shot list for b-roll if needed

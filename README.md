@@ -9,7 +9,7 @@ startup track, by Aetrai. Everything in this repo was built during the hackathon
 
 ## What it measures
 
-Measured on real runs against hand-checked labels, frame by frame at 15 fps
+Measured on real runs against checked labels, frame by frame at 15 fps
 ([docs/ACCURACY.md](docs/ACCURACY.md)):
 
 | | |

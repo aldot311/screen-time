@@ -23,7 +23,9 @@ export async function generateMetadata({ params }: PageProps<"/campaigns/[id]/vi
   return { title: v ? `${humanTitle(v.title)} · ${v.creator}` : "Video" };
 }
 
-export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/videos/[videoId]">) {
+export default async function VideoPage({ params, searchParams }: PageProps<"/campaigns/[id]/videos/[videoId]">) {
+  // ?t=12.5 opens the report at that second (links from the accuracy page point at a moment).
+  const t = Number((await searchParams).t);
   const { id, videoId } = await params;
   const [campaign, video, showcase, all] = await Promise.all([getCampaign(id), getVideo(id, videoId), loadShowcase(), listCampaigns()]);
   if (!campaign || !video) notFound();
@@ -69,6 +71,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
             poster={video.thumbUrl}
             synthetic={synthetic}
             fee={feeFor(campaign, video.creator)}
+            startAt={Number.isFinite(t) && t >= 0 ? t : undefined}
           />
         ) : (
           <div className="grid gap-x-12 gap-y-8 pt-4 sm:pt-0 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -158,7 +161,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
 
               {(video.status === "failed" || video.status === "done") &&
                 (synthetic ? (
-                  <p className="mt-6 text-[14px] text-(--ink-3)">Preview videos cannot be run again: their numbers come from hand-checked labels.</p>
+                  <p className="mt-6 text-[14px] text-(--ink-3)">Preview videos cannot be run again: their numbers come from checked labels.</p>
                 ) : (
                   <div className="mt-6">
                     <RunAgain campaignId={campaign.id} videoId={video.id} />

@@ -217,7 +217,7 @@ export default async function Landing() {
 
         <section id="accuracy" className="scroll-mt-20 border-t border-(--hair) bg-(--card)">
           <div className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-            <h2 className="ed-display max-w-[22ch] text-[34px] leading-[1.04] sm:text-[44px]">Measured frame by frame against hand-checked labels.</h2>
+            <h2 className="ed-display max-w-[22ch] text-[34px] leading-[1.04] sm:text-[44px]">Measured frame by frame against checked labels.</h2>
             <p className="mt-5 max-w-[44ch] text-[21px] leading-[1.4] text-(--ink-2) sm:text-[24px]">
               <span className="ed-num text-(--ink)">97.7%</span> precision and <span className="ed-num text-(--ink)">95.6%</span>{" "}
               recall per frame, over 23 product checks on 20 labeled test videos.
@@ -225,7 +225,17 @@ export default async function Landing() {
             <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-3)">
               Three of the videos show two products, and each product is checked on its own. SAM 3.1 tracking costs
               $0.20 per 1,000 frames; a whole check of a 12-second Reel, with Muse Spark and Voice Transcribe, costs about
-              $0.10 (clip12: 174 frames, $0.105).
+              $0.10 (clip12: 174 frames, $0.105). Priced at $2–5 per verified video, the model cost is under 5% of the price.
+            </p>
+            <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-2)">
+              Without Muse Spark, SAM 3.1 alone scores 89.0% precision: a can of a different flavor counts as the brand&rsquo;s. With it, 97.7%,
+              and the average error per video falls from 0.91 s to 0.33 s.{" "}
+              <PendingLink
+                href="/accuracy"
+                className="ed-press inline-flex min-h-11 items-center gap-1 rounded-full font-semibold text-(--ink) underline decoration-(--hair-2) decoration-2 hover:decoration-(--ink) active:opacity-70"
+              >
+                How it was measured, and where it is wrong <ArrowRight className="size-4" strokeWidth={2.25} aria-hidden />
+              </PendingLink>
             </p>
 
             <div className="mt-10 overflow-hidden rounded-(--r-card) bg-(--paper) ring-1 ring-(--hair)">

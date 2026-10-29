@@ -1,6 +1,6 @@
 # Accuracy (measured 2026-10-28)
 
-Per-frame precision and recall of "brand product on screen" against hand-checked labels, on real runs of the full
+Per-frame precision and recall of "brand product on screen" against checked labels, on real runs of the full
 pipeline (SAM 3.1 tracking → Muse Spark look-alike check → metrics), 15 fps.
 
 - Test set: 20 labelled vertical clips (15 filmed by Aldo, 5 Pexels stock; a sixth stock clip was never labelled), 23 clip/product targets (clip11, clip14 and clip15 each show two products): an Alani Nu can,
@@ -12,6 +12,21 @@ pipeline (SAM 3.1 tracking → Muse Spark look-alike check → metrics), 15 fps.
 
 **Overall: precision 97.7%, recall 95.6%, F1 96.6%.** Look-alike clip: 0 s counted (correct). Empty clip: 0 s (correct).
 
+Ablation (same runs, no model run again; `pnpm accuracy -- --json src/lib/accuracy-data.json`, shown in the app at
+/accuracy):
+
+| Pipeline | Precision | Recall | F1 | Avg. error per target | Seconds counted on clips without the product |
+|---|---|---|---|---|---|
+| SAM 3.1 alone (every tracked object counts) | 89.0% | 96.0% | 92.4% | 0.91 s | 13.3 s |
+| SAM 3.1 + Muse Spark (confirmed objects only) | 97.7% | 95.6% | 96.6% | 0.33 s | 0.0 s |
+
+The 13.3 s is the different-flavor Alani can in clip05; SAM alone also counts the Stanley cup held beside the can in
+clip12 and clip13. Not measured yet: the gain from the product photo (these runs predate it) and a held-out set
+filmed by other people.
+
+Analysis rate: every video is re-encoded to 15 fps before SAM 3.1, and SAM tracks every one of those frames; labels
+and scores use the same frames.
+
 What we learned:
 - The SAM prompt matters: "tumbler" found nothing; "cup" found the Stanley at 96–100% precision.
 - The verifier first rejected unbranded sneakers as "unclear" for having no visible logo; the instruction now judges
@@ -19,6 +34,8 @@ What we learned:
 - clip01's 79% precision is the can leaving the frame: SAM keeps tracking a 13–32 px sliver at the left edge for
   about a second (frames 78–92) after the labels mark it gone. The tracking is right; whether a sliver should count
   is a contract question, so the threshold was not tuned to this test set.
+- clip11's Stanley loses 1.9 s (frames 240–267): the tumbler swings up to the lens, cut off by the bottom of the
+  frame and blurred, and SAM drops the track until it is back at arm's length. Under-counting, never over-counting.
 - Prompt recovery (added after these runs): with the weak prompt "tumbler", clip06 found nothing; Muse Spark looked at
   four frames, said the tumbler was held up to the camera and suggested "cup", and the second SAM pass found it for
   10.1 s, the same as the hand-tuned prompt. Negative controls: the empty clip and the look-alike clip got "not

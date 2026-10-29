@@ -32,6 +32,8 @@ interface Props {
   synthetic?: boolean;
   /** The agreed fee for this video, when one is set: what the verdict pays or holds. */
   fee?: number | null;
+  /** Open the player at this second instead of the product's best moment. */
+  startAt?: number;
 }
 
 /** Fields the backend is adding to the report: the photo the run actually compared with, and whether the on-screen
@@ -72,7 +74,7 @@ const Range = ({ a, b }: { a: number; b: number }) => (
   </Tc>
 );
 
-export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null }: Props) {
+export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt }: Props) {
   const extras = report as VideoReport & ReportExtras;
   // Only the photo this run used: a photo added to the campaign later was not part of this check.
   const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
@@ -346,7 +348,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         ? `${counts.failed} of ${plural(n, "contract term")} missed${counts.unchecked ? `, ${counts.unchecked} not checkable` : ""}.`
         : `${counts.unchecked} of ${plural(n, "term")} could not be checked automatically.`;
   const modelLine = synthetic
-    ? "Preview: numbers from hand-checked labels, not a live model run."
+    ? "Preview: numbers from checked labels, not a live model run."
     : found
       ? `SAM 3.1 searched all ${report.info.frameCount} frames for “${report.prompt}”; ${
           rejectedTracks.length
@@ -404,7 +406,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               showBoxes={!synthetic}
               dockClassName={DOCK_VIDEO}
               rounded="rounded-[16px]"
-              initialSec={bestSec}
+              initialSec={startAt !== undefined ? Math.min(startAt, d) : bestSec}
             />
           </div>
         </div>
@@ -1024,13 +1026,16 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
           <div className="mt-10 border-t border-(--hair) pt-4 text-[12.5px] leading-[1.6] text-(--ink-3)">
             {synthetic ? (
               <p>
-                Preview: these numbers come from hand-checked labels run through Screen-Time&rsquo;s real metrics and contract code, not from a live
+                Preview: these numbers come from checked labels run through Screen-Time&rsquo;s real metrics and contract code, not from a live
                 model run.
               </p>
             ) : (
               <>
                 <p>
-                  Analyzed {report.info.frameCount} frames at 15 fps · Meta API cost ${report.cost.usd.toFixed(2)}
+                  Analyzed {report.info.frameCount} frames at 15 fps · Meta API cost ${report.cost.usd.toFixed(2)} ·{" "}
+                  <a href="/accuracy" className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
+                    How accurate is this?
+                  </a>
                 </p>
                 <p>SAM tracking + Muse Spark + Voice Transcribe</p>
               </>
