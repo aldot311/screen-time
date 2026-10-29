@@ -19,7 +19,7 @@
 /coverage
 /node_modules
 /out/
-data/out/
+data/out*/
 data/videos/
 next-env.d.ts
 node_modules/
