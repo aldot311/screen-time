@@ -1,0 +1,6 @@
+# Local media, run outputs and stores never go to Vercel; only the labels are read at build time (preview campaign).
+data/*
+!data/labels
+.impeccable
+.playwright-mcp
+.remember
