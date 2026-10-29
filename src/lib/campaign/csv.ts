@@ -2,7 +2,7 @@
 import { disclosureWhere } from "@/lib/metrics/rules";
 import type { VideoReport } from "@/lib/types";
 import { verdictOf } from "@/components/format";
-import { decisionOf, feeFor } from "./money";
+import { decisionOf, feeFor, latestFinished } from "./money";
 import type { Campaign, VideoEntry } from "./types";
 
 type Fees = Pick<Campaign, "fee" | "creators">;
@@ -47,10 +47,11 @@ export function csvCell(value: Cell): string {
 
 const round = (n: number, digits: number) => Math.round(n * 10 ** digits) / 10 ** digits;
 
-export function videoRow(v: VideoEntry, fees: Fees = {}): Cell[] {
+/** `latest`: false when a later finished video from the same creator replaced this one, so it pays or holds nothing. */
+export function videoRow(v: VideoEntry, fees: Fees = {}, latest = true): Cell[] {
   const r = v.report;
   if (!r) return [v.creator, v.title, v.status, ...Array<Cell>(CSV_HEADER.length - 3).fill(null)];
-  const decision = v.status === "done" ? decisionOf(verdictOf(r)) : null;
+  const decision = v.status !== "done" ? null : latest ? decisionOf(verdictOf(r)) : "superseded";
   const m = r.metrics;
   const count = (pass: boolean | null) => r.terms.filter((t) => t.pass === pass).length;
   return [
@@ -71,7 +72,7 @@ export function videoRow(v: VideoEntry, fees: Fees = {}): Cell[] {
     ...disclosureCells(r),
     r.usedProductPhoto ? "yes" : "no",
     decision,
-    decision ? feeFor(fees, v.creator) : null,
+    decision && decision !== "superseded" ? feeFor(fees, v.creator) : null,
   ];
 }
 
@@ -86,5 +87,6 @@ function disclosureCells(r: VideoReport): [Cell, Cell] {
 
 /** One row per video; `fees` (the campaign) adds what each recommendation pays or holds. */
 export function campaignCsv(videos: VideoEntry[], fees: Fees = {}): string {
-  return [CSV_HEADER, ...videos.map((v) => videoRow(v, fees))].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  const latest = latestFinished(videos);
+  return [CSV_HEADER, ...videos.map((v) => videoRow(v, fees, latest.get(v.creator.toLowerCase()) === v))].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }

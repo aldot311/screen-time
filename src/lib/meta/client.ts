@@ -4,6 +4,9 @@ import { basename, extname } from "node:path";
 import { type ClientOptions, MetaApiError, metaRequest } from "./http";
 import { parseSseEvents, type StreamEvent } from "./sse";
 
+/** The Meta Model API models every run uses, as named on each request (and in each report's run receipt). */
+export const MODELS = { sam: "sam-3.1", spark: "muse-spark-1.3", transcribe: "muse-voice-transcribe-1.0" } as const;
+
 const MIME_BY_EXT: Record<string, string> = {
   ".mp4": "video/mp4",
   ".mov": "video/quicktime",
@@ -80,7 +83,7 @@ export function buildSamVideoBody(input: SamVideoInput): Record<string, unknown>
   };
   if (input.maskEncoding) metadata.mask_encoding = input.maskEncoding;
   return {
-    model: "sam-3.1",
+    model: MODELS.sam,
     input: [
       {
         type: "message",
@@ -176,7 +179,7 @@ export interface SparkJsonInput {
 
 export function buildSparkJsonBody(req: SparkJsonInput): Record<string, unknown> {
   const body: Record<string, unknown> = {
-    model: req.model ?? "muse-spark-1.3",
+    model: req.model ?? MODELS.spark,
     input: [{ type: "message", role: "user", content: req.input }],
     text: {
       format: {
@@ -256,7 +259,7 @@ export interface TranscribeResult {
 }
 
 export const TRANSCRIBE_REQUEST = {
-  model: "muse-voice-transcribe-1.0",
+  model: MODELS.transcribe,
   audioEncoding: "WAV",
   mode: "ENDPOINTING",
 } as const;

@@ -28,6 +28,7 @@ describe("fees", () => {
     expect(usd(300)).toBe("$300");
     expect(usd(2800)).toBe("$2,800");
     expect(usd(99.5)).toBe("$99.50");
+    expect(usd(10.1 + 20.9)).toBe("$31"); // float noise never shows as cents
   });
 });
 
@@ -53,6 +54,11 @@ describe("payout", () => {
     expect(payoutLine(payout({ creators: [] }, [video("@a", report(true))]))).toBeNull();
     const mixed = payout({ creators: [{ handle: "@a", addedAt: "", fee: 200 }] }, [video("@a", report(true)), video("@b", report(true))]);
     expect(payoutLine(mixed)).toBe("Pay 2 creators $200 + 1 without a fee");
+  });
+
+  it("says a bucket has no fee instead of $0", () => {
+    const p = payout({ creators: [{ handle: "@a", addedAt: "", fee: 200 }] }, [video("@a", report(false)), video("@b", report(true))]);
+    expect(payoutLine(p)).toBe("Pay 1 creator no fee set · hold 1 ($200)");
   });
 
   it("starts with Hold when nobody delivered", () => {
@@ -105,5 +111,6 @@ describe("fee routes", () => {
     expect((await getCampaign(id))?.creators?.[0].fee).toBe(250);
     await creators.PATCH(json({ handle: "maya", fee: null }, "PATCH"), params({ id }));
     expect((await getCampaign(id))?.creators?.[0].fee).toBeUndefined();
+    expect((await creators.PATCH(json({ handle: "@nobody", fee: 5 }, "PATCH"), params({ id }))).status).toBe(404);
   });
 });

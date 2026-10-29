@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Check, CircleHelp, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
 import { FPS, type Disclosure, type Segment, type TermResult, type VideoReport } from "@/lib/types";
-import { countedBefore, framesToSegments, percent, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
+import { countedBefore, framesToSegments, percent, ruleReading, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
 import { Figure, Swatch } from "./bits";
@@ -16,6 +16,7 @@ import { ReportLanes, type Lit } from "./report-lanes";
 import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decision";
 import { usd } from "@/lib/campaign/money";
 import { AnalysisReplay } from "./analysis-replay";
+import { RunReceiptCard } from "./run-receipt";
 
 interface Props {
   report: VideoReport;
@@ -315,7 +316,9 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         ? `${n === 1 ? "The contract term" : `All ${n} contract terms`} met`
         : "Delivered"
       : verdict === "short"
-        ? `${missWords(failedTerms[0], brand)}${failedTerms.length > 1 ? ` · ${failedTerms.length - 1} more` : ""}`
+        ? failedTerms.length
+          ? `${missWords(failedTerms[0], brand)}${failedTerms.length > 1 ? ` · ${failedTerms.length - 1} more` : ""}`
+          : "Fell short"
         : n
           ? `${plural(counts.unchecked, "term")} to check by eye`
           : "No contract terms to check";
@@ -521,6 +524,11 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                 <span className="min-w-0">
                   <span className="block text-[15.5px] leading-snug font-semibold">{t.term.text}</span>
                   <span className="mt-0.5 block text-[14px] text-(--ink-2)">{t.detail}</span>
+                  {!synthetic && (
+                    <span className="mt-1 block text-[12.5px] text-(--ink-3)">
+                      Muse Spark read it as: <span className="font-semibold text-(--ink-2)">{ruleReading(t.term.rule)}</span>
+                    </span>
+                  )}
                 </span>
               );
               if (!proof)
@@ -1029,6 +1037,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             )}
           </div>
         </section>
+
+        {report.receipt && <RunReceiptCard receipt={report.receipt} />}
       </div>
 
       {/* Phone mini player: while a proof plays (or the viewer scrubs) with the main player out of view. */}

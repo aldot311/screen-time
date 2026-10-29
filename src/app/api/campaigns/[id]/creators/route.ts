@@ -42,6 +42,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const parsed = SetFee.safeParse(await req.json().catch(() => undefined));
   if (!parsed.success) return Response.json({ error: "Enter a fee from $0 to $1,000,000" }, { status: 400 });
   const { handle, fee } = parsed.data;
+  if (!campaign.creators?.some((c) => c.handle.toLowerCase() === handle.toLowerCase()))
+    return Response.json({ error: `${handle} is not on this campaign's list` }, { status: 404 });
   const updated = await updateCampaign(campaign.id, (c) => setCreatorFee(c, handle, fee));
   return updated ? Response.json(updated) : Response.json({ error: "Campaign not found" }, { status: 404 });
 }

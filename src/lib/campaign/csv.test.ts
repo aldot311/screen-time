@@ -20,12 +20,6 @@ describe("csvCell", () => {
     expect(csvCell("@aldo.tile")).toBe("@aldo.tile");
     expect(csvCell(-1)).toBe("-1");
   });
-
-  it("adds the recommendation and the creator's fee", () => {
-    const v = previewVideos()[0];
-    const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
-    expect(rows[1].endsWith(",pay,450")).toBe(true);
-  });
 });
 
 describe("campaignCsv", () => {
@@ -43,7 +37,9 @@ describe("campaignCsv", () => {
 
   it("writes whether and where the sponsorship was disclosed, and whether the product photo was used", () => {
     const v = previewVideos()[0];
-    const withReport = (over: object): VideoEntry => ({ ...v, report: { ...v.report!, ...over } });
+    // One creator per row, so no row replaces another.
+    let k = 0;
+    const withReport = (over: object): VideoEntry => ({ ...v, creator: `@c${k++}`, report: { ...v.report!, ...over } });
     const csv = campaignCsv([
       withReport({
         usedProductPhoto: true,
@@ -63,5 +59,20 @@ describe("campaignCsv", () => {
     const v = previewVideos()[0];
     const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
     expect(rows[1].endsWith(",pay,450")).toBe(true);
+  });
+
+  it("adds the recommendation and the creator's fee", () => {
+    const v = previewVideos()[0];
+    const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
+    expect(rows[1].endsWith(",pay,450")).toBe(true);
+  });
+
+  it("leaves the recommendation off a video a later one from the same creator replaced", () => {
+    const v = previewVideos()[0];
+    const older = { ...v, id: "a", createdAt: "2026-10-01T00:00:00Z" };
+    const newer = { ...v, id: "b", createdAt: "2026-10-02T00:00:00Z" };
+    const rows = campaignCsv([older, newer], { fee: 300 }).trimEnd().split("\r\n");
+    expect(rows[1].endsWith(",superseded,")).toBe(true);
+    expect(rows[2].endsWith(",pay,300")).toBe(true);
   });
 });

@@ -130,6 +130,8 @@ export interface VideoReport {
   productImageUrl?: string;
   /** Present when the first prompt found nothing and Muse Spark suggested another, in order; `prompt` is the one used. */
   promptAttempts?: PromptAttempt[];
+  /** Every model call that made this report (absent on reports made before receipts). */
+  receipt?: RunReceipt;
   /** Every tracked box with its object's verdict, so the player can draw the overlay. Older reports lack it. */
   detections?: (Detection & { verdict: VerifyVerdict })[];
 }
@@ -156,4 +158,25 @@ export interface LiveProgress {
   heard?: { audio?: boolean; mentions: Mention[]; disclosures: Mention[] };
   measured?: { secondsOnScreen: number; shareOfVideo: number; firstSeenSec: number | null };
   terms?: { text: string; pass: boolean | null; detail: string }[];
+}
+
+/** One call to the Meta Model API in a run: what went in, what came back, how long it took and what it was charged. */
+export interface ReceiptCall {
+  model: string;
+  /** What the call was for: "Track “drink can”", "Check object 2". */
+  purpose: string;
+  input: string;
+  output: string;
+  ms: number;
+  /** SAM's cost from the frames billed; Muse Spark and Voice Transcribe at the per-call amount the budget reserves. */
+  usd: number;
+}
+
+/** How a report was made: every model call in order, the model versions and the sampling. */
+export interface RunReceipt {
+  runId: string;
+  startedAt: string;
+  fps: number;
+  models: { sam: string; spark: string; transcribe: string };
+  calls: ReceiptCall[];
 }

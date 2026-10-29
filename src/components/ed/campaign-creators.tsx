@@ -421,7 +421,7 @@ function CreatorRow({
         <span className="flex min-h-[64px] min-w-0 flex-1 basis-[140px] items-center py-2.5">{who}</span>
       )}
 
-      <span className={`ml-auto flex shrink-0 items-center gap-1.5 ${canRun ? "max-sm:pb-3" : ""}`}>
+      <span className={`ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5 ${canRun ? "max-sm:pb-3" : ""}`}>
         {canRun && <CampaignRunButton campaignId={campaignId} videoId={e.videoId!} />}
 
         {!confirm && (

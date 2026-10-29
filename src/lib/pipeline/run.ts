@@ -2,14 +2,14 @@
 // (Voice Transcribe) → measure → check contract terms. Every billed call reserves its cost in the CostGuard first.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CostGuard, CostLimitError, MetaApiError, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
+import { CostGuard, CostLimitError, MetaApiError, MODELS, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
 import { checkTerms, computeMetrics, findDisclosures, findMentions, frameSamples } from "@/lib/metrics";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
 import { evenFrames, filmstripBoxes } from "@/lib/frames";
 export { evenFrames } from "@/lib/frames";
 import type { StepId } from "@/lib/campaign/types";
-import { FPS, type ContractTerm, type Detection, type Disclosure, type Mention, type PromptAttempt, type Track, type LiveProgress, type TrackVerification, type VerifyVerdict, type VideoReport } from "@/lib/types";
+import { FPS, type ContractTerm, type Detection, type Disclosure, type Mention, type PromptAttempt, type Track, type LiveProgress, type ReceiptCall, type TrackVerification, type VerifyVerdict, type VideoReport } from "@/lib/types";
 import {
   DISCLOSURE_FRAMES,
   DISCLOSURE_OPENING_SEC,
@@ -68,10 +68,15 @@ export interface RunInput {
   log?: (msg: string) => void;
   /** Called as each of the six steps starts, so a caller can show progress. A throw aborts the run. */
   onStep?: (step: StepId) => void | Promise<void>;
+  /** Identifies this run on its receipt; defaults to the video id and start time. */
+  runId?: string;
   /** Called with everything found so far each time a stage adds to it. Best effort: a throw is ignored. */
   onProgress?: (live: LiveProgress) => void | Promise<void>;
 }
 
+
+/** Seconds floored to tenths, as everywhere in the app. */
+const tenthsOf = (s: number) => (Math.floor(s * 10 + 1e-6) / 10).toFixed(1);
 
 // In micro-dollars, like the guard's ledger, so the report total does not pick up float noise.
 const micros = (usd: number) => Math.round(usd * 1e6);
@@ -96,6 +101,22 @@ class VideoSpend {
   get usd(): number {
     return this.totalMicros / 1e6;
   }
+
+  /** The run receipt: each model call, in the order they finished. */
+  readonly calls: ReceiptCall[] = [];
+
+  /** Runs one model call and records it on the receipt. `usd` and `output` read the result. */
+  async timed<T>(
+    call: { model: string; purpose: string; input: string },
+    usd: number | ((r: T) => number),
+    fn: () => Promise<T>,
+    output: (r: T) => string,
+  ): Promise<T> {
+    const t0 = performance.now();
+    const r = await fn();
+    this.calls.push({ ...call, output: output(r), ms: Math.round(performance.now() - t0), usd: typeof usd === "number" ? usd : usd(r) });
+    return r;
+  }
 }
 
 export async function runVideo(input: RunInput): Promise<VideoReport> {
@@ -104,6 +125,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   const spend = new VideoSpend(guard);
   const videoPath = join(input.workDir, `${input.videoId}.mp4`);
   const step = async (id: StepId) => input.onStep?.(id);
+  const startedAt = new Date().toISOString();
   const live: LiveProgress = {};
   const progress = async (patch: Partial<LiveProgress>) => {
     Object.assign(live, patch);
@@ -129,7 +151,12 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     log(`tracking "${prompt}" over ${info.frameCount} frames`);
     let sam: Awaited<ReturnType<typeof samVideo>>;
     try {
-      sam = await samVideo({ fileId, prompt, includeConfidence: true }, client);
+      sam = await spend.timed(
+        { model: MODELS.sam, purpose: `Track “${prompt}”`, input: `the ${info.frameCount}-frame video, prompt “${prompt}”` },
+        (r) => guard.estimateSamUsd(r.framesProcessed ?? info.frameCount),
+        () => samVideo({ fileId, prompt, includeConfidence: true }, client),
+        (r) => `${r.framesProcessed ?? info.frameCount} frames processed`,
+      );
     } catch (err) {
       // A 4xx (bad request, auth, billing, rate limit) is rejected before any frame is processed, so it is
       // refunded. Anything else (5xx, a dropped connection, a stream that failed midway) may have been
@@ -143,6 +170,8 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     await spend.adjust(guard.estimateSamUsd(samFrames) - reserved, `sam ${input.videoId} adjust`);
     const parsed = await parseSamVideo(sam.raw, info);
     for (const d of parsed.diagnostics) log(`sam: ${d}`);
+    const samCall = spend.calls.at(-1);
+    if (samCall) samCall.output += `, ${parsed.tracks.length} object${parsed.tracks.length === 1 ? "" : "s"} tracked`;
     await progress({
       searches: [...(live.searches ?? []), { prompt, objects: parsed.tracks.length, samFrames, boxes: filmstripBoxes(parsed.detections, info.frameCount) }],
     });
@@ -183,7 +212,13 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   log(`SAM budget for ${info.frameCount} frames: ~$${samEstimate.toFixed(3)} per pass`);
   let fileId: string;
   try {
-    fileId = await uploadFile(await readFile(videoPath), `${input.videoId}.mp4`, client);
+    const bytes = await readFile(videoPath);
+    fileId = await spend.timed(
+      { model: "Files API", purpose: "Upload the video for SAM 3.1", input: `${(bytes.length / 1e6).toFixed(1)} MB MP4, ${FPS} fps` },
+      0,
+      () => uploadFile(bytes, `${input.videoId}.mp4`, client),
+      () => "file id received",
+    );
   } catch (err) {
     // Nothing reached SAM, so nothing was billed for it.
     await spend.adjust(-samEstimate, `sam ${input.videoId} upload failed`);
@@ -229,7 +264,14 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   let turns: { startMs: number; endMs: number; transcript: string }[] = [];
   if (wavPath) {
     await spend.reserve(TRANSCRIBE_RESERVE_USD, `transcribe ${input.videoId}`);
-    turns = (await transcribe(await readFile(wavPath), client)).turns;
+    turns = (
+      await spend.timed(
+        { model: MODELS.transcribe, purpose: "Listen for the brand", input: `${tenthsOf(info.durationSec)} s of 16 kHz audio` },
+        TRANSCRIBE_RESERVE_USD,
+        async () => transcribe(await readFile(wavPath), client),
+        (r) => `${r.turns.length} speech turn${r.turns.length === 1 ? "" : "s"}, ${r.turns.reduce((n, t) => n + t.transcript.split(/\s+/).filter(Boolean).length, 0)} words`,
+      )
+    ).turns;
   }
   const mentions = findMentions(turns, input.brandTerms);
   const spoken: Mention[] = findDisclosures(turns);
@@ -269,6 +311,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     detections: tagDetections(parsed.detections, verifications),
     // Everything reserved and settled for this video: SAM as billed, Spark and transcription as reserved.
     cost: { samFrames, usd: spend.usd },
+    receipt: { runId: input.runId ?? `${input.videoId}-${startedAt}`, startedAt, fps: FPS, models: { ...MODELS }, calls: spend.calls },
   };
 }
 
@@ -291,18 +334,28 @@ async function verifyTrack(
   );
   const withPhoto = Boolean(input.productImageUrl);
   await spend.reserve(SPARK_RESERVE_USD, `verify ${input.videoId} obj${track.objectId}`);
-  const out = await sparkJson<VerifyOutput>(
+  const out = await spend.timed(
     {
-      name: "product_check",
-      schema: VERIFY_SCHEMA,
-      strict: true,
-      input: [
-        { type: "input_text", text: verifyPrompt(input.productDescription, input.prompt, withPhoto) },
-        // The reference photo goes first, as the prompt says.
-        ...(withPhoto ? [input.productImageUrl!] : []).concat(images).map((image_url) => ({ type: "input_image" as const, image_url })),
-      ],
+      model: MODELS.spark,
+      purpose: `Check object ${track.objectId + 1} against the product`,
+      input: `${images.length} crop${images.length === 1 ? "" : "s"} of the object${withPhoto ? " + the product photo" : ""} + the description`,
     },
-    input.client,
+    SPARK_RESERVE_USD,
+    () =>
+      sparkJson<VerifyOutput>(
+        {
+          name: "product_check",
+          schema: VERIFY_SCHEMA,
+          strict: true,
+          input: [
+            { type: "input_text", text: verifyPrompt(input.productDescription, input.prompt, withPhoto) },
+            // The reference photo goes first, as the prompt says.
+            ...(withPhoto ? [input.productImageUrl!] : []).concat(images).map((image_url) => ({ type: "input_image" as const, image_url })),
+          ],
+        },
+        input.client,
+      ),
+    (r) => `${r.verdict}, ${r.visibility}`,
   );
   if (withPhoto) photo.used = true;
   return { objectId: track.objectId, ...out };
@@ -365,19 +418,27 @@ async function findOnScreenDisclosure(
   const frames = disclosureFrames(frameCount);
   const images = await frameImages(videoPath, frames, input, "ad");
   await spend.reserve(SPARK_RESERVE_USD, `disclosure ${input.videoId}`);
-  const out = await sparkJson<unknown>(
-    {
-      name: "disclosure_check",
-      schema: DISCLOSURE_SCHEMA,
-      strict: true,
-      input: [
-        { type: "input_text", text: disclosurePrompt(images.length) },
-        ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
-      ],
-    },
-    input.client,
+  return spend.timed(
+    { model: MODELS.spark, purpose: "Read on-screen #ad labels", input: `${images.length} frames, weighted to the opening` },
+    SPARK_RESERVE_USD,
+    async () =>
+      toOnScreen(
+        await sparkJson<unknown>(
+          {
+            name: "disclosure_check",
+            schema: DISCLOSURE_SCHEMA,
+            strict: true,
+            input: [
+              { type: "input_text", text: disclosurePrompt(images.length) },
+              ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
+            ],
+          },
+          input.client,
+        ),
+        frames.map((f) => f / FPS),
+      ),
+    (r) => (r.length ? r.map((d) => `“${d.text}”`).join(", ") : "no disclosure on screen"),
   );
-  return toOnScreen(out, frames.map((f) => f / FPS));
 }
 
 /** Whole frames as JPEG data URLs, written to the work dir as <videoId>-<prefix>-<frame>.jpg. */
@@ -393,16 +454,28 @@ async function frameImages(videoPath: string, frames: number[], input: RunInput,
 async function parseTerms(input: RunInput, spend: VideoSpend): Promise<ContractTerm[]> {
   if (!input.contractTerms.length) return [];
   await spend.reserve(SPARK_RESERVE_USD, `terms ${input.videoId}`);
-  const out = await sparkJson<unknown>(
+  return spend.timed(
     {
-      name: "contract_rules",
-      schema: TERMS_SCHEMA,
-      strict: true,
-      input: [{ type: "input_text", text: parseTermsPrompt(input.contractTerms) }],
+      model: MODELS.spark,
+      purpose: "Turn the contract into checkable rules",
+      input: `${input.contractTerms.length} term${input.contractTerms.length === 1 ? "" : "s"} in plain English`,
     },
-    input.client,
+    SPARK_RESERVE_USD,
+    async () =>
+      toContractTerms(
+        input.contractTerms,
+        await sparkJson<unknown>(
+          {
+            name: "contract_rules",
+            schema: TERMS_SCHEMA,
+            strict: true,
+            input: [{ type: "input_text", text: parseTermsPrompt(input.contractTerms) }],
+          },
+          input.client,
+        ),
+      ),
+    (r) => `${r.filter((t) => t.rule).length} of ${r.length} checkable`,
   );
-  return toContractTerms(input.contractTerms, out);
 }
 
 /**
@@ -420,17 +493,25 @@ async function suggestPrompt(
   // Distinct frames only: a very short clip would otherwise extract the same frame into one file concurrently.
   const images = await frameImages(videoPath, evenFrames(frameCount, SUGGEST_FRAMES), input, "look");
   await spend.reserve(SPARK_RESERVE_USD, `suggest ${input.videoId}`);
-  const out = await sparkJson<unknown>(
-    {
-      name: "prompt_suggestion",
-      schema: SUGGEST_SCHEMA,
-      strict: true,
-      input: [
-        { type: "input_text", text: suggestPromptText(input.productDescription, attempts) },
-        ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
-      ],
-    },
-    input.client,
+  return spend.timed(
+    { model: MODELS.spark, purpose: "Suggest another search word", input: `${images.length} frames + the description` },
+    SPARK_RESERVE_USD,
+    async () =>
+      toSuggestion(
+        await sparkJson<unknown>(
+          {
+            name: "prompt_suggestion",
+            schema: SUGGEST_SCHEMA,
+            strict: true,
+            input: [
+              { type: "input_text", text: suggestPromptText(input.productDescription, attempts) },
+              ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
+            ],
+          },
+          input.client,
+        ),
+        attempts.map((a) => a.prompt),
+      ),
+    (r) => (r ? `“${r.prompt}”` : "no new word"),
   );
-  return toSuggestion(out, attempts.map((a) => a.prompt));
 }

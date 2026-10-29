@@ -121,9 +121,10 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
     fee: feeFor(campaign, c.handle),
     feeInherited: c.fee === undefined,
   }));
-  // Money is per creator (their latest finished video). A one-handle test campaign has no creators to pay, so it says
-  // nothing rather than "Pay 1 creator"; each card still shows what its verdict pays or holds.
-  const money = oneHandle && videos.length > 1 ? null : payoutLine(payout(campaign, videos));
+  // Money is per creator (their latest finished video). A test set (several clips from one handle, no roster) has no
+  // creators to pay, so it says nothing rather than "Pay 1 creator"; each card still shows what its verdict pays or holds.
+  const testSet = oneHandle !== null && videos.length > 1 && !campaign.creators?.length;
+  const money = testSet ? null : payoutLine(payout(campaign, videos));
   const mode = process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct";
   const creatorsSection =
     canUpload || creators.length > 0 ? <CampaignCreators campaignId={campaign.id} entries={creators} editable={canUpload} /> : null;

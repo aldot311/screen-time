@@ -17,6 +17,7 @@ export function feeFor(campaign: Pick<Campaign, "fee" | "creators">, handle: str
 
 /** "$300", "$1,250", "$99.50": whole dollars without cents. */
 export function usd(n: number): string {
+  n = Math.round(n * 100) / 100;
   return n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
 }
 
@@ -47,7 +48,8 @@ export interface Payout {
  * One decision per creator, from that creator's latest finished video: a re-cut that passes replaces the miss it fixes.
  * Creators with no finished video yet are not counted.
  */
-export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: VideoEntry[]): Payout {
+/** Each creator's latest finished video, keyed by lower-cased handle: the one that decides their money. */
+export function latestFinished(videos: VideoEntry[]): Map<string, VideoEntry> {
   const latest = new Map<string, VideoEntry>();
   for (const v of videos) {
     if (v.status !== "done" || !v.report) continue;
@@ -55,6 +57,11 @@ export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: Vid
     const seen = latest.get(key);
     if (!seen || v.createdAt > seen.createdAt) latest.set(key, v);
   }
+  return latest;
+}
+
+export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: VideoEntry[]): Payout {
+  const latest = latestFinished(videos);
   const empty = (): Bucket => ({ creators: 0, amount: 0, noFee: 0 });
   const out: Payout = { pay: empty(), hold: empty(), review: empty(), anyFee: false };
   for (const v of latest.values()) {
@@ -75,7 +82,8 @@ export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: Vid
 /** "Pay 5 creators $2,000 · hold 7 ($2,800) · review 1 ($400)", or null when nothing is finished or no fee is set. */
 export function payoutLine(p: Payout): string | null {
   if (!p.anyFee) return null;
-  const money = (b: Bucket) => usd(b.amount) + (b.noFee ? ` + ${b.noFee} without a fee` : "");
+  const money = (b: Bucket) =>
+    b.noFee === b.creators ? "no fee set" : usd(b.amount) + (b.noFee ? ` + ${b.noFee} without a fee` : "");
   const parts: string[] = [];
   if (p.pay.creators) parts.push(`Pay ${p.pay.creators} creator${p.pay.creators === 1 ? "" : "s"} ${money(p.pay)}`);
   if (p.hold.creators) parts.push(`${parts.length ? "hold" : "Hold"} ${p.hold.creators} (${money(p.hold)})`);

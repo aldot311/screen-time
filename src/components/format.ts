@@ -108,3 +108,26 @@ export function countedBefore(metrics: VideoMetrics, sec: number): number {
   if (metrics.visibleFrames) return metrics.visibleFrames.filter((f) => f < sec * FPS).length / FPS;
   return metrics.segments.reduce((sum, s) => sum + Math.max(0, Math.min(s.endSec, sec) - s.startSec), 0);
 }
+
+const sec = (n: number) => `${Math.round(n * 10) / 10} s`;
+
+/** How Muse Spark compiled a plain-English term, in the app's words: "on screen ≥ 3 s in total". Null rule: unreadable. */
+export function ruleReading(rule: ContractRule | null): string {
+  if (!rule) return "no checkable rule, so a person checks it";
+  switch (rule.kind) {
+    case "min_seconds_total":
+      return `on screen ≥ ${sec(rule.seconds)} in total`;
+    case "min_seconds_within":
+      return `on screen ≥ ${sec(rule.seconds)} within 0–${sec(rule.withinFirstSec)}`;
+    case "min_continuous":
+      return `one unbroken shot ≥ ${sec(rule.seconds)}`;
+    case "min_area":
+      return `≥ ${Math.round(rule.fraction * 100)}% of the frame for ≥ ${sec(rule.forSeconds)}`;
+    case "mentioned":
+      return `brand said ≥ ${rule.minTimes}×${rule.withinFirstSec ? ` within 0–${sec(rule.withinFirstSec)}` : ""}`;
+    case "first_seen_before":
+      return `first seen before ${sec(rule.seconds)}`;
+    case "disclosed":
+      return "#ad on screen, or “ad” / “sponsored” said aloud";
+  }
+}

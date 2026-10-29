@@ -47,12 +47,14 @@ export function missWords(t: TermResult, brand: string): string {
   const r = t.term.rule;
   switch (r?.kind) {
     case "mentioned":
+      if (r.withinFirstSec) return `“${brand}” not said in the first ${s(r.withinFirstSec)}`;
       return /\b0 times\b/.test(t.detail) ? `Never said “${brand}”` : `Said “${brand}” too few times`;
     case "disclosed":
       return "Sponsorship not disclosed";
     case "min_seconds_total":
       return "Not on screen long enough";
     case "min_seconds_within":
+      return `Too little screen time in the first ${s(r.withinFirstSec)}`;
     case "first_seen_before":
       return "On screen too late";
     case "min_continuous":

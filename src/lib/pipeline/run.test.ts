@@ -98,6 +98,15 @@ describe("runVideo", () => {
     // SAM $0.01 (15 frames billed at the 50-frame minimum) + verify $0.02 + transcribe $0.01 + terms $0.02.
     expect(report.cost).toEqual({ samFrames: 15, usd: 0.06 });
     expect(await guard.totalSpentUsd()).toBeCloseTo(0.06, 10);
+    // The receipt lists every model call in order, and its amounts add up to the report's cost.
+    const r = report.receipt!;
+    expect(r.models).toEqual({ sam: "sam-3.1", spark: "muse-spark-1.3", transcribe: "muse-voice-transcribe-1.0" });
+    expect(r.fps).toBe(15);
+    expect(r.calls.map((c) => c.model)).toEqual(["Files API", "sam-3.1", "muse-spark-1.3", "muse-voice-transcribe-1.0", "muse-spark-1.3"]);
+    expect(r.calls[1].output).toBe("15 frames processed, 1 object tracked");
+    expect(r.calls[2].output).toBe("match, clear");
+    expect(r.calls.reduce((n, c) => n + c.usd, 0)).toBeCloseTo(report.cost.usd, 10);
+    expect(r.calls.every((c) => c.ms >= 0)).toBe(true);
   }, 30_000);
 
   it("reports each step as it starts, in order", async () => {
