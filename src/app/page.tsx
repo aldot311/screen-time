@@ -13,7 +13,7 @@ const STEPS = [
     icon: ScanSearch,
     model: "SAM 3.1",
     title: "Track",
-    text: "Finds every can, cup or sneaker in every frame from a two-word prompt, with a box around each one.",
+    text: "Finds every can, cup or sneaker in every frame from a two-word prompt. If the word misses, Muse Spark looks at the video and suggests a better one.",
   },
   {
     icon: ShieldCheck,
