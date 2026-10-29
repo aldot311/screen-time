@@ -2,3 +2,4 @@ allowBuilds:
   ffmpeg-static: true
   sharp: false
   unrs-resolver: false
+  esbuild: false
