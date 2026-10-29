@@ -51,8 +51,12 @@ Aldo approved every item below on 2026-10-29.
   Baseten; Aldo signs up, the key goes in with set-secret.sh).
 - Fixed on the way to production (never seen locally): Vercel's ffmpeg is 7.0.2 (no drawtext, no frame count on a
   stream copy) and Blob's weak ETags broke every update of a large document. Linux test path: Docker (see memory).
-- Production reports from before tonight have no receipts, feature checks or live progress; re-running the hero
-  clips there would show them (about $0.10 each, needs the demo password).
+- Showcase campaign "Alani Nu: launch, with product photo" (alani-nu-launch) built in production: the 12 test
+  clips re-run with a $300 fee and the product photo (scripts/build-showcase.mts, $1.17); the landing links to it.
+  The test-runs campaign is untouched (accuracy and the landing table are measured on it).
+- Round 4 of the five judges (design 7-9, hackathon 7-9) and its fixes are in (e32f7f2, 1b1a5b7). What they still
+  want is mostly data only Aldo can get: other creators' Reels (the friends), a held-out labelled set, a video with a
+  spoken or on-screen #ad under a disclosure term, and an open-weight provider key for item 11.
 - 2026-10-29: the five features plus two deep review rounds are committed (545e7a2) and pushed. Preview:
   https://screen-time-gyxfq1zmq-aldos-projects-dcad187d.vercel.app (Vercel login). Production not deployed (needs Aldo's OK).
 - Accepted low findings: "sponsored by" also matches a creator describing someone else's sponsored video; bulk links
