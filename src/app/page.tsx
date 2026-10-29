@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight, AudioLines, ChevronRight, FileCheck2, ScanSea
 import { loadShowcase, type Showcased } from "@/lib/campaign/showcase";
 import { LiveReplay } from "@/components/ed/live-replay";
 import { PendingLink } from "@/components/ed/pending-link";
+import { TrySample } from "@/components/ed/try-sample";
 import { TopBar } from "@/components/ed/top-bar";
 import { Wordmark } from "@/components/ed/bits";
 import { getVideo } from "@/lib/campaign/store";
@@ -121,13 +122,12 @@ export default async function Landing() {
 
           <div className="min-w-0 lg:col-start-1 lg:row-start-2 lg:self-start lg:pt-8">
             <div className="flex flex-col items-stretch gap-1 sm:flex-row sm:flex-wrap sm:gap-3">
-              <PendingLink href={hero?.href ?? "/campaigns"} className={btnPrimary}>
-                Open a real report <ArrowRight className="size-[18px]" strokeWidth={2.25} aria-hidden />
-              </PendingLink>
-              <PendingLink href="/campaigns" className={btnSecondary}>
-                See every campaign
+              <TrySample className={btnPrimary} label="Run it on a sample video" />
+              <PendingLink href={hero?.href ?? "/campaigns"} className={btnSecondary}>
+                Open a real report
               </PendingLink>
             </div>
+            <p className="mt-2 text-[13px] text-(--ink-3)">The real pipeline, live, on a 12-second Reel. No password needed.</p>
             <p className="mt-5 hidden text-[14px] text-(--ink-3) sm:block">
               <a href="#accuracy" className="ed-press -mx-2 inline-flex min-h-11 items-center rounded-full px-2 hover:text-(--ink) active:bg-(--wash)">
                 <span>

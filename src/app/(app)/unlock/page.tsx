@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { LockKeyhole } from "lucide-react";
 import { TopBar } from "@/components/ed/top-bar";
 import { PendingLink } from "@/components/ed/pending-link";
+import { TrySample } from "@/components/ed/try-sample";
 import { UnlockForm } from "./unlock-form";
 
 export const metadata: Metadata = { title: "Demo access" };
@@ -28,7 +29,13 @@ export default function UnlockPage() {
           <Suspense fallback={<FormSkeleton />}>
             <UnlockForm />
           </Suspense>
-          <p className="mt-6 border-t border-(--hair) pt-5 text-[14px] text-(--ink-3)">
+          <div className="mt-6 border-t border-(--hair) pt-5">
+            <p className="text-[14px] text-(--ink-2)">No password? Watch the real pipeline run on a sample Reel.</p>
+            <div className="mt-2">
+              <TrySample className="ed-press inline-flex h-11 items-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold text-(--ink) shadow-(--sh-1) ring-1 ring-(--hair-2) active:bg-(--wash)" />
+            </div>
+          </div>
+          <p className="mt-4 text-[14px] text-(--ink-3)">
             Just looking?{" "}
             <PendingLink
               href="/campaigns"

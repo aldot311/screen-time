@@ -500,3 +500,25 @@ export async function takeUploadSlot(nonce: string): Promise<boolean> {
 export function storedFileInfo(url: string) {
   return backend().fileInfo(url);
 }
+
+// ---------- small documents for rate limits and one-time setup ----------
+
+/**
+ * Takes the first free of `max` numbered slots under `prefix` (each slot is a document created only if absent, so
+ * two requests never get the same one). False when all are taken: the limit is reached.
+ */
+export async function takeSlot(prefix: string, max: number): Promise<boolean> {
+  for (let i = 1; i <= max; i++) {
+    if (await backend().createJson(`${prefix}-${i}.json`, { at: new Date().toISOString() })) return true;
+  }
+  return false;
+}
+
+export function readDoc<T>(key: string): Promise<T | null> {
+  return backend().readJson(key) as Promise<T | null>;
+}
+
+/** Creates the document only if it does not exist yet; false when it already did. */
+export function createDoc(key: string, value: unknown): Promise<boolean> {
+  return backend().createJson(key, value);
+}

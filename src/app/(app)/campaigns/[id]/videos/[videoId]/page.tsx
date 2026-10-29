@@ -25,7 +25,10 @@ export async function generateMetadata({ params }: PageProps<"/campaigns/[id]/vi
 
 export default async function VideoPage({ params, searchParams }: PageProps<"/campaigns/[id]/videos/[videoId]">) {
   // ?t=12.5 opens the report at that second (links from the accuracy page point at a moment).
-  const t = Number((await searchParams).t);
+  const query = await searchParams;
+  const t = Number(query.t);
+  // Set by "Try a sample video" when a limit was reached and this is the newest finished sample instead.
+  const limit = typeof query.limit === "string" ? query.limit.slice(0, 120) : null;
   const { id, videoId } = await params;
   const [campaign, video, showcase, all] = await Promise.all([getCampaign(id), getVideo(id, videoId), loadShowcase(), listCampaigns()]);
   if (!campaign || !video) notFound();
@@ -59,6 +62,11 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
       <AutoRefresh active={running} everyMs={1500} />
       <TopBar back={{ href: `/campaigns/${campaign.id}`, label: backLabel }} />
       <main className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(env(safe-area-inset-bottom)+128px)] sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 lg:pb-24">
+        {limit && (
+          <p role="status" className="mt-3 mb-4 rounded-(--r-inner) bg-(--wash) px-4 py-3 text-[14px] leading-snug text-(--ink-2) sm:mt-0">
+            <span className="font-semibold text-(--ink)">{limit}</span> This is the newest sample run; tap Replay analysis to watch every step it took.
+          </p>
+        )}
         {video.status === "done" && video.report ? (
           <ReportClient
             report={video.report}
