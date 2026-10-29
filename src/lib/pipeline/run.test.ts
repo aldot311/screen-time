@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { CostGuard, CostLimitError, type FetchLike } from "@/lib/meta";
 import { disclosureFrames, pickFrames, runVideo } from "./run";
 import type { LiveProgress } from "@/lib/types";
-import { disclosurePrompt, parseTermsPrompt, TERMS_SCHEMA, toContractTerms, toOnScreen, toSuggestion, verifyPrompt } from "./prompts";
+import { toChecks, disclosurePrompt, parseTermsPrompt, TERMS_SCHEMA, toContractTerms, toOnScreen, toSuggestion, verifyPrompt } from "./prompts";
 import type { Detection } from "@/lib/types";
 
 // Two frames of SAM output for one object, in the documented token format (fixture from @meta-sam/parser's README).
@@ -548,5 +548,29 @@ describe("disclosureFrames", () => {
 
   it("never asks for more than the 50 images the API accepts", () => {
     expect(disclosureFrames(10 * 60 * 15, 80)).toHaveLength(50);
+  });
+});
+
+describe("toChecks", () => {
+  it("keeps up to six well-formed feature checks and drops the rest", () => {
+    expect(
+      toChecks([
+        { feature: "  teal   can ", seen: "yes" },
+        { feature: "pink Alani script", seen: "no" },
+        { feature: "", seen: "yes" },
+        { feature: "peach graphic", seen: "maybe" },
+        { feature: 3, seen: "yes" },
+        null,
+        ...Array.from({ length: 8 }, (_, i) => ({ feature: `f${i}`, seen: "unclear" })),
+      ]),
+    ).toEqual([
+      { feature: "teal can", seen: "yes" },
+      { feature: "pink Alani script", seen: "no" },
+      { feature: "f0", seen: "unclear" },
+      { feature: "f1", seen: "unclear" },
+      { feature: "f2", seen: "unclear" },
+      { feature: "f3", seen: "unclear" },
+    ]);
+    expect(toChecks(undefined)).toEqual([]);
   });
 });

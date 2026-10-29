@@ -5,13 +5,32 @@ export type VerifyOutput = Omit<TrackVerification, "objectId">;
 export const VERIFY_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["verdict", "visibility", "reason"],
+  required: ["verdict", "visibility", "reason", "checks"],
   properties: {
     verdict: { type: "string", enum: ["match", "lookalike", "unclear"] },
     visibility: { type: "string", enum: ["clear", "partial", "blurred"] },
     reason: { type: "string" },
+    checks: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["feature", "seen"],
+        properties: { feature: { type: "string" }, seen: { type: "string", enum: ["yes", "no", "unclear"] } },
+      },
+    },
   },
 } as const;
+
+/** The features Muse Spark checked, cleaned: at most six, short names, known answers only. Absent on older runs. */
+export function toChecks(raw: unknown): { feature: string; seen: "yes" | "no" | "unclear" }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((c): c is { feature: string; seen: string } => typeof c?.feature === "string" && typeof c?.seen === "string")
+    .map((c) => ({ feature: c.feature.trim().replace(/\s+/g, " ").slice(0, 60), seen: c.seen as "yes" | "no" | "unclear" }))
+    .filter((c) => c.feature && ["yes", "no", "unclear"].includes(c.seen))
+    .slice(0, 6);
+}
 
 export function verifyPrompt(productDescription: string, samPrompt: string, withPhoto = false): string {
   return [
@@ -27,6 +46,9 @@ export function verifyPrompt(productDescription: string, samPrompt: string, with
     `"unclear" is for when the object itself cannot be made out. Visibility: "clear" if the label is readable or the product is`,
     `unmistakable, "partial" if covered or cut off, "blurred" if motion or focus hides it.`,
     `Give a one-sentence reason a brand manager would understand.`,
+    `In "checks", list up to five distinguishing features of the brand's product, taken from the description${withPhoto ? " and the photo" : ""}`,
+    `(for example "teal can", "pink Alani script", "peach graphic"), each in a few words, and whether the crops show it:`,
+    `"yes", "no" (a different color, logo or shape is visible instead), or "unclear" (hidden, blurred or out of frame).`,
   ].join(" ");
 }
 

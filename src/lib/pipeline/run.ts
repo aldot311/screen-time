@@ -20,6 +20,7 @@ import {
   SUGGEST_SCHEMA,
   suggestPromptText,
   TERMS_SCHEMA,
+  toChecks,
   toContractTerms,
   toOnScreen,
   toSuggestion,
@@ -367,7 +368,8 @@ async function verifyTrack(
     (r) => `${r.verdict}, ${r.visibility}`,
   );
   if (withPhoto) photo.used = true;
-  return { objectId: track.objectId, ...out };
+  const checks = toChecks(out.checks);
+  return { objectId: track.objectId, verdict: out.verdict, visibility: out.visibility, reason: out.reason, ...(checks.length ? { checks } : {}) };
 }
 
 /** Every tracked box with its object's verdict, for the player overlay; only the fields the overlay draws. */

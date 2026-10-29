@@ -42,6 +42,8 @@ export interface TrackVerification {
   verdict: VerifyVerdict;
   visibility: "clear" | "partial" | "blurred";
   reason: string;
+  /** The product features Muse Spark looked for in this object and whether it saw each (absent on older reports). */
+  checks?: { feature: string; seen: "yes" | "no" | "unclear" }[];
 }
 
 export interface Mention {

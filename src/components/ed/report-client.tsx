@@ -843,17 +843,29 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               const live = isOn(key);
               const body = (
                 <>
-                  <span
-                    className={[
-                      "relative block aspect-[3/4] overflow-hidden rounded-[14px] bg-(--wash)",
-                      match ? "ring-[3px] ring-(--signal)" : "outline-2 outline-offset-2 outline-(--reject) outline-dashed",
-                    ].join(" ")}
-                  >
-                    {crop ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- stored stills, already small JPEGs
-                      <img src={crop} alt={name} className="size-full object-cover" />
-                    ) : (
-                      <span className={`absolute inset-3 rounded-[8px] ${match ? "bg-(--signal)/50" : "bg-(--reject-soft)"}`} aria-hidden />
+                  <span className="flex flex-col gap-2">
+                    <span
+                      className={[
+                        "relative block aspect-[3/4] overflow-hidden rounded-[14px] bg-(--wash)",
+                        match ? "ring-[3px] ring-(--signal)" : "outline-2 outline-offset-2 outline-(--reject) outline-dashed",
+                      ].join(" ")}
+                    >
+                      {crop ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- stored stills, already small JPEGs
+                        <img src={crop} alt={name} className="size-full object-cover" />
+                      ) : (
+                        <span className={`absolute inset-3 rounded-[8px] ${match ? "bg-(--signal)/50" : "bg-(--reject-soft)"}`} aria-hidden />
+                      )}
+                    </span>
+                    {referencePhoto && (
+                      // The photo this object was compared with, right under it.
+                      <span className="flex items-center gap-1.5">
+                        <span className="block size-9 shrink-0 overflow-hidden rounded-[8px] bg-(--card) ring-1 ring-(--hair-2)">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- the stored product photo */}
+                          <img src={referencePhoto} alt="" className="size-full object-cover" />
+                        </span>
+                        <span className="text-[11px] leading-tight text-(--ink-3)">vs. your photo</span>
+                      </span>
                     )}
                   </span>
                   <span className="min-w-0 py-1">
@@ -867,6 +879,28 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                     </span>
                     <span className="mt-2 block text-[16px] leading-snug font-semibold">{name}</span>
                     <span className="mt-1 block text-[14px] leading-[1.5] text-(--ink-2)">{t.reason}</span>
+                    {t.checks && t.checks.length > 0 && (
+                      <span className="mt-2 flex flex-wrap gap-1.5" role="list" aria-label="Features Muse Spark checked">
+                        {t.checks.map((c) => (
+                          <span
+                            key={c.feature}
+                            role="listitem"
+                            className={`inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-medium ${
+                              c.seen === "yes" ? "bg-(--wash) text-(--ink)" : "bg-(--card) text-(--ink-3) ring-1 ring-(--hair-2)"
+                            }`}
+                          >
+                            {c.seen === "yes" ? (
+                              <Check className="size-3.5" strokeWidth={3} aria-label="Seen" />
+                            ) : c.seen === "no" ? (
+                              <X className="size-3.5" strokeWidth={3} aria-label="Not seen" />
+                            ) : (
+                              <CircleHelp className="size-3.5" strokeWidth={2.5} aria-label="Could not tell" />
+                            )}
+                            {c.feature}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                     <span className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-(--ink-3)">
                       {match && <span>{VISIBILITY[t.visibility]}</span>}
                       {at && (
