@@ -54,6 +54,11 @@ Aldo approved every item below on 2026-10-29.
 - Showcase campaign "Alani Nu: launch, with product photo" (alani-nu-launch) built in production: the 12 test
   clips re-run with a $300 fee and the product photo (scripts/build-showcase.mts, $1.17); the landing links to it.
   The test-runs campaign is untouched (accuracy and the landing table are measured on it).
+- Round 5 of the five judges scored 7-9 on design and 8-9 on the hackathon criteria (up from 7-8); its fixes are in
+  35de1ac and live in production. Left, by the judges: data only Aldo can get (other creators' Reels, a held-out
+  set with person-checked labels, a clip with a spoken or on-screen #ad under a disclosure term, an open-weight
+  provider key), dashed red look-alike boxes in the proof clip (ffmpeg drawbox has no dashes), a custom player on
+  the live-run page, and the /new term rows on phones.
 - Round 4 of the five judges (design 7-9, hackathon 7-9) and its fixes are in (e32f7f2, 1b1a5b7). What they still
   want is mostly data only Aldo can get: other creators' Reels (the friends), a held-out labelled set, a video with a
   spoken or on-screen #ad under a disclosure term, and an open-weight provider key for item 11.
