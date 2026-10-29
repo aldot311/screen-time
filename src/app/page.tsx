@@ -407,7 +407,7 @@ function VerdictCard({ show, track }: { show: Showcased; track: Showcased["video
             <span className="font-medium text-(--ink-3)">Muse Spark: </span>&ldquo;{track.reason}&rdquo;
           </span>
           <span className="mt-auto inline-flex items-center gap-1 pt-4 text-[13px] font-semibold text-(--ink)">
-            Open {show.video.id} <ArrowRight className="size-3.5" strokeWidth={2.5} aria-hidden />
+            See it in the report <ArrowRight className="size-3.5" strokeWidth={2.5} aria-hidden />
           </span>
         </span>
       </PendingLink>

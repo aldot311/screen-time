@@ -171,7 +171,7 @@ const CARD = (on: boolean) =>
   [
     "flex min-h-[60px] cursor-pointer items-start gap-3 rounded-(--r-inner) px-3.5 py-2.5 transition-[background-color,box-shadow] duration-150",
     on
-      ? "bg-(--card) shadow-(--sh-1) ring-2 ring-(--ink)"
+      ? "bg-(--card) shadow-(--sh-1) ring-[1.5px] ring-(--ink)/80"
       : "bg-(--card)/55 ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:bg-(--card) [@media(hover:hover)]:hover:ring-(--ink-3)",
   ].join(" ");
 

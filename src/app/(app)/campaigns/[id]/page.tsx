@@ -18,7 +18,7 @@ import { CampaignCover } from "@/components/ed/product-photo";
 import { CampaignCreators } from "@/components/ed/campaign-creators";
 import { FeeEditor } from "@/components/ed/fee-editor";
 import { feeFor, payout, payoutLine } from "@/lib/campaign/money";
-import { reviewFlags } from "@/lib/campaign/review";
+import { reviewFlags, reviewReason } from "@/lib/campaign/review";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +73,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
       fee: feeFor(campaign, v.creator),
       override: v.override?.decision,
       flagged: r ? reviewFlags(r).length > 0 : false,
+      flagReason: r ? (reviewReason(r) ?? undefined) : undefined,
     };
   });
 
@@ -124,10 +125,10 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
     fee: feeFor(campaign, c.handle),
     feeInherited: c.fee === undefined,
   }));
-  // Money is per creator (their latest finished video). A test set (several clips from one handle, no roster) has no
-  // creators to pay, so it says nothing rather than "Pay 1 creator"; each card still shows what its verdict pays or holds.
+  // Money is per creator (their latest finished video). A test set (several clips from one handle, no roster) counts
+  // each clip on its own, as videos: "Pay 5 videos $1,500 · hold 7 ($2,100)".
   const testSet = oneHandle !== null && videos.length > 1 && !campaign.creators?.length;
-  const money = testSet ? null : payoutLine(payout(campaign, videos));
+  const money = testSet ? payoutLine(payout(campaign, videos, { perVideo: true }), "video") : payoutLine(payout(campaign, videos));
   const mode = process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct";
   const creatorsSection =
     canUpload || creators.length > 0 ? <CampaignCreators campaignId={campaign.id} entries={creators} editable={canUpload} /> : null;

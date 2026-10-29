@@ -311,7 +311,7 @@ const STATUS: Record<Exclude<CreatorStatus, "delivered" | "short" | "review">, {
   uploaded: { Icon: Inbox, cls: "text-(--ink-2)" },
   starting: { Icon: CircleDashed, cls: "text-(--ink-2)" },
   running: { Icon: CircleDashed, cls: "text-(--ink-2)" },
-  stopped: { Icon: AlertTriangle, cls: "text-(--short)" },
+  stopped: { Icon: AlertTriangle, cls: "text-(--ink-2)" },
 };
 
 function StatusLine({ e }: { e: CreatorEntry }) {

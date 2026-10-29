@@ -19,7 +19,7 @@ const RING: Record<Kind, { bg: string; badge: string; label: string }> = {
   short: { bg: "var(--short)", badge: "bg-(--short) text-white", label: "Fell short" },
   running: { bg: "var(--hair-2)", badge: "bg-(--card) text-(--ink) ring-1 ring-(--hair-2)", label: "Checking" },
   waiting: { bg: "var(--ink-3)", badge: "bg-(--ink) text-white", label: "Waiting for you" },
-  stopped: { bg: "var(--hair-2)", badge: "bg-(--short-soft) text-(--short) ring-1 ring-(--short)/25", label: "Stopped" },
+  stopped: { bg: "var(--hair-2)", badge: "bg-(--wash) text-(--ink-2) ring-1 ring-(--hair-2)", label: "Stopped" },
 };
 
 const kindOf = (r: Row): Kind =>

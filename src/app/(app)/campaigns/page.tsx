@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ChevronRight, Plus } from "lucide-react";
 import { listCampaigns, listVideos } from "@/lib/campaign/store";
+import { TRY_ID } from "@/lib/campaign/try";
 import type { Campaign } from "@/lib/campaign/types";
 import { seconds, verdictOf } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
@@ -33,7 +34,8 @@ async function summarize(c: Campaign) {
 }
 
 export default async function CampaignsPage() {
-  const cards = await Promise.all((await listCampaigns()).map(summarize));
+  // The public sample is a sandbox, opened from "Run it on a sample video"; it is not one of the brand's campaigns.
+  const cards = await Promise.all((await listCampaigns()).filter((c) => c.id !== TRY_ID).map(summarize));
 
   // Sorted by brand. Brands with one campaign share one grid; a brand with 2+ campaigns gets a quiet label over its own.
   const sorted = [...cards].sort((a, b) => a.c.brand.localeCompare(b.c.brand) || shortName(a.c).localeCompare(shortName(b.c)));
@@ -142,7 +144,7 @@ function CampaignCard({ k, eager }: { k: Card; eager: boolean }) {
           {k.review > 0 && <span>{k.review} to review</span>}
           {k.running > 0 && <span className="text-(--ink-3)">{k.running} in progress</span>}
           {k.waiting > 0 && <span className="font-semibold text-(--ink)">{k.waiting} waiting for you</span>}
-          {k.stopped > 0 && <span className="text-(--short)">{k.stopped} stopped</span>}
+          {k.stopped > 0 && <span className="text-(--ink-2)">{k.stopped} stopped</span>}
         </span>
       </span>
     </PendingLink>

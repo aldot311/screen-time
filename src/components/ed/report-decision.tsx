@@ -127,7 +127,7 @@ export function PayOrHold({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-semibold text-(--ink-3)">Pay or hold · a recommendation, you decide</p>
-          <h2 id="pay-h" className="ed-display mt-0.5 text-[21px] leading-tight sm:text-[23px]">
+          <h2 id="pay-h" className="ed-display mt-0.5 scroll-mt-28 text-[21px] leading-tight sm:text-[23px]">
             {tone.title}
           </h2>
           {verdict === "delivered" && (
@@ -251,7 +251,7 @@ function Override({ endpoint, override, recommended }: { endpoint: string; overr
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="ed-press mt-2 -ml-3 inline-flex h-11 cursor-pointer items-center rounded-full px-3 text-[13.5px] font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-4 active:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink)"
+        className="ed-press mt-3 inline-flex h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-(--ink) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
       >
         Decide differently
       </button>

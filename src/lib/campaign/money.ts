@@ -60,8 +60,11 @@ export function latestFinished(videos: VideoEntry[]): Map<string, VideoEntry> {
   return latest;
 }
 
-export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: VideoEntry[]): Payout {
-  const latest = latestFinished(videos);
+export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: VideoEntry[], opts: { perVideo?: boolean } = {}): Payout {
+  // perVideo: every finished video on its own (a test set of separate clips), not each creator's latest.
+  const latest = opts.perVideo
+    ? new Map(videos.filter((v) => v.status === "done" && v.report).map((v) => [v.id, v]))
+    : latestFinished(videos);
   const empty = (): Bucket => ({ creators: 0, amount: 0, noFee: 0 });
   const out: Payout = { pay: empty(), hold: empty(), review: empty(), anyFee: false };
   for (const v of latest.values()) {
@@ -80,13 +83,14 @@ export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: Vid
   return out;
 }
 
-/** "Pay 5 creators $2,000 · hold 7 ($2,800) · review 1 ($400)", or null when nothing is finished or no fee is set. */
-export function payoutLine(p: Payout): string | null {
+/** "Pay 5 creators $2,000 · hold 7 ($2,800) · review 1 ($400)" (or "videos" for a test set), or null when nothing is
+ *  finished or no fee is set. */
+export function payoutLine(p: Payout, unit: "creator" | "video" = "creator"): string | null {
   if (!p.anyFee) return null;
   const money = (b: Bucket) =>
     b.noFee === b.creators ? "no fee set" : usd(b.amount) + (b.noFee ? ` + ${b.noFee} without a fee` : "");
   const parts: string[] = [];
-  if (p.pay.creators) parts.push(`Pay ${p.pay.creators} creator${p.pay.creators === 1 ? "" : "s"} ${money(p.pay)}`);
+  if (p.pay.creators) parts.push(`Pay ${p.pay.creators} ${unit}${p.pay.creators === 1 ? "" : "s"} ${money(p.pay)}`);
   if (p.hold.creators) parts.push(`${parts.length ? "hold" : "Hold"} ${p.hold.creators} (${money(p.hold)})`);
   if (p.review.creators) parts.push(`${parts.length ? "review" : "Review"} ${p.review.creators} (${money(p.review)})`);
   return parts.length ? parts.join(" · ") : null;

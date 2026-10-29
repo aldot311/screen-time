@@ -220,7 +220,7 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
               <span aria-hidden className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[16px] text-(--ink-3)">
                 $
               </span>
-              <input id="f-fee" name="fee" inputMode="decimal" placeholder="300" autoComplete="off" enterKeyHint="done" aria-describedby="f-fee-hint" className={`${INPUT} h-12 pl-8 tabular`} />
+              <input id="f-fee" name="fee" inputMode="decimal" placeholder="e.g. 300" autoComplete="off" enterKeyHint="done" aria-describedby="f-fee-hint" className={`${INPUT} h-12 pl-8 tabular`} />
             </span>
           </Field>
         </Group>

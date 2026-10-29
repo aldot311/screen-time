@@ -23,7 +23,7 @@ export default function UnlockPage() {
             Screen-Time checks that your product was seen in creator video, to the second.
           </p>
           <p className="mt-2 text-[16px] leading-[1.55] text-(--ink-2)">
-            Anyone can read reports. Uploading and analyzing videos uses paid Meta API credits, so it needs the demo
+            Anyone can read reports and run the sample. Uploading and analyzing your own videos uses paid Meta API credits, so it needs the demo
             password.
           </p>
           <Suspense fallback={<FormSkeleton />}>

@@ -13,7 +13,7 @@ export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
   // UTC, so the server's render and the browser's agree.
   const started = `${new Date(receipt.startedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC`;
   return (
-    <details className="group rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair)">
+    <details id="receipt" className="group scroll-mt-20 rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair)">
       <summary className="ed-press-soft flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-(--r-card) px-4 py-3 active:bg-(--wash) [&::-webkit-details-marker]:hidden">
         <ReceiptText className="size-[18px] shrink-0 text-(--ink-2)" strokeWidth={2.25} aria-hidden />
         <span className="min-w-0 flex-1">

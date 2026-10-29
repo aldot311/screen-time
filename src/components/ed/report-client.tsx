@@ -6,7 +6,7 @@
 // plays exactly the moment that proves it: in the main player when at least half of it is on screen, otherwise in a
 // mini player docked at the bottom of a phone, without moving the page. The control that started it shows "Playing".
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Check, CircleHelp, Clapperboard, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
+import { Check, ChevronDown, CircleHelp, Clapperboard, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
 import { FPS, type Disclosure, type Segment, type TermResult, type VideoReport } from "@/lib/types";
 import { countedBefore, framesToSegments, percent, ruleReading, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
@@ -388,7 +388,11 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
       {/* Player on a paper card: first on a phone, sized so the verdict and its chips fit the first screen; sticky from tablet up. */}
       {/* Phones: the decision comes first, above the video, so the answer is on screen before anything plays. */}
       {verdict !== "pending" && (
-        <p className={`flex min-h-12 items-center gap-2.5 rounded-(--r-card) px-3 py-2 text-[14.5px] leading-snug md:hidden ${tone.card}`}>
+        // A link to the decision card: the next step is one tap away, however long the video is.
+        <a
+          href="#pay-h"
+          className={`ed-press flex min-h-12 items-center gap-2.5 rounded-(--r-card) px-3 py-2 text-[14.5px] leading-snug active:opacity-80 md:hidden ${tone.card}`}
+        >
           {override ? (
             <>
               <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-(--ink) px-3 text-[14px] font-semibold text-white tabular">
@@ -407,7 +411,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               <span className="min-w-0 text-(--ink-2)">{phoneReason}</span>
             </>
           )}
-        </p>
+          <ChevronDown className="ml-auto size-4 shrink-0 text-(--ink-3)" strokeWidth={2.5} aria-hidden />
+        </a>
       )}
       <div className="min-w-0 md:sticky md:top-[76px] md:self-start">
         <div
@@ -650,7 +655,10 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                   <Tc>{timecode(time)}</Tc>
                 </>
               ) : (
-                <span>Drag or use the arrow keys to move through the video; Space plays.</span>
+                <>
+                  <span className="[@media(pointer:coarse)]:hidden">Drag or use the arrow keys to move through the video; Space plays.</span>
+                  <span className="hidden [@media(pointer:coarse)]:inline">Drag to scrub through the video, or tap a moment to jump there.</span>
+                </>
               )}
             </div>
             <ReportLanes
@@ -890,7 +898,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                     <span
                       className={[
                         "inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold",
-                        match ? "bg-(--signal) text-(--signal-ink)" : "bg-(--reject-soft) text-(--reject)",
+                        match ? "bg-(--ink) text-white" : "bg-(--reject-soft) text-(--reject)",
                       ].join(" ")}
                     >
                       {match ? "Counted · SAM 3.1" : t.verdict === "lookalike" ? "Look-alike · Muse Spark" : "Unclear · Muse Spark"}
@@ -1109,7 +1117,22 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             ) : (
               <>
                 <p>
-                  Analyzed {report.info.frameCount} frames at 15 fps · Meta API cost ${report.cost.usd.toFixed(2)} ·{" "}
+                  Analyzed {report.info.frameCount} frames at 15 fps ·{" "}
+                  {report.receipt ? (
+                    <a
+                      href="#receipt"
+                      onClick={() => {
+                        // A link to a closed <details> lands on its summary; open it so the calls are what you see.
+                        const el = document.getElementById("receipt");
+                        if (el instanceof HTMLDetailsElement) el.open = true;
+                      }}
+                      className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
+                      Every Meta API call, ${report.cost.usd.toFixed(2)}
+                    </a>
+                  ) : (
+                    <>Meta API cost ${report.cost.usd.toFixed(2)}</>
+                  )}{" "}
+                  ·{" "}
                   <a href="/accuracy" className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
                     How accurate is this?
                   </a>

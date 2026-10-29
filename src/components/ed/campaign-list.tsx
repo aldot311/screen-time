@@ -50,8 +50,9 @@ export interface Row {
   fee?: number | null;
   /** The manager's own decision, when they overrode the recommendation. */
   override?: "pay" | "hold";
-  /** Muse Spark was unsure or a number landed near its threshold: worth a look before deciding. */
+  /** Muse Spark was unsure or a number landed near its threshold: worth a look before deciding, and why, in a word. */
   flagged?: boolean;
+  flagReason?: string;
 }
 
 type Filter = "all" | "delivered" | "short" | "review";
@@ -200,7 +201,7 @@ function CreatorCard({ r, eager }: { r: Row; eager: boolean }) {
               )}
               {r.flagged && !r.override && (
                 <span className="inline-flex h-6 items-center rounded-full bg-(--review-soft) px-2 text-[12px] font-semibold whitespace-nowrap text-(--review)">
-                  Look first
+                  Worth a look{r.flagReason ? ` · ${r.flagReason}` : ""}
                 </span>
               )}
               {r.verdict === "delivered" && r.terms > 0 && (
@@ -211,13 +212,14 @@ function CreatorCard({ r, eager }: { r: Row; eager: boolean }) {
             </span>
             {r.misses.length > 0 && (
               <span className="mt-2 block space-y-1">
-                {r.misses.slice(0, 2).map((m) => (
+                {/* Up to three shown in full: a "1 more" line would take the same space as the miss itself. */}
+                {r.misses.slice(0, r.misses.length > 3 ? 2 : 3).map((m) => (
                   <span key={m.term} className="flex gap-1.5 text-[12.5px] leading-snug text-(--ink)">
                     <X className="mt-[3px] size-3 shrink-0 text-(--short)" strokeWidth={3.25} aria-hidden />
-                    <span className="line-clamp-2">{m.detail.replace(/\.$/, "")}</span>
+                    <span className="line-clamp-2">{m.detail.replace(/\.$/, "").replace(/(\d) (s|times?)\b/g, "$1\u00a0$2")}</span>
                   </span>
                 ))}
-                {r.misses.length > 2 && <span className="block pl-[18px] text-[12px] text-(--ink-3)">and {r.misses.length - 2} more</span>}
+                {r.misses.length > 3 && <span className="block pl-[18px] text-[12px] text-(--ink-3)">and {r.misses.length - 2} more</span>}
               </span>
             )}
             {r.misses.length === 0 && r.unsure.length > 0 && (

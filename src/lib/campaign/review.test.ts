@@ -22,7 +22,10 @@ describe("reviewFlags", () => {
         ],
       }),
     );
-    expect(flags).toEqual(["Muse Spark saw the product (object 1) blurred.", "Muse Spark could not tell what object 2 is, so it was not counted."]);
+    expect(flags).toEqual([
+      "Muse Spark saw the product blurred, so a frame or two may be missing.",
+      "Muse Spark could not tell what one tracked object is, so it was not counted.",
+    ]);
   });
 
   it("flags a measurement near its threshold, on either side, and leaves clear wins alone", () => {

@@ -38,9 +38,8 @@ function measured(rule: ContractRule, r: VideoReport): { got: number; needed: nu
 export function reviewFlags(r: VideoReport): string[] {
   const flags: string[] = [];
   for (const t of r.tracks ?? []) {
-    const n = t.objectId + 1;
-    if (t.verdict === "unclear") flags.push(`Muse Spark could not tell what object ${n} is, so it was not counted.`);
-    else if (t.verdict === "match" && t.visibility === "blurred") flags.push(`Muse Spark saw the product (object ${n}) blurred.`);
+    if (t.verdict === "unclear") flags.push("Muse Spark could not tell what one tracked object is, so it was not counted.");
+    else if (t.verdict === "match" && t.visibility === "blurred") flags.push("Muse Spark saw the product blurred, so a frame or two may be missing.");
   }
   for (const t of r.terms ?? []) {
     if (!t.term.rule || t.pass === null) continue;
@@ -53,4 +52,11 @@ export function reviewFlags(r: VideoReport): string[] {
     );
   }
   return flags;
+}
+
+/** The first reason to look, in a couple of words for a card: "blurred", "unclear object", "near a threshold". */
+export function reviewReason(r: VideoReport): string | null {
+  const f = reviewFlags(r)[0];
+  if (!f) return null;
+  return /blurred/.test(f) ? "blurred" : /could not tell/.test(f) ? "unclear object" : "near a threshold";
 }

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
 import data from "@/lib/accuracy-data.json";
 import objects from "@/lib/open-weight-data.json";
 import { TopBar } from "@/components/ed/top-bar";
 import { PendingLink } from "@/components/ed/pending-link";
 import { DISPLAY } from "@/components/ed/campaign-ui";
+import { TrySample } from "@/components/ed/try-sample";
 
 export const metadata: Metadata = {
   title: "Accuracy",
@@ -25,11 +26,11 @@ const FAILURES = [
     why: "As the can leaves the frame, SAM 3.1 keeps tracking a 13–32 px strip of it at the left edge for about a second after the labels mark it gone. The tracking is right; whether a sliver counts is a contract question, so the threshold was not tuned to this test set.",
   },
   {
-    title: "Lost the tumbler up close",
-    clip: "clip11 · Stanley tumbler",
-    href: "/campaigns/stanley-test-runs/videos/clip11?t=15.8",
-    what: "Recall 79%: 1.9 s missed (frames 240–267).",
-    why: "The tumbler swings up to the lens, cut off by the bottom of the frame and blurred, and SAM 3.1 drops the track until it is back at arm's length. The report under-counts, so the brand sees less screen time than it got, never more.",
+    title: "Missed it at his side",
+    clip: "clip15 · Stanley tumbler",
+    href: "/campaigns/stanley-test-runs/videos/clip15?t=0",
+    what: "Recall 75%: 0.9 s missed at the start (frames 0–12).",
+    why: "The tumbler starts low at his side, small and half behind his leg, and SAM 3.1 only picks it up as it swings toward the camera. The report under-counts, so the brand sees less screen time than it got, never more.",
   },
 ];
 
@@ -39,7 +40,7 @@ export default function AccuracyPage() {
   const clips = new Set(verified.rows.map((r) => r.clip)).size;
   return (
     <>
-      <TopBar />
+      <TopBar back={{ href: "/", label: "Screen-Time" }} />
       <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-24 sm:px-6 lg:pt-12">
         <h1 className={`${DISPLAY} text-[38px] leading-[1.02] sm:text-[56px]`}>Measured, not claimed.</h1>
         <p className="mt-3 max-w-[62ch] text-[16px] leading-[1.55] text-(--ink-2)">
@@ -55,28 +56,7 @@ export default function AccuracyPage() {
             The same runs, scored twice: once counting every object SAM 3.1 tracked for the prompt, once counting only the objects Muse Spark
             confirmed as the brand&rsquo;s product. No model was run again for this.
           </p>
-          {/* Phones: one card per pipeline; the table from sm up. */}
-          <div className="mt-4 grid gap-3 sm:hidden">
-            {[sam, verified].map((s) => (
-              <div key={s.mode} className="rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair)">
-                <p className={`text-[15px] font-semibold ${s.mode === "verified" ? "text-(--ink)" : "text-(--ink-2)"}`}>{LABEL[s.mode]}</p>
-                <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-[13px] tabular">
-                  {[
-                    ["Precision", pct(s.precision)],
-                    ["Recall", pct(s.recall)],
-                    ["F1", pct(s.f1)],
-                    ["Avg. error", `${s.meanAbsErrorSec.toFixed(2)} s`],
-                    ["Not there, counted", `${s.falseSecondsOnEmptyClips.toFixed(1)} s`],
-                  ].map(([k, v]) => (
-                    <div key={k}>
-                      <dt className="text-[12px] text-(--ink-3)">{k}</dt>
-                      <dd className={`text-[16px] ${s.mode === "verified" ? "font-semibold text-(--ink)" : "text-(--ink-2)"}`}>{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            ))}
-          </div>
+          {/* The full table from sm up; phones get the before/after cards below, which carry the same numbers. */}
           <div className="mt-4 hidden overflow-x-auto rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair) sm:block">
             <table className="w-full min-w-[560px] text-left text-[14px] tabular">
               <thead className="text-[12.5px] text-(--ink-3)">
@@ -116,6 +96,29 @@ export default function AccuracyPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Before and after Muse Spark">
+            {[
+              { label: "Precision", a: pct(sam.precision), b: pct(verified.precision), fa: Number(sam.precision), fb: Number(verified.precision) },
+              { label: "Avg. error per clip", a: `${sam.meanAbsErrorSec.toFixed(2)} s`, b: `${verified.meanAbsErrorSec.toFixed(2)} s`, fa: 1, fb: verified.meanAbsErrorSec / sam.meanAbsErrorSec },
+              { label: "Look-alike seconds counted", a: `${sam.falseSecondsOnEmptyClips.toFixed(1)} s`, b: `${verified.falseSecondsOnEmptyClips.toFixed(1)} s`, fa: 1, fb: verified.falseSecondsOnEmptyClips / Math.max(sam.falseSecondsOnEmptyClips, 0.001) },
+            ].map((m) => (
+              <div key={m.label} className="rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair)">
+                <p className="text-[13px] font-semibold text-(--ink-3)">{m.label}</p>
+                <p className="mt-1 flex items-baseline gap-2 tabular">
+                  <span className="text-[15px] text-(--ink-3) line-through decoration-(--ink-3)/50">{m.a}</span>
+                  <span className="ed-display text-[30px] leading-none">{m.b}</span>
+                </p>
+                <div className="mt-3 space-y-1.5" aria-hidden>
+                  <div className="h-2 rounded-full bg-(--hair-2)" style={{ width: `${Math.max(4, m.fa * 100)}%` }} />
+                  <div className="h-2 rounded-full bg-(--ink)" style={{ width: `${Math.max(4, m.fb * 100)}%` }} />
+                </div>
+                <p className="mt-1.5 flex justify-between text-[12px] text-(--ink-3)">
+                  <span>SAM 3.1 alone</span>
+                  <span className="font-semibold text-(--ink)">+ Muse Spark</span>
+                </p>
+              </div>
+            ))}
           </div>
           <p className="mt-3 max-w-[62ch] text-[14.5px] leading-[1.55] text-(--ink-2)">
             Without the second model, a can of a different Alani flavor alone adds {sam.falseSecondsOnEmptyClips.toFixed(1)} s of &ldquo;screen time&rdquo; the brand
@@ -187,8 +190,9 @@ export default function AccuracyPage() {
         </section>
 
         <details className="group mt-10 rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair)">
-          <summary className="flex min-h-14 cursor-pointer list-none items-center px-4 text-[15px] font-semibold [&::-webkit-details-marker]:hidden">
-            Every clip ({targets})
+          <summary className="ed-press-soft flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-(--r-card) px-4 text-[15px] font-semibold active:bg-(--wash) [&::-webkit-details-marker]:hidden">
+            All {targets} product checks across {clips} clips
+            <ChevronDown className="size-5 shrink-0 text-(--ink-3) transition-transform group-open:rotate-180" strokeWidth={2.25} aria-hidden />
           </summary>
           <div className="overflow-x-auto border-t border-(--hair)">
             <table className="w-full min-w-[520px] text-left text-[13.5px] tabular">
@@ -217,6 +221,14 @@ export default function AccuracyPage() {
             </table>
           </div>
         </details>
+
+        <div className="mt-12 flex flex-col gap-3 rounded-(--r-card) bg-(--ink) p-6 text-white sm:flex-row sm:items-center sm:justify-between">
+          <p className="ed-display text-[22px] leading-tight">See it measure a real video, live.</p>
+          <TrySample
+            label="Run it on a sample video"
+            className="ed-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold text-(--ink) active:bg-(--paper)"
+          />
+        </div>
       </main>
     </>
   );

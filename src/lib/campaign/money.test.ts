@@ -66,6 +66,11 @@ describe("payout", () => {
     expect(payoutLine(payout({ fee: 100 }, [v]))).toBe("Hold 1 ($100)");
   });
 
+  it("counts every finished video on its own for a test set", () => {
+    const p = payout({ fee: 300 }, [video("@a", report(true)), video("@a", report(false)), video("@a", report(false)), video("@a", undefined)], { perVideo: true });
+    expect(payoutLine(p, "video")).toBe("Pay 1 video $300 · hold 2 ($600)");
+  });
+
   it("starts with Hold when nobody delivered", () => {
     expect(payoutLine(payout({ fee: 50 }, [video("@a", report(false))]))).toBe("Hold 1 ($50)");
   });
