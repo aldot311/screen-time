@@ -94,3 +94,7 @@ pnpm test              # 250 tests, no live API calls
 - `src/app`: landing page, campaigns, reports; `src/components`: player overlay, screen-time strip
 - `docs/`: [spec](docs/SPEC.md), [plan](docs/PLAN.md), [verified API notes](docs/meta-api-notes.md),
   [accuracy](docs/ACCURACY.md)
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
