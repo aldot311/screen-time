@@ -34,6 +34,11 @@ list it for this account (checked 2026-10-29: GET /v1/models, and muse-spark-ope
 404 as a nonsense model id). Baseten, Fireworks, Groq, Modal, Together and OpenRouter serve it. The script above runs
 the same check on it with `--run` once OPEN_BASE_URL, OPEN_MODEL and OPEN_API_KEY point at one of them.
 
+Result (2026-10-29, `meta/muse-spark-open` on OpenRouter, served by Fireworks; same crops, same prompt): 35 of 37
+correct, 0 look-alikes counted, 2 real products called "unclear" (clip04 obj0, stock01 obj10), which the app would not
+count and would flag for a look. Precision 100%, recall 93.1%, agreement with hosted 94.6%, median 413 ms per check,
+$0.22 for the 37 checks.
+
 Analysis rate: every video is re-encoded to 15 fps before SAM 3.1, and SAM tracks every one of those frames; labels
 and scores use the same frames.
 

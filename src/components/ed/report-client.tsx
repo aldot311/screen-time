@@ -525,6 +525,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             flags={synthetic ? [] : reviewFlags(report)}
             override={override}
             overrideEndpoint={overrideEndpoint}
+            agentCall={agent?.status === "done" ? agent.recommendation : undefined}
           />
           {agentEndpoint && <AgentPanel key={agent?.startedAt ?? "none"} endpoint={agentEndpoint} agent={agent} creator={creator} />}
           <div>

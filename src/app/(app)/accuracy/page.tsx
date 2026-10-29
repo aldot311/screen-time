@@ -100,6 +100,47 @@ export default function AccuracyPage() {
             objects that could be judged correctly: no look-alike counted, no product missed. Four more were too blurred for a person to
             judge either, so they are not scored (in the app, an object Muse Spark cannot make out is never counted).
           </p>
+          {objects.open && (
+            <>
+              <h3 className="mt-6 text-[17px] font-semibold">The same check on open-weight Muse Spark Open</h3>
+              <p className="mt-1.5 max-w-[62ch] text-[15px] leading-[1.55] text-(--ink-2)">
+                The same crops and the same prompt, sent to Meta&rsquo;s open-weight Muse Spark Open (served by Fireworks through OpenRouter). It
+                also counted no look-alike; it called two real products &ldquo;unclear&rdquo; that the hosted model matched, which in the app means
+                they would not be counted and the report would ask for a look.
+              </p>
+              <div className="mt-4 overflow-x-auto rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair)">
+                <table className="w-full min-w-[440px] text-left text-[14px] tabular">
+                  <thead className="text-[12.5px] text-(--ink-3)">
+                    <tr className="border-b border-(--hair)">
+                      <th className="px-4 py-2.5 font-semibold">Object check</th>
+                      <th className="px-4 py-2.5 font-semibold">Correct</th>
+                      <th className="px-4 py-2.5 font-semibold">Look-alikes counted</th>
+                      <th className="px-4 py-2.5 font-semibold">Products missed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: "Muse Spark 1.3 (hosted)", r: objects.hosted },
+                      { name: "Muse Spark Open", r: objects.open },
+                    ].map(({ name, r }) => (
+                      <tr key={name} className="border-b border-(--hair) last:border-0">
+                        <td className="px-4 py-2.5 font-semibold text-(--ink)">{name}</td>
+                        <td className="px-4 py-2.5">
+                          {Math.round((r.accuracy ?? 0) * r.objects)} of {r.objects}
+                        </td>
+                        <td className="px-4 py-2.5">{r.falseMatches}</td>
+                        <td className="px-4 py-2.5">{r.missedMatches}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-[13px] text-(--ink-3)">
+                {objects.open.objects} objects, median {objects.open.medianMs} ms per check, ${objects.open.usd.toFixed(2)} for the whole run · measured{" "}
+                {objects.measuredAt}
+              </p>
+            </>
+          )}
         </section>
 
         <section aria-labelledby="miss-h" className="mt-12">
@@ -143,9 +184,8 @@ export default function AccuracyPage() {
               it. Precision is the share of counted frames that were right; recall is the share of real frames that were counted.
             </li>
             <li>
-              <span className="font-semibold text-(--ink)">Not yet measured.</span> The gain from the product photo (the test set predates it); a
-              held-out set filmed by other people, which is being recorded now; and the same object check on Meta&rsquo;s open-weight Muse Spark
-              Open, which is ready to run once a hosting provider is connected.
+              <span className="font-semibold text-(--ink)">Not yet measured.</span> The gain from the product photo (the test set predates it) and a
+              held-out set filmed by other people, which is being recorded now.
             </li>
           </ul>
         </section>

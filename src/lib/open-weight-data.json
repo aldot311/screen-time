@@ -8,5 +8,18 @@
     "recall": 1,
     "falseMatches": 0,
     "missedMatches": 0
-  }
+  },
+  "open": {
+    "model": "meta/muse-spark-open",
+    "provider": "https://openrouter.ai/api/v1",
+    "objects": 37,
+    "accuracy": 0.9459459459459459,
+    "precision": 1,
+    "recall": 0.9310344827586207,
+    "falseMatches": 0,
+    "missedMatches": 2,
+    "medianMs": 413,
+    "usd": 0.22148224999999996
+  },
+  "agreement": 0.9459459459459459
 }

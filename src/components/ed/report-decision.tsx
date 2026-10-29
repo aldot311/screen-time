@@ -83,6 +83,30 @@ export function revisionRequest(creator: string, missed: TermResult[], reportUrl
   }?\n${items}\n\nWhat our check saw, second by second: ${link}\nThanks!`;
 }
 
+const VERDICT_TEXT: Record<Verdict, string> = { delivered: "text-(--pass)", short: "text-(--short)", review: "text-(--review)", pending: "text-(--ink-2)" };
+
+/** The contract check in a line: "Fell short · 1 of 3 terms missed". */
+function contractLine(verdict: Verdict, terms: TermResult[]): string {
+  const n = terms.length;
+  const missed = terms.filter((t) => t.pass === false).length;
+  const unsure = terms.filter((t) => t.pass === null).length;
+  if (verdict === "delivered") return n ? `Delivered · ${n === 1 ? "the term" : `all ${n} terms`} met` : "Delivered";
+  if (verdict === "short") return `Fell short · ${missed} of ${n} ${n === 1 ? "term" : "terms"} missed`;
+  return n ? `Needs review · ${unsure} of ${n} ${n === 1 ? "term" : "terms"} not checkable` : "Needs review · no terms set";
+}
+
+function Step({ label, icon, warn = false, children }: { label: string; icon?: React.ReactNode; warn?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={`grid gap-0.5 py-2.5 sm:grid-cols-[132px_1fr] sm:gap-3 ${warn ? "text-(--review)" : ""}`}>
+      <dt className={`flex items-center gap-1.5 text-[12.5px] font-semibold ${warn ? "" : "text-(--ink-3)"}`}>
+        {icon}
+        {label}
+      </dt>
+      <dd className="min-w-0">{children}</dd>
+    </div>
+  );
+}
+
 export function PayOrHold({
   verdict,
   creator,
@@ -91,6 +115,7 @@ export function PayOrHold({
   flags = [],
   override,
   overrideEndpoint,
+  agentCall,
 }: {
   verdict: Verdict;
   creator: string;
@@ -101,6 +126,8 @@ export function PayOrHold({
   override?: VideoEntry["override"];
   /** Where a manager's own decision is saved; absent where none can be (the preview). */
   overrideEndpoint?: string;
+  /** The follow-up agent's pay/hold call, once it has made one. */
+  agentCall?: { decision: "pay" | "hold" | "review"; reason: string };
 }) {
   const [copied, flash] = useFlash();
   if (verdict === "pending") return null;
@@ -126,11 +153,10 @@ export function PayOrHold({
           <tone.Icon className="size-[18px]" strokeWidth={2.5} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[12.5px] font-semibold text-(--ink-3)">Pay or hold · a recommendation, you decide</p>
+          <p className="text-[12.5px] font-semibold text-(--ink-3)">{override ? "Your decision" : "Pay or hold · a recommendation, you decide"}</p>
           <h2 id="pay-h" className="ed-display mt-0.5 scroll-mt-28 text-[21px] leading-tight sm:text-[23px]">
-            {override ? `${override.decision === "pay" ? "Pay" : "Hold"}${amount} · your call` : tone.title}
+            {override ? `${override.decision === "pay" ? "Pay" : "Hold"}${amount}` : tone.title}
           </h2>
-          {override && <p className="mt-0.5 text-[14px] text-(--ink-3) line-through decoration-(--ink-3)/40">{tone.title}</p>}
           {verdict === "delivered" && (
             <p className="mt-1.5 max-w-[60ch] text-[14.5px] leading-[1.5] text-(--ink-2)">
               Every contract term was met, each with the second that proves it below. Nothing here moves money; you pay as you normally do.
@@ -167,18 +193,44 @@ export function PayOrHold({
                 : "No contract terms were set, so there is nothing to check against. Watch the video before you decide."}
             </p>
           )}
-          {flags.length > 0 && (
-            <div className="mt-3 rounded-(--r-inner) bg-(--review-soft) px-3.5 py-3 text-(--review)">
-              <p className="flex items-center gap-1.5 text-[13.5px] font-semibold">
-                <Eye className="size-4" strokeWidth={2.5} aria-hidden /> Worth a look before you decide
-              </p>
-              <ul className="mt-1.5 space-y-1 text-[13.5px] leading-[1.45]">
-                {flags.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* How the decision was reached, always in this order: what the check found, what to look at, Screen-Time's
+              recommendation (a row of its own once the manager's call has replaced it as the headline), what the agent said,
+              and the manager's own call, which is the one that counts. */}
+          <dl className="mt-4 divide-y divide-(--hair) rounded-(--r-inner) bg-(--wash)/70 px-3.5 text-[13.5px] leading-[1.45] ring-1 ring-(--hair)" aria-label="How the decision was reached">
+            <Step label="Contract check">
+              <span className={`font-semibold ${VERDICT_TEXT[verdict]}`}>{contractLine(verdict, terms)}</span>
+            </Step>
+            {flags.length > 0 && (
+              <Step label="Worth a look" icon={<Eye className="size-3.5" strokeWidth={2.5} aria-hidden />} warn>
+                <ul className="space-y-0.5">
+                  {flags.map((f) => (
+                    <li key={f}>{f}</li>
+                  ))}
+                </ul>
+              </Step>
+            )}
+            {override && (
+              <Step label="Recommendation">
+                <span className="text-(--ink-2)">{tone.title}</span>
+              </Step>
+            )}
+            {agentCall && (
+              <Step label="Follow-up agent">
+                <span className="font-semibold text-(--ink)">{cap(agentCall.decision)}</span>
+                {agentCall.reason && <span className="text-(--ink-2)"> · {agentCall.reason}</span>}
+              </Step>
+            )}
+            <Step label="Your call">
+              {override ? (
+                <span className="font-semibold text-(--ink)">
+                  {override.decision === "pay" ? "Pay" : "Hold"}
+                  {amount} <span className="font-normal text-(--ink-2)">· &ldquo;{override.reason}&rdquo;</span>
+                </span>
+              ) : (
+                <span className="text-(--ink-3)">{overrideEndpoint ? "Not made yet · the recommendation above stands" : "Made outside Screen-Time"}</span>
+              )}
+            </Step>
+          </dl>
           {overrideEndpoint && <Override endpoint={overrideEndpoint} override={override} recommended={verdict === "delivered" ? "pay" : "hold"} />}
         </div>
       </div>
@@ -219,10 +271,9 @@ function Override({ endpoint, override, recommended }: { endpoint: string; overr
 
   if (override) {
     return (
-      <div className="mt-3 rounded-(--r-inner) bg-(--wash) px-3.5 py-3">
-        <p className="text-[14px] font-semibold text-(--ink)">Why you decided differently</p>
-        <p className="mt-1 text-[14px] leading-[1.45] text-(--ink-2)">&ldquo;{override.reason}&rdquo;</p>
-        <p className="mt-1 text-[12.5px] text-(--ink-3)">
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="text-[12.5px] text-(--ink-3)">
+          Decided{" "}
           {new Date(override.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC · the report
           below is unchanged
         </p>
@@ -230,7 +281,7 @@ function Override({ endpoint, override, recommended }: { endpoint: string; overr
           type="button"
           onClick={() => void send("DELETE")}
           disabled={busy}
-          className="ed-press mt-2 inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13.5px] font-semibold text-(--ink) ring-1 ring-(--hair-2) active:bg-(--card) disabled:cursor-wait"
+          className="ed-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13.5px] font-semibold text-(--ink) ring-1 ring-(--hair-2) active:bg-(--wash) disabled:cursor-wait"
         >
           {busy ? <Spinner className="size-3.5" /> : <Undo2 className="size-3.5" strokeWidth={2.5} aria-hidden />}
           Undo my decision
