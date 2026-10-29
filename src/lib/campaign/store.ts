@@ -2,12 +2,12 @@
 // when BLOB_READ_WRITE_TOKEN is set. Keys are built only from validated ids, so nothing can escape the store root.
 // The synthetic preview campaign is served from code and is read-only.
 import { createWriteStream } from "node:fs";
-import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { get, list, put } from "@vercel/blob";
+import { BlobNotFoundError, BlobPreconditionFailedError, del, get, head, list, put } from "@vercel/blob";
 import type { LedgerEntry } from "@/lib/meta/cost-guard";
 import { PREVIEW_ID, previewCampaign, previewVideos } from "./preview";
 import type { Campaign, VideoEntry } from "./types";
@@ -55,6 +55,11 @@ export interface Backend {
   readonly kind: "local" | "blob";
   readJson(key: string): Promise<unknown | null>;
   writeJson(key: string, value: unknown): Promise<void>;
+  /** Writes `value` only if `key` does not exist yet; false when it already did. Atomic on both backends. */
+  createJson(key: string, value: unknown): Promise<boolean>;
+  removeJson(key: string): Promise<void>;
+  /** Size and type of a stored file by its URL, or null when there is no such file. */
+  fileInfo(url: string): Promise<{ size: number; contentType: string } | null>;
   listKeys(prefix: string): Promise<string[]>;
   /** Stores a file and returns a URL the browser can fetch. */
   putFile(key: string, body: FileBody, contentType: string): Promise<string>;
@@ -118,6 +123,24 @@ export function localBackend(root = localStoreRoot()): Backend {
       }
     },
     writeJson: (key, value) => atomic(key, (tmp) => writeFile(tmp, JSON.stringify(value, null, 2))),
+    removeJson: (key) => rm(pathOf(key), { force: true }),
+    async fileInfo(url) {
+      const path = localFileFromUrl(url, root);
+      const info = path ? await stat(path).catch(() => null) : null;
+      if (!info?.isFile()) return null;
+      return { size: info.size, contentType: path!.endsWith(".mov") ? "video/quicktime" : "video/mp4" };
+    },
+    async createJson(key, value) {
+      const path = pathOf(key);
+      await mkdir(dirname(path), { recursive: true });
+      try {
+        await writeFile(path, JSON.stringify(value), { flag: "wx" });
+        return true;
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "EEXIST") return false;
+        throw err;
+      }
+    },
     async listKeys(prefix) {
       const dir = pathOf(prefix.replace(/\/$/, ""));
       const names = await readdir(dir, { recursive: true }).catch((err: NodeJS.ErrnoException) => {
@@ -160,6 +183,33 @@ export function blobBackend(): Backend {
         contentType: "application/json",
         cacheControlMaxAge: 60,
       });
+    },
+    async createJson(key, value) {
+      try {
+        await put(key, JSON.stringify(value), {
+          access: ACCESS,
+          allowOverwrite: false,
+          addRandomSuffix: false,
+          contentType: "application/json",
+        });
+        return true;
+      } catch (err) {
+        // Blob refuses to overwrite an existing pathname when allowOverwrite is false.
+        if (err instanceof BlobPreconditionFailedError || (err instanceof Error && /already exists/i.test(err.message))) return false;
+        throw err;
+      }
+    },
+    async removeJson(key) {
+      await del(key);
+    },
+    async fileInfo(url) {
+      try {
+        const h = await head(url);
+        return { size: h.size, contentType: h.contentType };
+      } catch (err) {
+        if (err instanceof BlobNotFoundError) return null;
+        throw err;
+      }
     },
     async listKeys(prefix) {
       const keys: string[] = [];
@@ -299,4 +349,36 @@ export async function withLedgerFile<T>(fn: (ledgerPath: string) => Promise<T>):
     }
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+// ---------- request links ----------
+
+const requestKey = (nonce: string) => `requests/${nonce}.json`;
+
+/** Marks a request link's one-time id as used; false if it already was. */
+export function claimRequest(nonce: string, videoId: string): Promise<boolean> {
+  return backend().createJson(requestKey(nonce), { videoId, at: new Date().toISOString() });
+}
+
+export async function requestUsed(nonce: string): Promise<boolean> {
+  return (await backend().readJson(requestKey(nonce))) !== null;
+}
+
+/** Gives a link back when storing its video failed after the claim, so the creator can try again. */
+export function releaseRequest(nonce: string): Promise<void> {
+  return backend().removeJson(requestKey(nonce));
+}
+
+/** Upload tokens a request link may mint: enough for a retry or two, never a way to fill the store. */
+export const REQUEST_UPLOAD_SLOTS = 3;
+
+export async function takeUploadSlot(nonce: string): Promise<boolean> {
+  for (let i = 1; i <= REQUEST_UPLOAD_SLOTS; i++) {
+    if (await backend().createJson(`requests/${nonce}-upload-${i}.json`, { at: new Date().toISOString() })) return true;
+  }
+  return false;
+}
+
+export function storedFileInfo(url: string) {
+  return backend().fileInfo(url);
 }

@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Download } from "lucide-react";
+import { Upload } from "lucide-react";
 import { getCampaign, listVideos } from "@/lib/campaign/store";
+import { STEPS } from "@/lib/campaign/types";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { ScreenTimeStrip } from "@/components/screen-time-strip";
-import { Thumb } from "@/components/thumb";
-import { UploadVideos } from "@/components/upload-videos";
-import { VideoStatus } from "@/components/video-status";
-import { friendlyError, seconds, termCounts, timecode, verdictOf } from "@/components/format";
+import { framesToSegments, friendlyError, verdictOf } from "@/components/format";
+import { Figure, Swatch } from "@/components/ed/bits";
+import { TopBar } from "@/components/ed/top-bar";
+import { ExportButton } from "@/components/ed/export-button";
+import { CampaignList, type Row } from "@/components/ed/campaign-list";
+import { CampaignRail } from "@/components/ed/campaign-rail";
+import { CampaignBriefCard, CampaignBriefDisclosure } from "@/components/ed/campaign-brief";
+import { DISPLAY, LiveDot, plural } from "@/components/ed/campaign-ui";
+import { UploadVideos } from "@/components/ed/upload-videos";
 
 export const dynamic = "force-dynamic";
 
@@ -22,171 +26,168 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
   const campaign = await getCampaign(id);
   if (!campaign) notFound();
   const videos = await listVideos(id);
-  const reports = videos.map((v) => v.report).filter((r) => r !== undefined);
-  const totalOnScreen = reports.reduce((s, r) => s + r.metrics.secondsOnScreen, 0);
-  const verdicts = videos.map((v) => verdictOf(v.report));
-  const running = videos.some((v) => v.status === "running" || v.status === "uploaded");
+
+  // Creators often share one handle (one person filming several clips); then the clip title leads the card.
+  const sharedHandle = new Set(videos.map((v) => v.creator)).size < videos.length;
+  const rows: Row[] = videos.map((v) => {
+    const r = v.report;
+    // "clip01.mp4 (synthetic preview)" -> "clip01": the extension is noise and the page already marks preview data.
+    const title = v.title.replace(/\s*\(synthetic preview\)\s*$/i, "").replace(/\.(mp4|mov)$/i, "");
+    return {
+      id: v.id,
+      href: `/campaigns/${campaign.id}/videos/${v.id}`,
+      primary: sharedHandle ? title : v.creator,
+      secondary: sharedHandle ? v.creator : title,
+      thumbUrl: v.thumbUrl,
+      verdict: verdictOf(r),
+      status: v.status,
+      stepLabel: STEPS.find((s) => s.id === v.step)?.label,
+      error: v.status === "failed" ? friendlyError(v.error) : undefined,
+      seconds: r ? r.metrics.secondsOnScreen : null,
+      durationSec: r ? r.info.durationSec : null,
+      firstSeenSec: r ? r.metrics.firstSeenSec : null,
+      passed: r ? r.terms.filter((t) => t.pass === true).length : 0,
+      terms: r ? r.terms.length : 0,
+      segments: r ? r.metrics.segments : [],
+      mentions: r ? r.metrics.mentions : [],
+      rejected: r ? framesToSegments((r.detections ?? []).filter((d) => d.verdict !== "match").map((d) => d.frame)) : [],
+    };
+  });
+
+  const done = rows.filter((r) => r.status === "done");
+  const delivered = done.filter((r) => r.verdict === "delivered").length;
+  const short = done.filter((r) => r.verdict === "short").length;
+  const review = done.filter((r) => r.verdict === "review").length;
+  const running = rows.filter((r) => r.status === "running" || r.status === "uploaded").length;
+  const stopped = rows.filter((r) => r.status === "failed").length;
+  const totalOnScreen = done.reduce((s, r) => s + (r.seconds ?? 0), 0);
+  const totalDuration = done.reduce((s, r) => s + (r.durationSec ?? 0), 0);
+  const lookalikes = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict !== "match").length ?? 0), 0);
+  const csv = `/api/campaigns/${campaign.id}/export.csv`;
+  const canUpload = !campaign.synthetic;
+
+  const rest = [
+    short && `${short} fell short`,
+    review && `${review} need${review === 1 ? "s" : ""} review`,
+  ].filter(Boolean) as string[];
+  const after = [running && `${running} still being checked`, stopped && `${stopped} stopped`].filter(Boolean) as string[];
 
   return (
     <>
-      <AutoRefresh active={running} />
-      <nav className="text-[13px] text-ink-3">
-        <Link href="/campaigns" className="hover:text-ink hover:underline">
-          Campaigns
-        </Link>{" "}
-        / {campaign.brand}
-      </nav>
+      <AutoRefresh active={running > 0} />
+      <TopBar
+        back={{ href: "/campaigns", label: "Campaigns" }}
+        right={
+          <span className="hidden md:block">
+            <ExportButton href={csv} filename={`${campaign.id}.csv`} variant="quiet" className="h-11" />
+          </span>
+        }
+      />
+      <main className="mx-auto w-full max-w-[1200px] px-4 pt-5 pb-[96px] sm:px-6 md:pb-24 lg:px-8 lg:pt-10">
+        <div className="grid gap-x-12 gap-y-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0 space-y-5">
+            <header>
+              <h1 className={`${DISPLAY} text-[38px] leading-[1] sm:text-[56px]`}>{campaign.brand}</h1>
+              <p className="mt-1.5 text-[15px] text-(--ink-2)">
+                {campaign.name} · {plural(videos.length, "creator video")}
+              </p>
 
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
-        <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[-0.015em]">{campaign.name}</h1>
-          <p className="mt-1 max-w-[70ch] text-ink-2">
-            Tracking <span className="font-medium text-ink">&ldquo;{campaign.prompt}&rdquo;</span>, counted only when it is{" "}
-            {campaign.productDescription}.
-            {campaign.brandTerms.length > 0 && <> Listening for {campaign.brandTerms.map((t) => `“${t}”`).join(", ")}.</>}
-          </p>
-        </div>
-        <a
-          href={`/api/campaigns/${campaign.id}/export.csv`}
-          className="inline-flex items-center gap-1.5 rounded-[8px] border border-line bg-surface px-3 py-2 font-medium shadow-1 hover:border-line-strong"
-        >
-          <Download className="size-4" aria-hidden /> Export CSV
-        </a>
-      </div>
-
-      {campaign.synthetic && (
-        <p className="mt-4 max-w-[80ch] rounded-[8px] bg-unsure-soft px-3 py-2 text-[13px] text-unsure">
-          Preview data: these reports are built from hand-checked labels run through the real metrics and contract
-          code, so you can see the report before any live model run. New campaigns run the full Meta pipeline.
-        </p>
-      )}
-
-      <div className="mt-6 grid gap-x-10 gap-y-6 lg:grid-cols-[1fr_320px]">
-        <section aria-label="Creators" className="min-w-0">
-          <ul className="divide-y divide-line rounded-[10px] border border-line bg-surface shadow-1 sm:hidden">
-            {videos.map((v) => {
-              const r = v.report;
-              return (
-                <li key={v.id}>
-                  <Link href={`/campaigns/${campaign.id}/videos/${v.id}`} className="block px-4 py-3">
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="flex min-w-0 items-center gap-3">
-                        <Thumb src={v.thumbUrl} />
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">{v.creator}</span>
-                          <span className="block truncate text-[12px] text-ink-3">{v.title}</span>
-                        </span>
-                      </span>
-                      <span className="shrink-0">
-                        <VideoStatus video={v} showReason={false} />
-                      </span>
-                    </span>
-                    {v.status === "failed" && v.error && (
-                      <span className="mt-1.5 block text-[12px] leading-4 text-ink-3">{friendlyError(v.error)}</span>
-                    )}
-                    {r && (
-                      <span className="mt-2 flex items-center gap-3">
-                        <ScreenTimeStrip durationSec={r.info.durationSec} segments={r.metrics.segments} mentions={r.metrics.mentions} size="mini" />
-                        <span className="shrink-0 text-[12px] text-ink-2 tabular">{seconds(r.metrics.secondsOnScreen)}</span>
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-            {!videos.length && <li className="px-4 py-8 text-center text-ink-2">No videos yet.</li>}
-          </ul>
-          <div className="hidden overflow-x-auto rounded-[10px] border border-line bg-surface shadow-1 sm:block">
-            <table className="w-full min-w-[760px] text-left">
-              <thead className="border-b border-line text-[12px] text-ink-3">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium">Creator</th>
-                  <th className="w-[34%] px-4 py-2.5 font-medium">Product on screen</th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">Seconds</th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">First seen</th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">Terms met</th>
-                  <th className="px-4 py-2.5 font-medium">Verdict</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {videos.map((v) => {
-                  const r = v.report;
-                  const counts = r ? termCounts(r.terms) : null;
-                  const href = `/campaigns/${campaign.id}/videos/${v.id}`;
-                  return (
-                    <tr key={v.id} className="group hover:bg-sunken/50">
-                      <td className="px-4 py-2.5">
-                        <Link href={href} className="flex items-center gap-3">
-                          <Thumb src={v.thumbUrl} />
-                          <span className="min-w-0">
-                            <span className="block font-medium group-hover:underline">{v.creator}</span>
-                            <span className="block max-w-[180px] truncate text-[12px] text-ink-3">{v.title}</span>
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        {r ? (
-                          <ScreenTimeStrip durationSec={r.info.durationSec} segments={r.metrics.segments} mentions={r.metrics.mentions} size="mini" />
-                        ) : (
-                          <span className="block h-2.5 rounded-[6px] bg-sunken" aria-hidden />
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular">{r ? seconds(r.metrics.secondsOnScreen) : "–"}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px] tabular">
-                        {r ? (r.metrics.firstSeenSec === null ? "Never" : timecode(r.metrics.firstSeenSec)) : "–"}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular">
-                        {counts && r ? `${counts.passed}/${r.terms.length}` : "–"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <VideoStatus video={v} />
-                      </td>
-                    </tr>
-                  );
-                })}
-                {!videos.length && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-ink-2">
-                      No videos yet. Add a creator&rsquo;s video to start.
-                    </td>
-                  </tr>
+              <p className={`${DISPLAY} mt-5 max-w-[24ch] text-[24px] leading-[1.15] font-medium! sm:text-[30px]`}>
+                {videos.length === 0 ? (
+                  <>No creator videos yet. Add the first one to see if it delivered.</>
+                ) : done.length === 0 ? (
+                  <>
+                    {running > 0
+                      ? `${plural(running, "video")} being checked now.`
+                      : `${plural(stopped, "video")} stopped before a verdict.`}
+                    {running > 0 && stopped > 0 && <span className="text-(--ink-3)"> {stopped} stopped.</span>}
+                  </>
+                ) : (
+                  <>
+                    <span className="ed-num">{delivered}</span> of <span className="ed-num">{done.length}</span> delivered what the
+                    contract asked.
+                    {rest.length > 0 && <span className="text-(--short)"> {rest.join(", ")}.</span>}
+                  </>
                 )}
-              </tbody>
-            </table>
-          </div>
-          {!campaign.synthetic && (
-            <div className="mt-4">
-              <UploadVideos campaignId={campaign.id} mode={process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct"} />
-            </div>
-          )}
-        </section>
+              </p>
+              {done.length > 0 && after.length > 0 && <p className="mt-2 text-[15px] text-(--ink-2)">Plus {after.join(" and ")}.</p>}
 
-        <aside className="space-y-6">
-          <div>
-            <h2 className="text-[13px] font-semibold">Across {videos.length} videos</h2>
-            <dl className="mt-3 grid grid-cols-3 gap-3">
-              {(["delivered", "short", "review"] as const).map((k) => (
-                <div key={k}>
-                  <dt className="text-[12px] text-ink-3">{k === "delivered" ? "Delivered" : k === "short" ? "Fell short" : "Needs review"}</dt>
-                  <dd className="text-[20px] font-medium tabular">{verdicts.filter((x) => x === k).length}</dd>
+              {done.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-(--ink-2)">
+                  <span className="flex items-center gap-2">
+                    <Swatch kind="signal" />
+                    <span>
+                      <span className="ed-num text-[18px] text-(--ink)">
+                        <Figure value={totalOnScreen} />
+                      </span>{" "}
+                      s on screen of <span className="tabular">{totalDuration.toFixed(1)}</span> s
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Swatch kind="reject" />
+                    <span>
+                      <span className="ed-num text-[18px] text-(--ink)">{lookalikes}</span> look-alike{lookalikes === 1 ? "" : "s"} rejected
+                    </span>
+                  </span>
                 </div>
-              ))}
-            </dl>
-            <p className="mt-3 text-ink-2">
-              <span className="mr-1.5 inline-block size-2.5 rounded-[2px] bg-lime align-middle" aria-hidden />
-              <span className="font-medium tabular">{seconds(totalOnScreen)}</span> of product on screen in total.
-            </p>
+              )}
+
+              {running > 0 && (
+                <p className="mt-4 inline-flex min-h-9 items-center gap-2.5 rounded-full bg-(--card) px-3.5 text-[13.5px] font-medium text-(--ink-2) ring-1 ring-(--hair)" role="status">
+                  <LiveDot />
+                  Checking {plural(running, "video")}. This page updates by itself.
+                </p>
+              )}
+
+              {campaign.synthetic && (
+                <p className="mt-4 max-w-[70ch] rounded-(--r-inner) bg-(--review-soft) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--review)">
+                  <span className="font-semibold">Preview data.</span> These reports come from hand-checked labels run through the
+                  real metrics and contract code, so you can see a report before any live model run. New campaigns run the full
+                  Meta pipeline.
+                </p>
+              )}
+            </header>
+
+            <CampaignRail rows={rows} />
+
+            <div className="lg:hidden">
+              <CampaignBriefDisclosure campaign={campaign} />
+            </div>
+
+            <section aria-label="Creators" className="min-w-0">
+              {rows.length ? (
+                <CampaignList rows={rows} />
+              ) : (
+                <p className="rounded-(--r-card) bg-(--card) p-6 text-center text-(--ink-2) ring-1 ring-(--hair)">
+                  {canUpload ? "No videos in this campaign yet. Add the first one below." : "No videos in this campaign."}
+                </p>
+              )}
+            </section>
           </div>
-          <div>
-            <h2 className="text-[13px] font-semibold">Contract terms</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-ink-2 marker:text-ink-3">
-              {campaign.contractTerms.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-              {!campaign.contractTerms.length && <li className="list-none pl-0 text-ink-3">None set.</li>}
-            </ul>
-          </div>
-        </aside>
+
+          <aside className="min-w-0 space-y-5 lg:pt-2">
+            {canUpload && <UploadVideos campaignId={campaign.id} mode={process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct"} />}
+            <div className="hidden lg:block">
+              <CampaignBriefCard campaign={campaign} />
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      {/* Thumb-reach actions on a phone, sitting on top of the tab bar (58px + safe area). */}
+      <div className="ed-glass fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+58px)] z-30 border-t border-(--hair)/70 px-4 py-2.5 md:hidden">
+        <div className={`mx-auto grid max-w-[480px] gap-2 ${canUpload ? "grid-cols-2" : ""}`}>
+          {canUpload && (
+            <a
+              href="#add-videos"
+              className="ed-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-(--ink) px-4 text-[15px] font-semibold text-white shadow-(--sh-2) active:bg-black/85"
+            >
+              <Upload className="size-[18px]" strokeWidth={2.25} aria-hidden />
+              Add videos
+            </a>
+          )}
+          <ExportButton href={csv} filename={`${campaign.id}.csv`} variant={canUpload ? "quiet" : "solid"} />
+        </div>
       </div>
     </>
   );

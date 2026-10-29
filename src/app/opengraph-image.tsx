@@ -4,38 +4,117 @@ export const alt = "Screen-Time: proof your product was seen in creator video";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// The share card: the headline over the product's own strip, lime where the product was on screen.
+// The share card in the Editorial palette: the mark, the headline with lime on "seen." (the one brand use of the
+// signal colour), and the product's own strip below, lime where it was on screen, a dashed red look-alike, a violet
+// spoken mention and the playhead.
+const PAPER = "#f7f6f2";
+const INK = "#14130f";
+const INK_2 = "#4f4b44";
+const SIGNAL = "#c5f03a";
+const VOICE = "#5446d0";
+const REJECT = "#c2392b";
+const WASH = "#efede7";
+const HAIR = "#d6d2c9";
+
+const HEAD = "Proof your product was seen.";
+const SUB = "Every frame of a sponsored video, checked against the contract. Built on Meta SAM 3.1 and Muse.";
 const SEGMENTS: [number, number][] = [[0.04, 0.22], [0.3, 0.52], [0.58, 0.6], [0.7, 0.93]];
 
-export default function OpengraphImage() {
+/** The brand faces from Google Fonts, subset to the card's text. Falls back to the default face if the fetch fails. */
+async function googleFont(family: string, axes: string, text: string): Promise<ArrayBuffer | null> {
+  try {
+    const css = await fetch(
+      `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}:${axes}&text=${encodeURIComponent(text)}`,
+      { signal: AbortSignal.timeout(4000) },
+    ).then((r) => (r.ok ? r.text() : ""));
+    const url = /src: url\((.+?)\) format\('(?:opentype|truetype)'\)/.exec(css)?.[1];
+    if (!url) return null;
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    return res.ok ? await res.arrayBuffer() : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function OpengraphImage() {
+  const [display, body] = await Promise.all([
+    googleFont("Bricolage Grotesque", "opsz,wght@96,650", `${HEAD}Screen-Time`),
+    googleFont("Hanken Grotesk", "wght@500", SUB),
+  ]);
+  const fonts = [
+    ...(display ? [{ name: "Display", data: display, weight: 600 as const, style: "normal" as const }] : []),
+    ...(body ? [{ name: "Body", data: body, weight: 500 as const, style: "normal" as const }] : []),
+  ];
+  const displayFamily = display ? "Display" : undefined;
+  const bodyFamily = body ? "Body" : undefined;
+
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#f7f8fa", padding: 72, color: "#0e1116" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 34, fontWeight: 600 }}>
-          <div style={{ display: "flex", position: "relative", width: 54, height: 36, borderRadius: 9, background: "#0e1116" }}>
-            <div style={{ position: "absolute", left: 13, top: 7, width: 23, height: 22, borderRadius: 3, background: "#c8f031" }} />
-            <div style={{ position: "absolute", left: 27, top: 3, width: 4, height: 30, borderRadius: 2, background: "#fff" }} />
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          background: PAPER,
+          padding: "64px 72px 68px",
+          color: INK,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 36, fontWeight: 600, fontFamily: displayFamily, letterSpacing: -1 }}>
+          {/* The mark: the strip in miniature on an ink tile. */}
+          <div style={{ display: "flex", position: "relative", width: 56, height: 56, borderRadius: 16, background: INK }}>
+            <div style={{ position: "absolute", left: 8, top: 23, width: 40, height: 10, borderRadius: 5, background: "rgba(255,255,255,0.2)" }} />
+            <div style={{ position: "absolute", left: 8, top: 23, width: 25, height: 10, borderRadius: 5, background: SIGNAL }} />
+            <div style={{ position: "absolute", left: 36, top: 14, width: 4.5, height: 28, borderRadius: 2.25, background: "#fff" }} />
           </div>
           Screen-Time
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ display: "flex", fontSize: 84, fontWeight: 700, letterSpacing: -3, lineHeight: 1 }}>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "flex-end",
+              fontSize: 100,
+              fontWeight: 600,
+              fontFamily: displayFamily,
+              letterSpacing: -3.5,
+              lineHeight: 0.98,
+            }}
+          >
             Proof your product was&nbsp;
-            <span style={{ display: "flex", background: "#c8f031", padding: "0 10px", borderRadius: 8 }}>seen.</span>
+            <div style={{ display: "flex", position: "relative" }}>
+              <div style={{ position: "absolute", left: -6, right: -6, top: 20, bottom: 0, borderRadius: 12, background: SIGNAL }} />
+              <span style={{ position: "relative" }}>seen.</span>
+            </div>
           </div>
-          <div style={{ display: "flex", fontSize: 30, color: "#444b57" }}>
-            Every frame of a sponsored video, checked against the contract. Built on Meta SAM 3.1 and Muse.
-          </div>
+          <div style={{ display: "flex", fontSize: 30, color: INK_2, fontFamily: bodyFamily, lineHeight: 1.35, maxWidth: 940 }}>{SUB}</div>
         </div>
-        <div style={{ display: "flex", position: "relative", height: 56, borderRadius: 10, background: "#eef0f3", border: "2px solid #cfd4db" }}>
+
+        <div style={{ display: "flex", position: "relative", height: 52, borderRadius: 12, background: WASH, border: `2px solid ${HAIR}`, overflow: "hidden" }}>
           {SEGMENTS.map(([a, b]) => (
-            <div key={a} style={{ position: "absolute", top: 0, bottom: 0, left: `${a * 100}%`, width: `${(b - a) * 100}%`, background: "#c8f031" }} />
+            <div key={a} style={{ position: "absolute", top: 0, bottom: 0, left: `${a * 100}%`, width: `${(b - a) * 100}%`, background: SIGNAL }} />
           ))}
-          <div style={{ position: "absolute", top: 26, bottom: 0, left: "36%", width: 6, borderRadius: 3, background: "#6e56cf" }} />
-          <div style={{ position: "absolute", top: -6, bottom: -6, left: "64%", width: 4, background: "#0e1116" }} />
+          <div
+            style={{
+              position: "absolute",
+              top: 8,
+              bottom: 8,
+              left: "53.5%",
+              width: "4%",
+              borderRadius: 6,
+              border: `2.5px dashed ${REJECT}`,
+              background: "#fbe9e5",
+            }}
+          />
+          <div style={{ position: "absolute", top: 24, bottom: 0, left: "36%", width: 6, borderRadius: 3, background: VOICE }} />
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: "64%", width: 5, borderRadius: 2.5, background: INK }} />
         </div>
       </div>
     ),
-    size,
+    { ...size, fonts: fonts.length ? fonts : undefined },
   );
 }

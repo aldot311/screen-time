@@ -56,12 +56,12 @@
   --color-focus: var(--focus);
   --shadow-1: var(--shadow-1);
   --shadow-2: var(--shadow-2);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-ed-body), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 html {
-  background: var(--ground);
+  background: #f7f6f2;
   color: var(--ink);
   font-family: var(--font-sans);
   font-feature-settings: "ss01", "cv11";
@@ -69,7 +69,7 @@ html {
 }
 
 body {
-  background: var(--ground);
+  background: #f7f6f2;
 }
 
 /* Lime means "product on screen" and nothing else, so selection uses the ink scale. */

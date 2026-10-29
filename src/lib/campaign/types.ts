@@ -47,4 +47,7 @@ export interface VideoEntry {
   thumbUrl?: string;
   /** A crop of each tracked object at its largest, keyed by objectId. */
   cropUrls?: Record<string, string>;
+  /** Set when the creator sent the video through a request link: what they agreed to, and the link's one-time id. */
+  consent?: { at: string; text: string };
+  requestNonce?: string;
 }

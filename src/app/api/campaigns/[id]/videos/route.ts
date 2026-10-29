@@ -1,7 +1,7 @@
 import { Creator, isBlobUrl, MAX_VIDEO_BYTES, RegisterVideo, VIDEO_TYPES } from "@/lib/campaign/schema";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
-import { getCampaign, putVideo, randomSuffix, saveVideoFile, slugify } from "@/lib/campaign/store";
-import type { VideoEntry } from "@/lib/campaign/types";
+import { addVideo, newVideoId } from "@/lib/campaign/add-video";
+import { getCampaign, saveVideoFile } from "@/lib/campaign/store";
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
 
@@ -17,22 +17,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const campaign = await getCampaign(id);
   if (!campaign) return fail(404, "Campaign not found");
 
-  const videoId = (title: string) => `${slugify(title.replace(/\.[^.]+$/, ""), 32)}-${randomSuffix()}`;
-  const entry = (vid: string, creator: string, title: string, url: string): VideoEntry => {
-    const now = new Date().toISOString();
-    return {
-      id: vid, campaignId: id, creator, title, videoUrl: url, sourceUrl: url,
-      status: "uploaded", step: null, createdAt: now, updatedAt: now,
-    };
-  };
-
   if ((req.headers.get("content-type") ?? "").includes("application/json")) {
     const parsed = RegisterVideo.safeParse(await req.json().catch(() => undefined));
     if (!parsed.success) return Response.json({ error: "Invalid video", issues: parsed.error.issues }, { status: 400 });
     const { url, creator } = parsed.data;
     if (!isBlobUrl(url, id)) return fail(400, "The video must be uploaded to this campaign's folder");
     const title = parsed.data.title || decodeURIComponent(new URL(url).pathname.split("/").at(-1) ?? "video");
-    return Response.json(await putVideo(entry(videoId(title), creator, title, url)), { status: 201 });
+    return Response.json(await addVideo(id, { id: newVideoId(title), creator, title, url }), { status: 201 });
   }
 
   const form = await req.formData().catch(() => null);
@@ -45,7 +36,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (file.size > MAX_VIDEO_BYTES) return fail(413, "The video is over 200 MB");
 
   const title = String(form.get("title") ?? "").trim().slice(0, 200) || file.name || "video";
-  const vid = videoId(title);
+  const vid = newVideoId(title);
   const url = await saveVideoFile(id, vid, new Uint8Array(await file.arrayBuffer()), file.type);
-  return Response.json(await putVideo(entry(vid, creator.data, title, url)), { status: 201 });
+  return Response.json(await addVideo(id, { id: vid, creator: creator.data, title, url }), { status: 201 });
 }

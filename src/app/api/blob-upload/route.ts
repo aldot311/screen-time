@@ -1,8 +1,9 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { MAX_VIDEO_BYTES, VIDEO_TYPES } from "@/lib/campaign/schema";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
-import { getCampaign, isValidId, usingBlob } from "@/lib/campaign/store";
+import { getCampaign, isValidId, requestUsed, takeUploadSlot, usingBlob } from "@/lib/campaign/store";
 import { ACCESS_COOKIE, accessError, decideAccess } from "@/lib/access";
+import { linkSecret, verifyRequestToken } from "@/lib/campaign/requests";
 import { cookies } from "next/headers";
 
 /**
@@ -18,12 +19,19 @@ export async function POST(req: Request) {
     const result = await handleUpload({
       body,
       request: req,
-      onBeforeGenerateToken: async (pathname) => {
-        // Token requests come from the browser, so they carry the demo-password cookie.
-        const access = await decideAccess((await cookies()).get(ACCESS_COOKIE)?.value);
-        if (access !== "allow") throw new AccessRefused(access);
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
         const m = /^campaigns\/([^/]+)\/files\/[\w.-]+\.(mp4|mov)$/i.exec(pathname);
         const campaignId = m?.[1] ?? "";
+        // Token requests come from the browser: the brand's carry the demo-password cookie, a creator's carry the
+        // signed request link as clientPayload, which only allows its own campaign.
+        const access = await decideAccess((await cookies()).get(ACCESS_COOKIE)?.value);
+        if (access !== "allow") {
+          const claims = clientPayload ? await verifyRequestToken(clientPayload, linkSecret()) : null;
+          if (!claims || claims.campaignId !== campaignId) throw new AccessRefused(access);
+          // A used link gets no more upload tokens, so it cannot be replayed to fill the store.
+          if (await requestUsed(claims.nonce)) throw new Error("A video was already sent with this link");
+          if (!(await takeUploadSlot(claims.nonce))) throw new Error("Too many upload attempts with this link. Ask the brand for a new one.");
+        }
         if (!isValidId(campaignId) || campaignId === PREVIEW_ID || !(await getCampaign(campaignId))) {
           throw new Error("Upload path must be campaigns/<campaign id>/files/<name>.mp4 for an existing campaign");
         }

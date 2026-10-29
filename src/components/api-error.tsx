@@ -8,7 +8,7 @@ export function ApiError({ message }: { message: string }) {
   const path = usePathname();
   const locked = /demo password/i.test(message);
   return (
-    <span className="text-fail">
+    <span className="text-(--short)">
       {message}
       {locked && (
         <>

@@ -1,0 +1,202 @@
+/* Editorial comp: every rule is scoped under .ed so nothing leaks to the rest of the app.
+   Warm paper ground, ink type, soft layered depth, and one vivid signal: lime = seconds the product was on screen. */
+.ed {
+  --paper: #f7f6f2;
+  --card: #ffffff;
+  --wash: #efede7;
+  --ink: #14130f;
+  --ink-2: #4f4b44; /* 8.0:1 on paper */
+  --ink-3: #6b665e; /* 5.3:1 on paper */
+  --hair: #e7e4dd;
+  --hair-2: #d6d2c9;
+
+  --signal: #c5f03a; /* on-screen time, and nothing else */
+  --signal-ink: #263000;
+  --voice: #5446d0; /* spoken mentions */
+  --voice-soft: #ecebfb;
+  --reject: #c2392b; /* look-alikes, never counted */
+  --reject-soft: #fbe9e5;
+
+  --pass: #137a4c;
+  --pass-soft: #e3f2e8;
+  --short: #c2392b;
+  --short-soft: #fbe9e5;
+  --review: #8c5e00;
+  --review-soft: #f8edd3;
+  --focus: #2f5bea;
+
+  --sh-1: 0 1px 1px rgb(20 19 15 / 0.04), 0 2px 6px -1px rgb(20 19 15 / 0.06);
+  --sh-2: 0 1px 2px rgb(20 19 15 / 0.05), 0 14px 32px -14px rgb(20 19 15 / 0.2);
+  --sh-3: 0 2px 6px rgb(20 19 15 / 0.08), 0 28px 56px -20px rgb(20 19 15 / 0.36);
+
+  --r-card: 22px;
+  --r-inner: 14px;
+  --r-ctl: 12px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --press: 120ms;
+
+  --font-display: var(--font-ed-display), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-ed-body), ui-sans-serif, system-ui, sans-serif;
+  --font-tc: var(--font-geist-mono), ui-monospace, monospace;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  caret-color: var(--focus);
+}
+
+.ed ::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.ed :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.ed a {
+  text-underline-offset: 4px;
+}
+
+.ed * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair-2) transparent;
+}
+
+/* Display voice: Bricolage at its large optical size, tight but above the -0.04em floor. */
+.ed .ed-display {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.ed .ed-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.ed .ed-tc {
+  font-family: var(--font-tc);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.ed .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Every control answers a tap inside 120 ms: it sinks and dims slightly, then springs back. */
+.ed .ed-press {
+  touch-action: manipulation;
+  transition:
+    transform var(--press) var(--ease-out),
+    background-color var(--press) ease-out,
+    border-color var(--press) ease-out,
+    box-shadow var(--press) ease-out,
+    opacity var(--press) ease-out,
+    color var(--press) ease-out;
+}
+.ed .ed-press:active {
+  transform: scale(0.97);
+}
+.ed .ed-press-soft:active {
+  transform: scale(0.985);
+}
+
+/* Frosted glass, used only where content scrolls under a surface that stays put. */
+.ed .ed-glass {
+  /* Opaque enough that text scrolling underneath never ghosts through; the blur only softens colour and images. */
+  background: rgb(250 249 246 / 0.94);
+  backdrop-filter: saturate(1.8) blur(24px);
+  -webkit-backdrop-filter: saturate(1.8) blur(24px);
+}
+.ed .ed-glass-dark {
+  background: rgb(20 19 15 / 0.42);
+  backdrop-filter: saturate(1.4) blur(12px);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px);
+}
+
+@keyframes ed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ed .ed-spin {
+  animation: ed-spin 0.7s linear infinite;
+}
+
+/* The evidence a term points at flashes on the strip so a tap visibly lands somewhere. */
+@keyframes ed-flash {
+  0% {
+    box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 0 rgb(20 19 15 / 0.35);
+  }
+  60% {
+    box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 8px rgb(20 19 15 / 0);
+  }
+  100% {
+    box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 0 rgb(20 19 15 / 0);
+  }
+}
+.ed .ed-flash {
+  animation: ed-flash 0.9s var(--ease-out) 2;
+}
+
+@keyframes ed-dock-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.ed .ed-dock-in {
+  animation: ed-dock-in 280ms var(--ease-out) both;
+}
+
+@keyframes ed-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+.ed .ed-skel {
+  background: linear-gradient(100deg, var(--wash) 30%, #f7f5f0 50%, var(--wash) 70%) var(--wash);
+  background-size: 200% 100%;
+  animation: ed-shimmer 1.3s ease-in-out infinite;
+}
+
+/* The pending hint on a tapped link: always rendered, only its opacity changes, so nothing shifts. */
+.ed .ed-pending {
+  opacity: 0;
+  transition: opacity 100ms ease-out;
+}
+.ed .ed-pending[data-on="true"] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed .ed-press:active,
+  .ed .ed-press-soft:active {
+    transform: none;
+    opacity: 0.8;
+  }
+  .ed .ed-flash,
+  .ed .ed-dock-in {
+    animation: none;
+  }
+}
