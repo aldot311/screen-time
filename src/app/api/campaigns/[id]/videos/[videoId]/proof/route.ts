@@ -12,8 +12,6 @@ import { getCampaign, getVideo, localFileFromUrl, saveVideoFile, updateVideo } f
 
 export const maxDuration = 120;
 
-const FONT = join(process.cwd(), "node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf");
-
 /** The report's proof clip: rendered on the first request and kept, then a redirect to the stored MP4. Public, like
  *  the report it is made from; each report renders once. */
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string; videoId: string }> }) {
@@ -35,7 +33,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string; vi
     }
     const out = join(work, "proof.mp4");
     const brand = (await getCampaign(id))?.brand ?? "";
-    await renderProof(source, out, video.report, { brand, creator: video.creator, font: FONT }, work);
+    await renderProof(source, out, video.report, { brand, creator: video.creator }, work);
     const url = await saveVideoFile(id, videoId, new Uint8Array(await readFile(out)), "video/mp4", "proof");
     await updateVideo(id, videoId, (v) => ({ ...v, proofUrl: url }));
     return Response.redirect(new URL(url, _req.url), 302);

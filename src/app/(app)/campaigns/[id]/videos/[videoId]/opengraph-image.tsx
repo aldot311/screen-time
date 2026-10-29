@@ -44,7 +44,6 @@ export default async function ReportCard({ params }: { params: Promise<{ id: str
     (
       <div style={{ width: "100%", height: "100%", display: "flex", background: PAPER, color: INK, padding: 56, gap: 48 }}>
         {still ? (
-          // eslint-disable-next-line @next/next/no-img-element -- next/og renders plain img
           <img src={still} alt="" width={290} height={518} style={{ borderRadius: 28, objectFit: "cover", border: `6px solid ${SIGNAL}` }} />
         ) : (
           <div style={{ display: "flex", width: 290, height: 518, borderRadius: 28, background: WASH }} />
