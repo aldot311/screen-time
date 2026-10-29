@@ -175,14 +175,22 @@ function MixBar({ k }: { k: Card }) {
 function ThumbCluster({ thumbs, eager }: { thumbs: string[]; eager: boolean }) {
   const shown = thumbs.slice(0, 3);
   const extra = thumbs.length - shown.length;
-  if (!shown.length) return <CampaignThumb className="w-[70px] rounded-[13px]" />;
   const step = 14;
+  // One slot width for every card (room for a three-still fan), so titles start at the same edge on every card.
+  const slot = 70 + step * 2 + 8;
+  if (!shown.length) {
+    return (
+      <span className="block shrink-0" style={{ width: slot }} aria-hidden>
+        <CampaignThumb className="w-[70px] rounded-[13px]" />
+      </span>
+    );
+  }
   return (
-    <span className="relative block shrink-0" style={{ width: 70 + step * (shown.length - 1) + (shown.length > 1 ? 8 : 0) }} aria-hidden>
+    <span className="relative block shrink-0" style={{ width: slot }} aria-hidden>
       {shown
         .map((t, i) => (
           <span
-            key={t}
+            key={`${i}-${t}`}
             className="absolute top-0 block overflow-hidden rounded-[13px] shadow-(--sh-1) ring-2 ring-(--card)"
             style={{ left: `${i * step}px`, transform: `rotate(${i * 3}deg)`, transformOrigin: "bottom left", zIndex: 3 - i }}
           >

@@ -28,7 +28,9 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
   // When a brand has several campaigns, the back link names which one: "Stanley · Live demo".
   const sibling = all.filter((c) => c.brand === campaign.brand).length > 1;
   const short = campaign.name.replace(/^[^:]+:\s*/, "");
-  const backLabel = sibling && short ? `${campaign.brand} · ${short.charAt(0).toUpperCase()}${short.slice(1)}` : campaign.brand;
+  // A name without a "Brand: " prefix, or one that is just the brand, adds nothing after the dot.
+  const named = short && short !== campaign.name && short.toLowerCase() !== campaign.brand.toLowerCase();
+  const backLabel = sibling && named ? `${campaign.brand} · ${short.charAt(0).toUpperCase()}${short.slice(1)}` : campaign.brand;
   // A creator's link submission waits for the brand to start it; the brand's own upload starts by itself. Only poll
   // while something is actually going to change.
   const waiting = video.status === "uploaded" && Boolean(video.consent);

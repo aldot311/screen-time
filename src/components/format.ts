@@ -4,7 +4,8 @@ import { FPS, type ContractRule, type Segment, type TermResult, type VideoMetric
 export function timecode(sec: number): string {
   const s = Math.max(0, sec);
   const m = Math.floor(s / 60);
-  return `${m}:${(s - m * 60).toFixed(1).padStart(4, "0")}`;
+  // Rounded down like every other figure, so a 12.87 s video reads 0:12.8 on the clock and 12.8 s in the text.
+  return `${m}:${tenths(s - m * 60).padStart(4, "0")}`;
 }
 
 /** Seconds to one decimal, rounded down like the contract checker, so a figure never reads 10.3 s in one place and
@@ -15,6 +16,13 @@ export function tenths(sec: number): string {
 
 export function seconds(sec: number): string {
   return `${tenths(sec)} s`;
+}
+
+/** The share shown next to a seconds figure, worked out from the two figures as displayed (10.2 of 11.6 s = 88%), so
+ *  the reader's own division always agrees with it. */
+export function shareShown(onScreenSec: number, durationSec: number): string {
+  const d = Number(tenths(durationSec));
+  return d > 0 ? percent(Number(tenths(onScreenSec)) / d) : "0%";
 }
 
 export function percent(fraction: number, digits = 0): string {

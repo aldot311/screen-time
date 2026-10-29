@@ -19,12 +19,7 @@ export default function UnlockPage() {
           </span>
           <h1 className="ed-display mt-6 text-[36px] leading-[1.02] sm:text-[40px]">Demo access</h1>
           <p className="mt-3 text-[17px] leading-[1.45] font-medium text-(--ink)">
-            Screen-Time checks that your product was{" "}
-            <span className="relative inline-block">
-              <span className="absolute inset-x-[-0.12em] top-[0.12em] bottom-[0.02em] rounded-[0.18em] bg-(--signal)" aria-hidden />
-              <span className="relative">seen</span>
-            </span>{" "}
-            in creator video, to the second.
+            Screen-Time checks that your product was seen in creator video, to the second.
           </p>
           <p className="mt-2 text-[16px] leading-[1.55] text-(--ink-2)">
             Anyone can read reports. Uploading and analyzing videos uses paid Meta API credits, so it needs the demo

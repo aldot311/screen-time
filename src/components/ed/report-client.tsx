@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Check, CircleHelp, Mic, Pause, Play, ScanLine, X } from "lucide-react";
 import { FPS, type Segment, type TermResult, type VideoReport } from "@/lib/types";
-import { countedBefore, framesToSegments, percent, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
+import { countedBefore, framesToSegments, percent, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
 import { Figure, Swatch } from "./bits";
@@ -383,7 +383,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                 }
                 icon={<Swatch kind="signal" />}
               >
-                <span className="font-semibold text-(--ink)">{tenths(m.secondsOnScreen)} s</span> on screen · {percent(m.shareOfVideo)}
+                <span className="font-semibold text-(--ink)">{tenths(m.secondsOnScreen)} s</span> on screen · {shareShown(m.secondsOnScreen, report.info.durationSec)}
               </Chip>
             )}
             {rejectedSegs.length > 0 && (
@@ -622,7 +622,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             <MetricRow
               label="Share of the video"
               hint={`Of the ${tenths(d)} s video`}
-              value={percent(m.shareOfVideo)}
+              value={shareShown(m.secondsOnScreen, report.info.durationSec)}
               caption={allOn ? <Range a={allOn.startSec} b={allOn.endSec} /> : undefined}
               on={isOn("num-share")}
               onClick={
