@@ -155,7 +155,7 @@ export interface LiveProgress {
   checks?: { prompt: string; objectId: number; verdict: VerifyVerdict; reason: string }[];
   /** Voice Transcribe: the brand mentions and spoken disclosures heard. `audio` is false when the video has no sound,
    *  and absent when not known (a replay of an older report). */
-  heard?: { audio?: boolean; mentions: Mention[]; disclosures: Mention[] };
+  heard?: { audio?: boolean; mentions: Mention[]; disclosures?: Mention[] };
   measured?: { secondsOnScreen: number; shareOfVideo: number; firstSeenSec: number | null };
   terms?: { text: string; pass: boolean | null; detail: string }[];
 }

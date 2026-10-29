@@ -10,7 +10,8 @@ const money = (usd: number) => `$${usd.toFixed(usd > 0 && usd < 0.01 ? 4 : 3)}`;
 export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
   const total = receipt.calls.reduce((n, c) => n + c.usd, 0);
   const ms = receipt.calls.reduce((n, c) => n + c.ms, 0);
-  const started = new Date(receipt.startedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  // UTC, so the server's render and the browser's agree.
+  const started = `${new Date(receipt.startedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC`;
   return (
     <details className="group rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair)">
       <summary className="ed-press-soft flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-(--r-card) px-4 py-3 active:bg-(--wash) [&::-webkit-details-marker]:hidden">

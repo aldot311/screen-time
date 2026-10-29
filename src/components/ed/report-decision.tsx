@@ -51,7 +51,8 @@ export function missWords(t: TermResult, brand: string): string {
   const r = t.term.rule;
   switch (r?.kind) {
     case "mentioned":
-      if (r.withinFirstSec) return `“${brand}” not said in the first ${s(r.withinFirstSec)}`;
+      if (r.withinFirstSec)
+        return r.minTimes === 1 ? `“${brand}” not said in the first ${s(r.withinFirstSec)}` : `“${brand}” said too few times in the first ${s(r.withinFirstSec)}`;
       return /\b0 times\b/.test(t.detail) ? `Never said “${brand}”` : `Said “${brand}” too few times`;
     case "disclosed":
       return "Sponsorship not disclosed";
@@ -223,7 +224,7 @@ function Override({ endpoint, override, recommended }: { endpoint: string; overr
         </p>
         <p className="mt-1 text-[14px] leading-[1.45] text-(--ink-2)">&ldquo;{override.reason}&rdquo;</p>
         <p className="mt-1 text-[12.5px] text-(--ink-3)">
-          {new Date(override.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · the report
+          {new Date(override.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC · the report
           below is unchanged
         </p>
         <button

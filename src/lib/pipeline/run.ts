@@ -113,7 +113,16 @@ class VideoSpend {
     output: (r: T) => string,
   ): Promise<T> {
     const t0 = performance.now();
-    const r = await fn();
+    let r: T;
+    try {
+      r = await fn();
+    } catch (err) {
+      // A failed call stays on the receipt with what it was charged (its reservation is kept), so the receipt still
+      // adds up to the report's cost when an optional step fails and the run goes on.
+      const msg = err instanceof Error ? err.message : String(err);
+      this.calls.push({ ...call, output: `failed: ${msg.slice(0, 160)}`, ms: Math.round(performance.now() - t0), usd: typeof usd === "number" ? usd : 0 });
+      throw err;
+    }
     this.calls.push({ ...call, output: output(r), ms: Math.round(performance.now() - t0), usd: typeof usd === "number" ? usd : usd(r) });
     return r;
   }

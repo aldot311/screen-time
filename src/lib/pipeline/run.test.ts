@@ -278,6 +278,10 @@ describe("runVideo prompt recovery", () => {
     expect(report.prompt).toBe("tumbler");
     expect(report.promptAttempts).toBeUndefined();
     expect(report.terms).toHaveLength(1);
+    // The failed call is on the receipt with its kept reservation, so the receipt still adds up to the cost.
+    const failed = report.receipt!.calls.find((c) => c.purpose === "Suggest another search word");
+    expect(failed?.output).toMatch(/^failed: /);
+    expect(report.receipt!.calls.reduce((n, c) => n + c.usd, 0)).toBeCloseTo(report.cost.usd, 10);
   }, 30_000);
 
   it("ignores a suggestion that repeats the prompt already tried", async () => {

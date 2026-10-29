@@ -5,7 +5,8 @@ import type { LiveProgress, VideoReport } from "./types";
 
 /** Everything a finished report says about how it was made, in the shape the run writes as it goes. */
 export function liveFromReport(r: VideoReport): LiveProgress {
-  const boxes = filmstripBoxes(r.detections ?? [], r.info.frameCount);
+  // Boxes without their verdict: in a replay, as live, the colors come from Muse Spark's checks one step later.
+  const boxes = filmstripBoxes(r.detections ?? [], r.info.frameCount).map((d) => ({ frame: d.frame, objectId: d.objectId, box: d.box, areaFraction: d.areaFraction, centroid: d.centroid }));
   const attempts = r.promptAttempts?.length ? r.promptAttempts : [{ prompt: r.prompt, objects: r.tracks.length, samFrames: r.cost.samFrames }];
   return {
     video: { frameCount: r.info.frameCount, durationSec: r.info.durationSec, width: r.info.width, height: r.info.height },
@@ -18,7 +19,8 @@ export function liveFromReport(r: VideoReport): LiveProgress {
       ...("next" in a && a.next ? { next: a.next } : {}),
     })),
     checks: r.tracks.map((t) => ({ prompt: r.prompt, objectId: t.objectId, verdict: t.verdict, reason: t.reason })),
-    heard: { mentions: r.metrics.mentions, disclosures: r.disclosure?.spoken ?? [] },
+    // A report keeps spoken disclosures only when a term asked for them; otherwise they are unknown, not absent.
+    heard: { mentions: r.metrics.mentions, ...(r.disclosure ? { disclosures: r.disclosure.spoken } : {}) },
     measured: { secondsOnScreen: r.metrics.secondsOnScreen, shareOfVideo: r.metrics.shareOfVideo, firstSeenSec: r.metrics.firstSeenSec },
     terms: r.terms.map((t) => ({ text: t.term.text, pass: t.pass, detail: t.detail })),
   };

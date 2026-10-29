@@ -75,10 +75,16 @@ export function StepFindings({ step, live, videoUrl, brand }: { step: StepId; li
       const h = live.heard;
       if (!h) return null;
       if (h.audio === false) return <p className={line}>The video has no sound, so nothing could be heard.</p>;
-      const said = [...h.mentions.map((m) => ({ ...m, kind: "brand" })), ...h.disclosures.map((m) => ({ ...m, kind: "ad" }))].sort(
+      const said = [...h.mentions.map((m) => ({ ...m, kind: "brand" })), ...(h.disclosures ?? []).map((m) => ({ ...m, kind: "ad" }))].sort(
         (a, b) => a.startSec - b.startSec,
       );
-      if (!said.length) return <p className={line}>Voice Transcribe heard no mention of {brand} and no sponsorship disclosure.</p>;
+      if (!said.length)
+        return (
+          <p className={line}>
+            Voice Transcribe heard no mention of {brand}
+            {h.disclosures ? " and no sponsorship disclosure" : ""}.
+          </p>
+        );
       return (
         <ul className="flex flex-wrap gap-1.5" aria-label="Heard in the audio">
           {said.map((m, i) => (
@@ -110,10 +116,10 @@ export function StepFindings({ step, live, videoUrl, brand }: { step: StepId; li
       if (!terms?.length) return null;
       return (
         <ul className="space-y-1.5">
-          {terms.map((t) => {
+          {terms.map((t, i) => {
             const Icon = t.pass === true ? Check : t.pass === false ? X : CircleHelp;
             return (
-              <li key={t.text} className="flex gap-2 text-[13.5px] leading-[1.45]">
+              <li key={`${i}-${t.text}`} className="flex gap-2 text-[13.5px] leading-[1.45]">
                 <Icon
                   className={`mt-[3px] size-4 shrink-0 ${t.pass === true ? "text-(--pass)" : t.pass === false ? "text-(--short)" : "text-(--review)"}`}
                   strokeWidth={3}

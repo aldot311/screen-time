@@ -69,6 +69,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
   let current = video;
   // Step and progress writes go out one at a time, in order, so a late write never undoes an earlier one.
   let queue = Promise.resolve();
+  let ended = false;
   // A failed write rejects its own caller only; the next write still runs.
   const write = (next: (v: VideoEntry) => VideoEntry | Promise<VideoEntry>) =>
     (queue = queue
@@ -101,10 +102,12 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
             }
             return { ...v, step };
           }),
-        onProgress: (live) => write((v) => ({ ...v, live })),
+        // Once the run has ended (a failure can leave other calls finishing), progress no longer writes.
+        onProgress: (live) => (ended ? undefined : write((v) => ({ ...v, live }))),
       }),
     );
     // Save the paid-for report first; stills are nice to have and are added afterwards if they work.
+    ended = true;
     await queue.catch(() => undefined);
     current = await putVideo({ ...current, status: "done", report, error: undefined, live: undefined });
     try {
@@ -116,6 +119,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
     return current;
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
+    ended = true;
     await queue.catch(() => undefined);
     return putVideo({ ...current, status: "failed", error }).catch(() => current);
   } finally {

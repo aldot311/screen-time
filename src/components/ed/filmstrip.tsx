@@ -41,6 +41,12 @@ export function Filmstrip({
     video.muted = true;
     video.playsInline = true;
     video.preload = "auto";
+    video.setAttribute("playsinline", "");
+    // In the document but out of sight: WebKit does not load or seek a detached video reliably.
+    video.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:0";
+    document.body.appendChild(video);
+    // A video that cannot load leaves the frames empty; the boxes and labels still show.
+    video.addEventListener("error", () => setDrawn(frames.length), { once: true });
     video.src = videoUrl;
     let i = 0;
     const next = () => {
@@ -63,6 +69,7 @@ export function Filmstrip({
       video.removeEventListener("seeked", onSeeked);
       video.removeAttribute("src");
       video.load();
+      video.remove();
     };
     // frames derive from frameCount
   }, [videoUrl, frameCount]); // eslint-disable-line react-hooks/exhaustive-deps
