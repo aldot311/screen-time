@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { googleFont } from "@/lib/og-font";
 
 export const alt = "Screen-Time: proof your product was seen in creator video";
 export const size = { width: 1200, height: 630 };
@@ -19,22 +20,6 @@ const HAIR = "#d6d2c9";
 const HEAD = "Proof your product was seen.";
 const SUB = "Every frame of a sponsored video, checked against the contract. Built on Meta SAM 3.1 and Muse.";
 const SEGMENTS: [number, number][] = [[0.04, 0.22], [0.3, 0.52], [0.58, 0.6], [0.7, 0.93]];
-
-/** The brand faces from Google Fonts, subset to the card's text. Falls back to the default face if the fetch fails. */
-async function googleFont(family: string, axes: string, text: string): Promise<ArrayBuffer | null> {
-  try {
-    const css = await fetch(
-      `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}:${axes}&text=${encodeURIComponent(text)}`,
-      { signal: AbortSignal.timeout(4000) },
-    ).then((r) => (r.ok ? r.text() : ""));
-    const url = /src: url\((.+?)\) format\('(?:opentype|truetype)'\)/.exec(css)?.[1];
-    if (!url) return null;
-    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
-    return res.ok ? await res.arrayBuffer() : null;
-  } catch {
-    return null;
-  }
-}
 
 export default async function OpengraphImage() {
   const [display, body] = await Promise.all([

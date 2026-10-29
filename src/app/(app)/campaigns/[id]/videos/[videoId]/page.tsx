@@ -111,6 +111,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
             overrideEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/override`}
             agent={video.agent}
             agentEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/agent`}
+            proofHref={synthetic ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/proof`}
           />
         ) : (
           <div className="grid gap-x-12 gap-y-8 pt-4 sm:pt-0 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">

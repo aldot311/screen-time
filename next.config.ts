@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   // run failed at "Prepare video". Load it with Node's require instead, and ship the binary with the routes that run.
   serverExternalPackages: ["ffmpeg-static"],
   outputFileTracingIncludes: {
-    "/api/campaigns/**": ["./node_modules/ffmpeg-static/ffmpeg"],
+    "/api/campaigns/**": ["./node_modules/ffmpeg-static/ffmpeg", "./node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf"],
   },
   turbopack: {
     rules: {

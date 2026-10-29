@@ -56,6 +56,11 @@ async function runOrThrow(args: string[], timeoutMs: number): Promise<RunResult>
   return result;
 }
 
+/** Runs ffmpeg with these arguments and throws with the end of its log when it fails. */
+export async function ffmpeg(args: string[], timeoutMs: number): Promise<void> {
+  await runOrThrow(args, timeoutMs);
+}
+
 /** `ffmpeg -i` with no output exits 1 by design; we only want its stream listing. Sizes are pre-rotation. */
 async function probe(inPath: string, timeoutMs: number) {
   const { stderr } = await run(["-hide_banner", "-i", inPath], timeoutMs);

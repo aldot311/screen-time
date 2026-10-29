@@ -6,7 +6,7 @@
 // plays exactly the moment that proves it: in the main player when at least half of it is on screen, otherwise in a
 // mini player docked at the bottom of a phone, without moving the page. The control that started it shows "Playing".
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Check, CircleHelp, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
+import { Check, CircleHelp, Clapperboard, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
 import { FPS, type Disclosure, type Segment, type TermResult, type VideoReport } from "@/lib/types";
 import { countedBefore, framesToSegments, percent, ruleReading, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
@@ -43,6 +43,8 @@ interface Props {
   /** The follow-up agent's latest run, and where to start one (absent on the preview). */
   agent?: VideoEntry["agent"];
   agentEndpoint?: string;
+  /** The proof clip route (absent on the preview, which has no real video). */
+  proofHref?: string;
 }
 
 /** Fields the backend is adding to the report: the photo the run actually compared with, and whether the on-screen
@@ -83,7 +85,7 @@ const Range = ({ a, b }: { a: number; b: number }) => (
   </Tc>
 );
 
-export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint, agent, agentEndpoint }: Props) {
+export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint, agent, agentEndpoint, proofHref }: Props) {
   const extras = report as VideoReport & ReportExtras;
   // Only the photo this run used: a photo added to the campaign later was not part of this check.
   const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
@@ -521,6 +523,17 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
           <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
             <ShareReport title={`${title} · ${creator}`} />
             {!synthetic && <AnalysisReplay report={report} videoUrl={videoUrl} brand={brand} />}
+            {proofHref && (
+              <a
+                href={proofHref}
+                target="_blank"
+                rel="noopener"
+                className="ed-press inline-flex h-11 items-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold text-(--ink) shadow-(--sh-1) ring-1 ring-(--hair-2) active:bg-(--wash) [@media(hover:hover)]:hover:ring-(--ink-3)"
+              >
+                <Clapperboard className="size-4" aria-hidden />
+                Proof clip (MP4)
+              </a>
+            )}
           </div>
         </div>
 
