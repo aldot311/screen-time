@@ -17,7 +17,7 @@ Measured on real runs against hand-checked labels, frame by frame at 15 fps
 | Precision | **97.7%**: when it says the product is on screen, it is |
 | Recall | **95.6%** of the frames the product was really there |
 | F1 | 96.6% |
-| Test set | 21 vertical clips, 23 clip/product targets, including a look-alike can and a clip with no product (both correctly 0 s) |
+| Test set | 20 labelled vertical clips (three show two products), 23 clip/product targets, including a look-alike can and a clip with no product (both correctly 0 s) |
 | Cost | SAM 3.1 at $0.20 per 1,000 frames; a 12–15 second Reel cost $0.10–0.15 all in on our runs, including a prompt retry |
 
 ## How it works
@@ -72,6 +72,7 @@ pnpm dev                     # http://localhost:3000
 | `META_MODEL_API_KEY` | Meta Model API key (required for runs) |
 | `SCREEN_TIME_PASSWORD` | 12+ characters; required in production for any change (create, upload, run) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob store; without it, data lives in `data/store` |
+| `SCREEN_TIME_LINK_SECRET` | Random, 32+ characters (`openssl rand -base64 32`); signs "request video from creator" links. Without it in production, request links are off |
 | `BLOB_STORE_HOST` | The store's public host (`<id>.public.blob.vercel-storage.com`); needed for newer Blob tokens, which do not contain the store id |
 | `SCREEN_TIME_MAX_USD_PER_VIDEO` / `SCREEN_TIME_MAX_USD_TOTAL` | Spend caps (default $0.50 / $20) |
 

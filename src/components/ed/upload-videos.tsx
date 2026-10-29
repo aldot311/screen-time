@@ -4,9 +4,10 @@
 //  - "blob" (production): the browser uploads straight to Vercel Blob with a client token from /api/blob-upload, then
 //    registers the file with POST /api/campaigns/:id/videos { creator, title, url }.
 //  - "direct" (local dev): multipart POST /api/campaigns/:id/videos with creator + file.
+// On phones and tablets this renders inside the roll-up's bottom sheet; from lg up it is a card in the side column.
 // Either way the run starts with POST /api/campaigns/:id/videos/:videoId/run, and the page refreshes so the new row
 // appears; the roll-up's AutoRefresh then polls while it runs. Every file gets its own row with real progress.
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, RotateCcw, Upload, X } from "lucide-react";
 import { ApiError } from "@/components/api-error";
@@ -21,7 +22,18 @@ interface Props {
 }
 
 type State = "uploading" | "starting" | "running" | "failed";
-type Item = { key: number; file: File; handle: string; state: State; progress: number; error?: string; /** Rejected before upload; retrying cannot help. */ local?: boolean };
+type Item = {
+  key: number;
+  file: File;
+  handle: string;
+  state: State;
+  progress: number;
+  error?: string;
+  /** Rejected before upload; retrying cannot help. */
+  local?: boolean;
+  /** Set once the video is registered: a retry then only re-runs this id, never re-uploads or re-registers. */
+  videoId?: string;
+};
 
 const MAX_BYTES = 200 * 1024 * 1024; // matches MAX_VIDEO_BYTES in lib/campaign/schema
 const TYPES = ["video/mp4", "video/quicktime"];
@@ -36,15 +48,6 @@ export function UploadVideos({ campaignId, mode }: Props) {
   const [dragging, setDragging] = useState(false);
 
   const patch = (key: number, p: Partial<Item>) => setItems((xs) => xs.map((x) => (x.key === key ? { ...x, ...p } : x)));
-
-  // The phone's "Add videos" action scrolls here via #add-videos; bring the handle field into play too.
-  useEffect(() => {
-    const onHash = () => {
-      if (location.hash === "#add-videos") document.getElementById("creator-handle")?.focus({ preventScroll: true });
-    };
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
 
   function add(files: File[]) {
     const raw = creator.trim().replace(/^@+/, "");
@@ -66,8 +69,10 @@ export function UploadVideos({ campaignId, mode }: Props) {
   }
 
   async function send(item: Item) {
+    if (item.videoId) return start(item.key, item.videoId);
     const { key, file, handle } = item;
     patch(key, { state: "uploading", progress: 0, error: undefined });
+    let videoId: string;
     try {
       let res: { ok: boolean; status: number; body: unknown };
       if (mode === "blob") {
@@ -92,16 +97,27 @@ export function UploadVideos({ campaignId, mode }: Props) {
         res = await postWithProgress(`/api/campaigns/${campaignId}/videos`, form, (p) => patch(key, { progress: p }));
       }
       if (!res.ok) throw new Error(errorOf(res.body) ?? `Upload failed (${res.status})`);
-      const video = res.body as { id: string };
-      patch(key, { state: "starting", progress: 1 });
-      const run = await fetch(`/api/campaigns/${campaignId}/videos/${video.id}/run`, { method: "POST" });
-      if (!run.ok) throw new Error(errorOf(await run.json().catch(() => null)) ?? `Could not start (${run.status})`);
-      patch(key, { state: "running" });
-      router.refresh();
+      videoId = (res.body as { id: string }).id;
+      patch(key, { videoId, progress: 1 });
     } catch (e) {
       patch(key, { state: "failed", error: e instanceof Error ? e.message : String(e) });
-      router.refresh();
+      return;
     }
+    await start(key, videoId);
+  }
+
+  /** Start (or retry starting) the run of a registered video. */
+  async function start(key: number, videoId: string) {
+    patch(key, { state: "starting", error: undefined });
+    try {
+      const run = await fetch(`/api/campaigns/${campaignId}/videos/${videoId}/run`, { method: "POST" });
+      if (!run.ok) throw new Error(errorOf(await run.json().catch(() => null)) ?? `Could not start (${run.status})`);
+      patch(key, { state: "running" });
+    } catch (e) {
+      patch(key, { state: "failed", error: e instanceof Error ? e.message : String(e) });
+    }
+    // The registered row exists either way, so show it.
+    router.refresh();
   }
 
   const busy = items.filter((x) => x.state === "uploading" || x.state === "starting").length;
@@ -110,7 +126,7 @@ export function UploadVideos({ campaignId, mode }: Props) {
     <section
       id="add-videos"
       aria-labelledby="add-videos-title"
-      className="scroll-mt-24 rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair) target:ring-2 target:ring-(--ink) sm:p-5"
+      className="lg:rounded-(--r-card) lg:bg-(--card) lg:p-5 lg:shadow-(--sh-1) lg:ring-1 lg:ring-(--hair)"
     >
       <h2 id="add-videos-title" className="ed-display text-[20px] font-semibold! tracking-[-0.022em]!">
         Add creator videos
@@ -119,30 +135,32 @@ export function UploadVideos({ campaignId, mode }: Props) {
       <label htmlFor="creator-handle" className="mt-4 block text-[14px] font-semibold">
         Creator
       </label>
-      <div className="mt-1.5 flex h-12 items-center rounded-(--r-ctl) bg-(--card) ring-1 ring-(--hair-2) focus-within:ring-2 focus-within:ring-(--focus)">
-        <span className="pl-3.5 text-[16px] text-(--ink-3)" aria-hidden>
-          @
-        </span>
-        <input
-          id="creator-handle"
-          value={creator}
-          onChange={(e) => setCreator(e.target.value.replace(/^@+/, ""))}
-          placeholder="handle"
-          autoCapitalize="none"
-          autoCorrect="off"
-          autoComplete="off"
-          spellCheck={false}
-          enterKeyHint="done"
-          aria-describedby="creator-note"
-          className="h-full min-w-0 flex-1 rounded-r-(--r-ctl) bg-transparent pr-3.5 pl-1 text-[16px] outline-none placeholder:text-(--ink-3)"
-        />
+      <div className="mt-1.5">
+        <RequestFromCreator campaignId={campaignId} creator={creator}>
+          <div className="flex h-12 items-center">
+            <span className="pl-3.5 text-[16px] text-(--ink-3)" aria-hidden>
+              @
+            </span>
+            <input
+              id="creator-handle"
+              value={creator}
+              onChange={(e) => setCreator(e.target.value.replace(/^@+/, ""))}
+              placeholder="handle"
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              aria-describedby="creator-note"
+              className="h-full min-w-0 flex-1 bg-transparent pr-3.5 pl-1 text-[16px] outline-none placeholder:text-(--ink-3) outline-none!"
+            />
+          </div>
+        </RequestFromCreator>
       </div>
       <p id="creator-note" className="mt-2 text-[13px] leading-snug text-(--ink-2)">
         Platforms don&rsquo;t let third parties download creator videos. Upload the file the creator delivered, or ask the
         creator to send it.
       </p>
-      {/* Slot: the lead adds a "Request video from creator" link here. */}
-      <RequestFromCreator campaignId={campaignId} creator={creator} />
 
       <div
         onDragOver={(e) => {

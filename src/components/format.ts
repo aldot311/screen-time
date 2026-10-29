@@ -7,8 +7,14 @@ export function timecode(sec: number): string {
   return `${m}:${(s - m * 60).toFixed(1).padStart(4, "0")}`;
 }
 
+/** Seconds to one decimal, rounded down like the contract checker, so a figure never reads 10.3 s in one place and
+ *  10.2 s in another (and a near miss never shows as the threshold it missed). */
+export function tenths(sec: number): string {
+  return (Math.floor(sec * 10 + 1e-6) / 10).toFixed(1);
+}
+
 export function seconds(sec: number): string {
-  return `${sec.toFixed(1)} s`;
+  return `${tenths(sec)} s`;
 }
 
 export function percent(fraction: number, digits = 0): string {

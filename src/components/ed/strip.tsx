@@ -23,6 +23,8 @@ interface Props {
   /** Draw only what has played so far (the landing replay). */
   fillTo?: number;
   ruler?: boolean;
+  /** Spoken-mention evidence lights violet, everything else ink. */
+  evidenceTone?: "ink" | "voice";
 }
 
 export function Strip({
@@ -39,12 +41,16 @@ export function Strip({
   size = "full",
   fillTo,
   ruler = size === "full",
+  evidenceTone = "ink",
 }: Props) {
   const track = useRef<HTMLDivElement>(null);
   const [widthPx, setWidthPx] = useState(360);
   const d = Math.max(durationSec, 0.001);
   const pct = (s: number) => `${(Math.min(Math.max(s, 0), d) / d) * 100}%`;
-  const span = (a: number, b: number, min = 2) => ({ left: pct(a), width: `max(${min}px, calc(${pct(b)} - ${pct(a)}))` });
+  const span = (a: number, b: number, min = 2) => ({
+    left: pct(a),
+    width: `max(${min}px, calc(${pct(b)} - ${pct(a)}))`,
+  });
 
   useEffect(() => {
     const el = track.current;
@@ -79,8 +85,8 @@ export function Strip({
 
   return (
     <div className="w-full select-none">
+      {/* The tap target is at least 44 px tall even when the drawn strip is thinner. */}
       <div
-        ref={track}
         role={interactive ? "slider" : "img"}
         aria-label={interactive ? "Video position" : `Product on screen in ${segs.length} stretch${segs.length === 1 ? "" : "es"}`}
         aria-valuemin={interactive ? 0 : undefined}
@@ -98,68 +104,85 @@ export function Strip({
         }}
         onKeyDown={(e) => {
           if (!onSeek) return;
-          const step = e.shiftKey ? 1 : 1 / 15;
-          if (e.key === "ArrowRight") onSeek(Math.min(d, (playheadSec ?? 0) + step));
-          if (e.key === "ArrowLeft") onSeek(Math.max(0, (playheadSec ?? 0) - step));
+          const step = e.shiftKey || e.key === "PageUp" || e.key === "PageDown" ? 1 : 1 / 15;
+          const at = playheadSec ?? 0;
+          if (e.key === "ArrowRight" || e.key === "PageUp") onSeek(Math.min(d, at + step));
+          else if (e.key === "ArrowLeft" || e.key === "PageDown") onSeek(Math.max(0, at - step));
+          else if (e.key === "Home") onSeek(0);
+          else if (e.key === "End") onSeek(d);
+          else return;
+          e.preventDefault();
         }}
-        className={[
-          "relative w-full overflow-hidden bg-(--wash)",
-          size === "mini" ? "rounded-full" : "rounded-[10px] shadow-[inset_0_0_0_1px_var(--hair)]",
-          height,
-          interactive ? "cursor-ew-resize touch-none" : "",
-        ].join(" ")}
+        className={interactive ? `cursor-ew-resize touch-none rounded-[10px] ${size === "full" ? "" : "py-1"}` : undefined}
       >
-        {win && (
-          <div
-            className="absolute inset-y-0 bg-[repeating-linear-gradient(135deg,rgb(20_19_15/0.08)_0_4px,transparent_4px_8px)] outline-[1.5px] -outline-offset-[1.5px] outline-(--ink-3) outline-dashed"
-            style={span(win.startSec, win.endSec)}
-          />
-        )}
-        {rej.map((s) => (
-          <div
-            key={`r-${s.startSec}`}
-            title={`Look-alike on screen ${timecode(s.startSec)}–${timecode(s.endSec)}, not counted`}
-            className={[
-              "absolute",
-              // At row and dock scale a dashed outline reads as garbled text: draw a solid hatched red band instead.
-              size === "full"
-                ? "inset-y-1.5 rounded-[3px] border-[1.5px] border-dashed border-(--reject) bg-[repeating-linear-gradient(135deg,rgb(194_57_43/0.14)_0_3px,transparent_3px_7px)]"
-                : size === "compact"
-                  ? "inset-y-2 rounded-[3px] bg-[repeating-linear-gradient(135deg,rgb(194_57_43/0.55)_0_2px,rgb(194_57_43/0.18)_2px_5px)]"
-                  : "inset-y-0 bg-[repeating-linear-gradient(135deg,rgb(194_57_43/0.7)_0_2px,rgb(194_57_43/0.3)_2px_4px)]",
-            ].join(" ")}
-            style={span(s.startSec, s.endSec, 3)}
-          />
-        ))}
-        {segs.map((s) => (
-          <div key={s.startSec} className="absolute inset-y-0 bg-(--signal)" style={span(s.startSec, s.endSec)} />
-        ))}
-        {evidence.map((s) => (
-          <div
-            key={`ev-${flashKey}-${s.startSec}-${s.endSec}`}
-            className="ed-flash absolute inset-y-0 rounded-[3px] shadow-[inset_0_0_0_2px_var(--ink)]"
-            style={span(s.startSec, s.endSec, 6)}
-          />
-        ))}
-        {longest && size === "full" && (
-          <div title="Longest continuous run" className="absolute bottom-0 h-[3px] bg-(--signal-ink)" style={span(longest.startSec, longest.endSec)} />
-        )}
-        {ments.map((m) => (
-          <div
-            key={`m-${m.startSec}`}
-            title={`"${m.text}" at ${timecode(m.startSec)}`}
-            className={size === "mini" ? "absolute inset-y-0 w-[3px] bg-(--voice)" : "absolute bottom-0 h-3/5 w-[3px] rounded-t-[2px] bg-(--voice)"}
-            style={{ left: pct(m.startSec) }}
-          />
-        ))}
-        {playheadSec !== undefined && size !== "mini" && (
-          <div
-            className="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 bg-(--ink) transition-[left] duration-75 ease-linear"
-            style={{ left: pct(playheadSec) }}
-          >
-            <span className="absolute -top-1 left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-(--ink) ring-2 ring-white" />
-          </div>
-        )}
+        <div
+          ref={track}
+          className={[
+            "relative w-full overflow-hidden bg-(--wash)",
+            size === "mini" ? "rounded-full" : "rounded-[10px] shadow-[inset_0_0_0_1px_var(--hair)]",
+            height,
+          ].join(" ")}
+        >
+          {win && (
+            <div
+              className="absolute inset-y-0 bg-[repeating-linear-gradient(135deg,rgb(20_19_15/0.08)_0_4px,transparent_4px_8px)] outline-[1.5px] -outline-offset-[1.5px] outline-(--ink-3) outline-dashed"
+              style={span(win.startSec, win.endSec)}
+            />
+          )}
+          {rej.map((s) => (
+            <div
+              key={`r-${s.startSec}`}
+              title={`Look-alike on screen ${timecode(s.startSec)}–${timecode(s.endSec)}, not counted`}
+              className={[
+                "absolute",
+                // At row and dock scale a dashed outline reads as garbled text: draw a solid hatched red band instead.
+                size === "full"
+                  ? "inset-y-1.5 rounded-[3px] border-[1.5px] border-dashed border-(--reject) bg-[repeating-linear-gradient(135deg,rgb(194_57_43/0.14)_0_3px,transparent_3px_7px)]"
+                  : size === "compact"
+                    ? "inset-y-2 rounded-[3px] bg-[repeating-linear-gradient(135deg,rgb(194_57_43/0.55)_0_2px,rgb(194_57_43/0.18)_2px_5px)]"
+                    : "inset-y-0 bg-[repeating-linear-gradient(135deg,rgb(194_57_43/0.7)_0_2px,rgb(194_57_43/0.3)_2px_4px)]",
+              ].join(" ")}
+              style={span(s.startSec, s.endSec, 3)}
+            />
+          ))}
+          {segs.map((s) => (
+            <div key={s.startSec} className="absolute inset-y-0 bg-(--signal)" style={span(s.startSec, s.endSec)} />
+          ))}
+          {evidence.map((s) => (
+            <div
+              key={`ev-${flashKey}-${s.startSec}-${s.endSec}`}
+              className={
+                evidenceTone === "voice"
+                  ? "ed-flash absolute inset-y-0 rounded-[3px] bg-(--voice)/35 shadow-[inset_0_0_0_2px_var(--voice)]"
+                  : "ed-flash absolute inset-y-0 rounded-[3px] shadow-[inset_0_0_0_2px_var(--ink)]"
+              }
+              style={span(s.startSec, s.endSec, 6)}
+            />
+          ))}
+          {longest && size === "full" && (
+            <div
+              title="Longest continuous run"
+              className="absolute bottom-0 h-[3px] bg-(--signal-ink)"
+              style={span(longest.startSec, longest.endSec)}
+            />
+          )}
+          {ments.map((m) => (
+            <div
+              key={`m-${m.startSec}`}
+              title={`"${m.text}" at ${timecode(m.startSec)}`}
+              className={size === "mini" ? "absolute inset-y-0 w-[3px] bg-(--voice)" : "absolute bottom-0 h-3/5 w-[3px] rounded-t-[2px] bg-(--voice)"}
+              style={{ left: pct(m.startSec) }}
+            />
+          ))}
+          {playheadSec !== undefined && size !== "mini" && (
+            <div
+              className="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 bg-(--ink) transition-[left] duration-75 ease-linear"
+              style={{ left: pct(playheadSec) }}
+            >
+              <span className="absolute -top-1 left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-(--ink) ring-2 ring-white" />
+            </div>
+          )}
+        </div>
       </div>
       {ruler && (
         <div className="ed-tc relative mt-1.5 h-4 text-[11px] text-(--ink-3)" aria-hidden>

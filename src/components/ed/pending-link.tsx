@@ -32,10 +32,12 @@ type Props = ComponentProps<typeof Link> & {
 };
 
 export function PendingLink({ children, hint = "inline", hintClassName, className = "", ...rest }: Props) {
+  // "inline": the spinner takes the label's place in the middle while the next page loads, so the label is centred
+  // at rest instead of leaving room for a spinner beside it.
   return (
-    <Link {...rest} className={`ed-press ${className}`}>
-      {children}
-      {hint === "inline" && <Hint className={`inline-grid ${hintClassName ?? ""}`} />}
+    <Link {...rest} className={`ed-press ed-pl ${hint === "inline" ? "relative" : ""} ${className}`}>
+      {hint === "inline" ? <span className="ed-label contents">{children}</span> : children}
+      {hint === "inline" && <Hint className={`absolute inset-0 grid place-items-center ${hintClassName ?? ""}`} />}
       {hint === "cover" && (
         <Hint
           className={`absolute inset-0 z-10 grid place-items-center rounded-[inherit] bg-[rgb(247_246_242/0.6)] text-(--ink) backdrop-blur-[2px] ${hintClassName ?? ""}`}

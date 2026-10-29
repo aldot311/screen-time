@@ -56,11 +56,12 @@ const video = (campaignId: string, id: string): VideoEntry => ({
 });
 
 describe("local store", () => {
-  it("round-trips campaigns and videos, and lists the preview campaign last", async () => {
+  it("round-trips campaigns and videos, and lists the preview only while the store is empty", async () => {
+    expect((await listCampaigns()).map((c) => c.id)).toEqual(["preview"]);
     await putCampaign(campaign("fall"));
     expect(await getCampaign("fall")).toEqual(campaign("fall"));
     expect(await getCampaign("missing")).toBeNull();
-    expect((await listCampaigns()).map((c) => c.id)).toEqual(["fall", "preview"]);
+    expect((await listCampaigns()).map((c) => c.id)).toEqual(["fall"]);
 
     const saved = await putVideo(video("fall", "v1"));
     expect(saved.updatedAt).not.toBe("2026-10-28T10:00:00.000Z");

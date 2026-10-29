@@ -1,7 +1,7 @@
 // Small presentational pieces shared by the three comp screens. Server-safe (no hooks).
 import { Check, CircleDashed, CircleHelp, X } from "lucide-react";
 import type { Verdict } from "@/components/format";
-import { VERDICT_LABEL } from "@/components/format";
+import { tenths, VERDICT_LABEL } from "@/components/format";
 
 /** The mark: a lime run on a dark rule, the strip in miniature. Authored SVG, no glyphs. */
 export function Mark({ size = 22 }: { size?: number }) {
@@ -50,7 +50,8 @@ export function VerdictPill({ verdict, size = "sm" }: { verdict: Verdict; size?:
 
 /** "10.3" with tabular digits but a proportional point, so a live counter does not jitter or gape. */
 export function Figure({ value, digits = 1 }: { value: number; digits?: number }) {
-  const [whole, frac] = value.toFixed(digits).split(".");
+  // Seconds round down to tenths everywhere (see tenths in format.ts); other precisions round normally.
+  const [whole, frac] = (digits === 1 ? tenths(value) : value.toFixed(digits)).split(".");
   return (
     <>
       <span className="tabular">{whole}</span>

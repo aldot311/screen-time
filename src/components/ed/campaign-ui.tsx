@@ -46,3 +46,10 @@ export function LiveDot() {
 
 /** "1 video" / "12 videos". */
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** "Alani Nu: test runs" -> "Test runs": the brand is shown on its own, so the name drops its "Brand: " prefix. */
+export function shortName(c: { name: string; brand: string }): string {
+  const esc = c.brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const rest = c.name.replace(new RegExp(`^${esc}\\s*[:·–-]\\s*`, "i"), "").trim() || c.name;
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+}

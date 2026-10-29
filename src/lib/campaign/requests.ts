@@ -20,14 +20,13 @@ export function consentText(brand: string): string {
 }
 
 /**
- * The signing secret: SCREEN_TIME_LINK_SECRET, else the demo password (both at least 12 characters). Development falls
- * back to a fixed secret; anywhere else no secret means request links are off.
+ * The signing secret: SCREEN_TIME_LINK_SECRET, a random value of at least 32 characters (`openssl rand -base64 32`).
+ * Never the demo password: links go to creators, and a link signed with a password-derived key would let its holder
+ * guess the password offline. Development falls back to a fixed secret; anywhere else no secret means links are off.
  */
 export function linkSecret(env: Record<string, string | undefined> = process.env): string | null {
-  for (const v of [env.SCREEN_TIME_LINK_SECRET, env.SCREEN_TIME_PASSWORD]) {
-    const s = v?.trim();
-    if (s && s.length >= 12) return s;
-  }
+  const s = env.SCREEN_TIME_LINK_SECRET?.trim();
+  if (s && s.length >= 32) return s;
   return env.NODE_ENV === "development" ? "development-only-request-link-secret" : null;
 }
 

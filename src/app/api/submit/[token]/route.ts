@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { addVideo, newVideoId } from "@/lib/campaign/add-video";
+import { requestFilePrefix } from "@/lib/campaign/upload-name";
 import { isBlobUrl, MAX_VIDEO_BYTES, VIDEO_TYPES } from "@/lib/campaign/schema";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
 import { claimRequest, getCampaign, releaseRequest, requestUsed, saveVideoFile, storedFileInfo } from "@/lib/campaign/store";
@@ -36,7 +37,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
     if (!parsed.success) return fail(400, "Agree to the analysis and upload an MP4 or MOV video.");
     // Only a video file this campaign's upload route could have issued, never its JSON or another asset.
     const path = new URL(parsed.data.url).pathname;
-    if (!isBlobUrl(parsed.data.url, campaign.id) || !new RegExp(`^/campaigns/${campaign.id}/files/[\\w.-]+\\.(mp4|mov)$`, "i").test(path)) {
+    const prefix = `/campaigns/${campaign.id}/files/${requestFilePrefix(claims.nonce)}`;
+    if (!isBlobUrl(parsed.data.url, campaign.id) || !path.startsWith(prefix) || !/^[\w.-]+\.(mp4|mov)$/i.test(path.slice(prefix.length))) {
       return fail(400, "The video must be uploaded to this campaign's folder");
     }
     // The file must really be there, as a video within the size limit: an invented URL must not use up the link.
@@ -57,6 +59,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const file = form.get("file");
   if (!(file instanceof File)) return fail(400, "Missing the video file");
   if (!(VIDEO_TYPES as readonly string[]).includes(file.type)) return fail(415, "Upload an MP4 or MOV video");
+  if (file.size === 0) return fail(400, "That file is empty. Choose the video again.");
   if (file.size > MAX_VIDEO_BYTES) return fail(413, "The video is over 200 MB");
   const title = (file.name || "video").slice(0, 200);
   const id = newVideoId(title);

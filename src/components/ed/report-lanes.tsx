@@ -1,18 +1,20 @@
 "use client";
 
-// The report's timeline: one lane per signal, labelled. On screen (lime, counted seconds only, with the first-seen
-// notch and the longest run underlined), Look-alike (hatched red: seen, rejected, never counted) and Said aloud
-// (violet, each spoken mention). Tap or drag anywhere to scrub; arrow keys step a frame (Shift: a second). The stretch a
-// tapped term or number plays flashes across every lane, so the tap visibly lands.
+// The report's timeline: one full-width lane per signal, each named above its track. On screen (lime, counted seconds
+// only, first-seen notch, longest run underlined), Look-alike (hatched red: seen, rejected, never counted; only when
+// there was one) and Said aloud (violet mentions, or "Not heard" inside the lane). Tap or drag anywhere to scrub; arrow
+// keys step a frame, Shift+arrow or PageUp/PageDown a second, Home/End the ends. The stretch a tapped proof plays is
+// outlined while it plays (violet for a spoken mention) and cleared when playback stops.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, ScanEye, ScanLine } from "lucide-react";
 import type { Mention, Segment } from "@/lib/types";
-import { timecode } from "@/components/format";
+import { tenths, timecode } from "@/components/format";
 
 export interface Lit {
   segs: Segment[];
   window: Segment | null;
   key: number;
+  tone: "ink" | "voice";
 }
 
 interface Props {
@@ -28,10 +30,11 @@ interface Props {
   firstSeenSec: number | null;
   longest: Segment | null;
   onSeek: (sec: number) => void;
+  /** Preview reports have no audio: the voice lane says so instead of "Not heard". */
+  noAudio?: boolean;
 }
 
 const RULER = 18;
-const GAP = 6;
 
 export function ReportLanes({
   durationSec,
@@ -45,10 +48,14 @@ export function ReportLanes({
   firstSeenSec,
   longest,
   onSeek,
+  noAudio = false,
 }: Props) {
   const d = Math.max(durationSec, 0.001);
   const pct = (s: number) => (Math.min(Math.max(s, 0), d) / d) * 100;
-  const span = (s: Segment, min = 0) => ({ left: `${pct(s.startSec)}%`, width: `max(${min}px, ${pct(s.endSec) - pct(s.startSec)}%)` });
+  const span = (s: Segment, min = 0) => ({
+    left: `${pct(s.startSec)}%`,
+    width: `max(${min}px, ${pct(s.endSec) - pct(s.startSec)}%)`,
+  });
 
   const track = useRef<HTMLDivElement>(null);
   const [widthPx, setWidthPx] = useState(300);
@@ -72,76 +79,126 @@ export function ReportLanes({
   );
 
   const lanes = [
-    { key: "product", label: "On screen", Icon: ScanEye, h: 36, tone: "text-(--signal-ink)" },
-    ...(rejected.length ? [{ key: "reject", label: "Look-alike", Icon: ScanLine, h: 24, tone: "text-(--reject)" }] : []),
-    { key: "voice", label: "Said aloud", Icon: Mic, h: 24, tone: "text-(--voice)" },
+    {
+      key: "product",
+      label: "On screen",
+      Icon: ScanEye,
+      h: 32,
+      tone: "text-(--signal-ink)",
+      empty: segments.length ? null : "Never counted",
+    },
+    ...(rejected.length
+      ? [
+          {
+            key: "reject",
+            label: "Look-alike, not counted",
+            Icon: ScanLine,
+            h: 22,
+            tone: "text-(--reject)",
+            empty: null,
+          },
+        ]
+      : []),
+    {
+      key: "voice",
+      label: "Said aloud",
+      Icon: Mic,
+      h: 22,
+      tone: "text-(--voice)",
+      empty: mentions.length ? null : noAudio ? "Audio not analysed in the preview" : "Not heard",
+    },
   ];
-  const lanesH = lanes.reduce((s, l) => s + l.h, 0) + GAP * (lanes.length - 1);
   const ticks = rulerTicks(d, Math.max(3, Math.floor(widthPx / 56)));
+  const overlays = (laneKey: string) => (
+    <>
+      {laneKey === "product" && preview && <Window style={span(preview)} />}
+      {laneKey === "product" && lit?.window && <Window style={span(lit.window)} />}
+      {(lit?.tone === "voice" ? laneKey === "voice" : laneKey === "product") &&
+        lit?.segs.map((s) => (
+          <div
+            key={`${lit.key}-${s.startSec}`}
+            className={[
+              "ed-flash pointer-events-none absolute inset-y-0 rounded-[6px]",
+              lit.tone === "voice" ? "bg-(--voice)/25 shadow-[inset_0_0_0_2px_var(--voice)]" : "shadow-[inset_0_0_0_2px_var(--ink)]",
+            ].join(" ")}
+            style={span(s, 6)}
+          />
+        ))}
+    </>
+  );
 
   return (
     <div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
-        {/* Lane names */}
-        <div className="flex flex-col" style={{ paddingTop: RULER + GAP, gap: GAP }} aria-hidden>
-          {lanes.map((l) => (
-            <span key={l.key} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-(--ink-2)" style={{ height: l.h }}>
-              <l.Icon className={`size-4 shrink-0 ${l.tone}`} strokeWidth={2.25} />
-              {l.label}
+      <div
+        ref={track}
+        role="slider"
+        tabIndex={0}
+        aria-label="Video position"
+        aria-valuemin={0}
+        aria-valuemax={Math.round(d * 10) / 10}
+        aria-valuenow={Math.round(playheadSec * 10) / 10}
+        aria-valuetext={timecode(playheadSec)}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setDragging(true);
+          seekFrom(e.clientX);
+        }}
+        onPointerMove={(e) => {
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) seekFrom(e.clientX);
+        }}
+        onPointerUp={() => setDragging(false)}
+        onPointerCancel={() => setDragging(false)}
+        onKeyDown={(e) => {
+          const step = e.shiftKey || e.key === "PageUp" || e.key === "PageDown" ? 1 : 1 / 15;
+          if (e.key === "ArrowRight" || e.key === "PageUp") onSeek(Math.min(d, playheadSec + step));
+          else if (e.key === "ArrowLeft" || e.key === "PageDown") onSeek(Math.max(0, playheadSec - step));
+          else if (e.key === "Home") onSeek(0);
+          else if (e.key === "End") onSeek(d);
+          else return;
+          e.preventDefault();
+        }}
+        className="relative cursor-ew-resize touch-none rounded-[8px] pb-1 select-none"
+      >
+        {/* Ruler */}
+        <div className="ed-tc relative text-[11px] text-(--ink-3)" style={{ height: RULER }} aria-hidden>
+          {ticks.map((t, i) => (
+            <span key={t} className={`absolute top-0 ${i === 0 ? "" : "-translate-x-1/2"}`} style={{ left: `${pct(t)}%` }}>
+              {timecode(t).replace(/\.0$/, "")}
             </span>
           ))}
         </div>
 
-        {/* Tracks: one slider over every lane */}
-        <div
-          ref={track}
-          role="slider"
-          tabIndex={0}
-          aria-label="Video position"
-          aria-valuemin={0}
-          aria-valuemax={Math.round(d * 10) / 10}
-          aria-valuenow={Math.round(playheadSec * 10) / 10}
-          aria-valuetext={timecode(playheadSec)}
-          onPointerDown={(e) => {
-            e.currentTarget.setPointerCapture(e.pointerId);
-            setDragging(true);
-            seekFrom(e.clientX);
-          }}
-          onPointerMove={(e) => {
-            if (e.currentTarget.hasPointerCapture(e.pointerId)) seekFrom(e.clientX);
-          }}
-          onPointerUp={() => setDragging(false)}
-          onPointerCancel={() => setDragging(false)}
-          onKeyDown={(e) => {
-            const step = e.shiftKey ? 1 : 1 / 15;
-            if (e.key === "ArrowRight") onSeek(Math.min(d, playheadSec + step));
-            else if (e.key === "ArrowLeft") onSeek(Math.max(0, playheadSec - step));
-            else if (e.key === "Home") onSeek(0);
-            else if (e.key === "End") onSeek(d);
-            else return;
-            e.preventDefault();
-          }}
-          className="relative cursor-ew-resize touch-none rounded-[8px] select-none"
-          style={{ height: RULER + GAP + lanesH }}
-        >
-          {/* Ruler */}
-          <div className="ed-tc relative text-[11px] text-(--ink-3)" style={{ height: RULER }} aria-hidden>
-            {ticks.map((t, i) => (
-              <span key={t} className={`absolute top-0 ${i === 0 ? "" : "-translate-x-1/2"}`} style={{ left: `${pct(t)}%` }}>
-                {timecode(t).replace(/\.0$/, "")}
+        <div className="mt-1 flex flex-col gap-2">
+          {lanes.map((l) => (
+            <div key={l.key}>
+              <span className="mb-1 flex h-[18px] items-center gap-1.5 text-[12.5px] font-semibold text-(--ink-2)" aria-hidden>
+                <l.Icon className={`size-3.5 shrink-0 ${l.tone}`} strokeWidth={2.25} />
+                {l.label}
               </span>
-            ))}
-          </div>
-
-          <div className="flex flex-col" style={{ marginTop: GAP, gap: GAP }}>
-            {lanes.map((l) => (
-              <div key={l.key} className="relative overflow-hidden rounded-[7px] bg-(--wash) shadow-[inset_0_0_0_1px_var(--hair)]" style={{ height: l.h }}>
+              <div className="relative overflow-hidden rounded-[7px] bg-(--wash) shadow-[inset_0_0_0_1px_var(--hair)]" style={{ height: l.h }}>
+                {l.empty && (
+                  <span className="absolute inset-y-0 left-2.5 flex items-center text-[12px] font-medium text-(--ink-3)" aria-hidden>
+                    {l.empty}
+                  </span>
+                )}
                 {l.key === "product" && (
                   <>
                     {segments.map((s) => (
                       <div key={s.startSec} className="absolute inset-y-0 bg-(--signal)" style={span(s, 3)} />
                     ))}
                     {longest && <div className="absolute bottom-0 h-[4px] bg-(--signal-ink)" style={span(longest)} />}
+                    {firstSeenSec !== null && (
+                      <svg
+                        className="absolute top-0 -translate-x-1/2"
+                        style={{ left: `${pct(firstSeenSec)}%` }}
+                        width="10"
+                        height="7"
+                        viewBox="0 0 10 7"
+                        aria-hidden
+                      >
+                        <path d="M0 0h10L5 7z" fill="var(--ink)" />
+                      </svg>
+                    )}
                   </>
                 )}
                 {l.key === "reject" &&
@@ -160,79 +217,56 @@ export function ReportLanes({
                       style={span({ startSec: m.startSec, endSec: m.endSec }, 4)}
                     />
                   ))}
+                {overlays(l.key)}
               </div>
-            ))}
-          </div>
-
-          {/* First-seen notch: a small ink wedge above the product lane. */}
-          {firstSeenSec !== null && (
-            <svg
-              className="pointer-events-none absolute -translate-x-1/2"
-              style={{ left: `${pct(firstSeenSec)}%`, top: RULER - 2 }}
-              width="10"
-              height="8"
-              viewBox="0 0 10 8"
-              aria-hidden
-            >
-              <path d="M0 0h10L5 7z" fill="var(--ink)" />
-            </svg>
-          )}
-
-          {/* Overlays across every lane: the term's window, the flashing evidence, the playhead. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0" style={{ top: RULER + GAP }}>
-            {preview && <Window seg={preview} style={span(preview)} />}
-            {lit?.window && <Window seg={lit.window} style={span(lit.window)} />}
-            {lit?.segs.map((s) => (
-              <div
-                key={`${lit.key}-${s.startSec}`}
-                className="ed-flash absolute -inset-y-[3px] rounded-[6px] shadow-[inset_0_0_0_2px_var(--ink)]"
-                style={span(s, 6)}
-              />
-            ))}
-            {showPlayhead && (
-              <div
-                className={`absolute -top-1.5 bottom-0 w-0.5 -translate-x-1/2 bg-(--ink) ${dragging ? "" : "transition-[left] duration-75 ease-linear"}`}
-                style={{ left: `${pct(playheadSec)}%` }}
-              >
-                <span className="absolute -top-1 left-1/2 size-3 -translate-x-1/2 rounded-full bg-(--ink) ring-2 ring-white" />
-              </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
+
+        {/* Playhead across every lane, with a large knob. */}
+        {showPlayhead && (
+          <div
+            className={`pointer-events-none absolute bottom-0 w-0.5 -translate-x-1/2 bg-(--ink) ${dragging ? "" : "transition-[left] duration-75 ease-linear"}`}
+            style={{ left: `${pct(playheadSec)}%`, top: RULER - 2 }}
+          >
+            <span className="absolute -top-1.5 left-1/2 size-3.5 -translate-x-1/2 rounded-full bg-(--ink) ring-2 ring-white" />
+          </div>
+        )}
       </div>
 
-      {/* What the marks mean: drawn swatches, readable on touch (no hover tooltips). */}
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] text-(--ink-2)">
-        {firstSeenSec !== null && (
-          <li className="flex items-center gap-1.5">
-            <svg width="10" height="8" viewBox="0 0 10 8" aria-hidden>
-              <path d="M0 0h10L5 7z" fill="var(--ink)" />
-            </svg>
-            First seen <span className="ed-tc">{timecode(firstSeenSec)}</span>
-          </li>
-        )}
-        {longest && (
-          <li className="flex items-center gap-1.5">
-            <span className="inline-block h-1 w-4 rounded-full bg-(--signal-ink)" aria-hidden />
-            Longest run {(longest.endSec - longest.startSec).toFixed(1)} s
-          </li>
-        )}
-        {(lit?.window || preview) && (
-          <li className="flex items-center gap-1.5">
-            <span className="inline-block h-3 w-3.5 rounded-[3px] border-[1.5px] border-dashed border-(--ink-3)" aria-hidden />
-            Term window
-          </li>
-        )}
-      </ul>
+      {/* What the marks mean, for this video only. Drawn swatches, readable on touch. */}
+      {(firstSeenSec !== null || longest || lit?.window || preview) && (
+        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] text-(--ink-2)">
+          {firstSeenSec !== null && (
+            <li className="flex items-center gap-1.5">
+              <svg width="10" height="7" viewBox="0 0 10 7" aria-hidden>
+                <path d="M0 0h10L5 7z" fill="var(--ink)" />
+              </svg>
+              First seen <span className="ed-tc">{timecode(firstSeenSec)}</span>
+            </li>
+          )}
+          {longest && (
+            <li className="flex items-center gap-1.5">
+              <span className="inline-block h-1 w-4 rounded-full bg-(--signal-ink)" aria-hidden />
+              Longest run {tenths(longest.endSec - longest.startSec)} s
+            </li>
+          )}
+          {(lit?.window || preview) && (
+            <li className="flex items-center gap-1.5">
+              <span className="inline-block h-3 w-3.5 rounded-[3px] border-[1.5px] border-dashed border-(--ink-3)" aria-hidden />
+              Term window
+            </li>
+          )}
+        </ul>
+      )}
     </div>
   );
 }
 
-function Window({ seg, style }: { seg: Segment; style: React.CSSProperties }) {
+function Window({ style }: { style: React.CSSProperties }) {
   return (
     <div
-      data-window={`${seg.startSec}-${seg.endSec}`}
-      className="absolute inset-y-0 rounded-[6px] bg-[repeating-linear-gradient(135deg,rgb(20_19_15/0.07)_0_4px,transparent_4px_8px)] outline-[1.5px] -outline-offset-[1.5px] outline-(--ink-3) outline-dashed"
+      className="pointer-events-none absolute inset-y-0 rounded-[6px] bg-[repeating-linear-gradient(135deg,rgb(20_19_15/0.08)_0_4px,transparent_4px_8px)] outline-[1.5px] -outline-offset-[1.5px] outline-(--ink-3) outline-dashed"
       style={style}
     />
   );

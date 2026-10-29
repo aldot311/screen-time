@@ -4,13 +4,13 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createRequestToken, linkSecret, verifyRequestToken } from "./requests";
 import { claimRequest, getVideo, listVideos, releaseRequest, requestUsed, takeUploadSlot } from "./store";
-import { safeUploadName } from "./upload-name";
+import { requestNonce, safeUploadName } from "./upload-name";
 
 const campaigns = await import("@/app/api/campaigns/route");
 const requests = await import("@/app/api/campaigns/[id]/requests/route");
 const submit = await import("@/app/api/submit/[token]/route");
 
-const SECRET = "a-long-enough-secret";
+const SECRET = "a-long-enough-secret-for-request-links";
 const claims = { campaignId: "fall", creator: "@maya", exp: 2_000_000_000, nonce: "abc123def456" };
 
 describe("request link tokens", () => {
@@ -34,12 +34,20 @@ describe("request link tokens", () => {
     }
   });
 
-  it("needs a 12+ character secret outside development", () => {
+  it("needs a dedicated 32+ character secret outside development, never the demo password", () => {
+    const long = "x".repeat(32);
     expect(linkSecret({ NODE_ENV: "production" })).toBeNull();
-    expect(linkSecret({ NODE_ENV: "production", SCREEN_TIME_PASSWORD: "short" })).toBeNull();
-    expect(linkSecret({ NODE_ENV: "production", SCREEN_TIME_PASSWORD: "demo-pass-long" })).toBe("demo-pass-long");
-    expect(linkSecret({ NODE_ENV: "production", SCREEN_TIME_LINK_SECRET: "link-secret-long", SCREEN_TIME_PASSWORD: "demo-pass-long" })).toBe("link-secret-long");
+    expect(linkSecret({ NODE_ENV: "production", SCREEN_TIME_PASSWORD: "a-very-long-demo-password-123456789" })).toBeNull();
+    expect(linkSecret({ NODE_ENV: "production", SCREEN_TIME_LINK_SECRET: "too-short-secret" })).toBeNull();
+    expect(linkSecret({ NODE_ENV: "production", SCREEN_TIME_LINK_SECRET: long })).toBe(long);
     expect(linkSecret({ NODE_ENV: "development" })).not.toBeNull();
+  });
+});
+
+describe("requestNonce", () => {
+  it("reads the one-time id from a link and rejects junk", async () => {
+    expect(requestNonce(await createRequestToken(claims, SECRET))).toBe(claims.nonce);
+    expect(requestNonce("not-a-token")).toBeNull();
   });
 });
 
@@ -95,6 +103,15 @@ describe("creator submissions", () => {
     expect((await submit.POST(fileForm(true), params({ token: `${token}x` }))).status).toBe(403);
   });
 
+  it("refuses an empty file without using up the link", async () => {
+    const { token } = await campaignWithLink("Empty");
+    const form = new FormData();
+    form.set("file", new File([], "empty.mp4", { type: "video/mp4" }));
+    form.set("consent", "true");
+    expect((await submit.POST(new Request("http://localhost/api", { method: "POST", body: form }), params({ token }))).status).toBe(400);
+    expect((await submit.POST(fileForm(true), params({ token }))).status).toBe(201);
+  });
+
   it("lets only one of several simultaneous uploads through a link land", async () => {
     const { id, token } = await campaignWithLink("Race");
     const codes = (await Promise.all(Array.from({ length: 5 }, () => submit.POST(fileForm(true), params({ token }))))).map((r) => r.status);
@@ -121,6 +138,8 @@ describe("creator submissions", () => {
     expect((await register("https://evil.example/x.mp4")).status).toBe(400);
     expect((await register(`https://store.public.blob.vercel-storage.com/campaigns/${id}/campaign.json`)).status).toBe(400);
     expect((await register(`https://store.public.blob.vercel-storage.com/campaigns/other/files/x.mp4`)).status).toBe(400);
+    // A video in the right folder that was not uploaded with this link (another creator's) is refused too.
+    expect((await register(`https://store.public.blob.vercel-storage.com/campaigns/${id}/files/clip-abc.mp4`)).status).toBe(400);
     expect(await listVideos(id)).toHaveLength(0);
     delete process.env.BLOB_STORE_HOST;
   });

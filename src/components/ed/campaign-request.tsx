@@ -2,14 +2,16 @@
 
 // "Request video from creator": makes a signed one-time link for the handle above, which the brand sends to the
 // creator. The creator agrees to the analysis and uploads the delivered cut there; the video then waits here to be run.
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Check, Copy, Link2, Share } from "lucide-react";
 import { ApiError } from "@/components/api-error";
 import { Spinner } from "./pending-link";
 
 type State = { kind: "idle" } | { kind: "busy" } | { kind: "ready"; url: string; creator: string; expires: string; copied: boolean } | { kind: "error"; message: string };
 
-export function RequestFromCreator({ campaignId, creator }: { campaignId: string; creator: string }) {
+/** One input group: the handle field (passed as children) with the request action attached under it. With no handle the
+ *  action reads as disabled and says what it needs. The link, once made, opens below the group. */
+export function RequestFromCreator({ campaignId, creator, children }: { campaignId: string; creator: string; children?: ReactNode }) {
   const [state, setState] = useState<State>({ kind: "idle" });
   const inputId = useId();
   const handle = creator.trim().replace(/^@+/, "");
@@ -31,9 +33,9 @@ export function RequestFromCreator({ campaignId, creator }: { campaignId: string
     }
   }
 
-  if (state.kind === "ready") {
-    const share = typeof navigator !== "undefined" && "share" in navigator;
-    return (
+  const share = typeof navigator !== "undefined" && "share" in navigator;
+  const ready =
+    state.kind === "ready" ? (
       <div className="mt-3 rounded-(--r-inner) bg-(--wash) p-3" role="status">
         <p className="text-[13px] text-(--ink-2)">
           Send this to <span className="font-semibold text-(--ink)">{state.creator}</span>. It works once, until {state.expires}.
@@ -74,25 +76,41 @@ export function RequestFromCreator({ campaignId, creator }: { campaignId: string
           Make another link
         </button>
       </div>
-    );
-  }
+    ) : null;
 
+  const canAsk = Boolean(handle) && state.kind !== "busy" && state.kind !== "ready";
   return (
-    <div className="mt-3">
-      <button
-        type="button"
-        onClick={make}
-        disabled={!handle || state.kind === "busy"}
-        className="ed-press inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold ring-1 ring-(--hair-2) active:bg-(--wash) disabled:text-(--ink-3) [@media(hover:hover)]:hover:ring-(--ink-3)"
-      >
-        {state.kind === "busy" ? <Spinner /> : <Link2 className="size-4" aria-hidden />}
-        {handle ? `Request the video from @${handle}` : "Enter a handle to request the video"}
-      </button>
+    <>
+      <div className="overflow-hidden rounded-(--r-ctl) bg-(--card) ring-1 ring-(--hair-2) focus-within:ring-2 focus-within:ring-(--ink)">
+        {children}
+        <button
+          type="button"
+          onClick={make}
+          disabled={!canAsk}
+          aria-disabled={!canAsk}
+          className={[
+            "flex h-11 w-full items-center gap-2 border-t border-(--hair) px-3.5 text-left text-[14px] font-semibold",
+            canAsk ? "ed-press-soft cursor-pointer text-(--ink) active:bg-(--wash) [@media(hover:hover)]:hover:bg-(--wash)" : "cursor-default bg-(--paper) text-(--ink-3)",
+          ].join(" ")}
+        >
+          {state.kind === "busy" ? <Spinner /> : <Link2 className="size-4 shrink-0" aria-hidden />}
+          <span className="truncate">
+            {state.kind === "busy"
+              ? "Making the link…"
+              : state.kind === "ready"
+                ? `Link for ${state.creator} is ready below`
+                : handle
+                  ? `Make a request link for @${handle}`
+                  : "Type a handle to make a request link"}
+          </span>
+        </button>
+      </div>
       {state.kind === "error" && (
         <p role="alert" className="mt-2 text-[13px]">
           <ApiError message={state.message} />
         </p>
       )}
-    </div>
+      {ready}
+    </>
   );
 }

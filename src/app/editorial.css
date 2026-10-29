@@ -23,7 +23,7 @@
   --short-soft: #fbe9e5;
   --review: #8c5e00;
   --review-soft: #f8edd3;
-  --focus: #2f5bea;
+  --focus: #14130f; /* ink: the focus ring stays in the palette */
 
   --sh-1: 0 1px 1px rgb(20 19 15 / 0.04), 0 2px 6px -1px rgb(20 19 15 / 0.06);
   --sh-2: 0 1px 2px rgb(20 19 15 / 0.05), 0 14px 32px -14px rgb(20 19 15 / 0.2);
@@ -58,6 +58,17 @@
 .ed :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+/* A link's label hides while its spinner shows in the same place. "contents" keeps the label's children in the
+   link's own flex layout; opacity on them, not the wrapper, hides them. */
+.ed .ed-pl:has(.ed-pending[data-on="true"]) .ed-label > * ,
+.ed .ed-pl:has(.ed-pending[data-on="true"]) .ed-label {
+  color: transparent;
+}
+.ed .ed-pl:has(.ed-pending[data-on="true"]) .ed-label svg {
+  opacity: 0;
 }
 
 .ed a {
@@ -117,7 +128,7 @@
 /* Frosted glass, used only where content scrolls under a surface that stays put. */
 .ed .ed-glass {
   /* Opaque enough that text scrolling underneath never ghosts through; the blur only softens colour and images. */
-  background: rgb(250 249 246 / 0.94);
+  background: rgb(250 249 246 / 0.985);
   backdrop-filter: saturate(1.8) blur(24px);
   -webkit-backdrop-filter: saturate(1.8) blur(24px);
 }

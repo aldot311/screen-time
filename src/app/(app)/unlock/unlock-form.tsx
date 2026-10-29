@@ -1,13 +1,23 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CircleAlert, Eye, EyeOff, LockKeyholeOpen } from "lucide-react";
 import { Spinner } from "@/components/ed/pending-link";
 
+// The same white field as the app's other forms. One error style only: a red border, and while the field shows an
+// error the focus ring is dropped so the two never stack.
+const INPUT = [
+  "block h-[52px] w-full rounded-(--r-ctl) border-[1.5px] bg-(--card) pr-14 pl-4 text-[16px] text-(--ink)",
+  "shadow-[0_1px_1px_rgb(20_19_15/0.03)] transition-[border-color] duration-150 placeholder:text-(--ink-3)",
+  "border-(--hair-2) hover:border-(--ink-3)",
+  "aria-invalid:border-(--short) aria-invalid:outline-none! aria-invalid:shadow-none!",
+].join(" ");
+
 export function UnlockForm() {
   const router = useRouter();
   const next = useSearchParams().get("next") ?? "/campaigns";
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [shown, setShown] = useState(false);
@@ -15,35 +25,40 @@ export function UnlockForm() {
   const id = useId();
   const errorId = `${id}-error`;
 
+  const fail = (message: string) => {
+    setBusy(false);
+    setError(message);
+    input.current?.focus();
+  };
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (busy) return;
+    if (!password) return fail("Type the demo password.");
+    setBusy(true);
+    setError(null);
+    let res: Response;
+    try {
+      res = await fetch("/api/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+    } catch {
+      return fail("Could not reach the server. Check your connection and try again.");
+    }
+    if (!res.ok) {
+      // 503: this deployment has no demo password, so uploads are off for everyone.
+      if (res.status === 503) return fail("Uploads are switched off on this demo. Browse the reports instead.");
+      return fail((await res.json().catch(() => null))?.error ?? "Could not unlock.");
+    }
+    // Stay busy until the next page commits, so the button never snaps back while the router navigates.
+    router.push(sameOriginPath(next));
+    router.refresh();
+  }
+
   return (
-    <form
-      className="mt-7 space-y-4"
-      action={async (form) => {
-        setBusy(true);
-        setError(null);
-        try {
-          const res = await fetch("/api/unlock", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password: String(form.get("password") ?? "") }),
-          });
-          if (!res.ok) {
-            setBusy(false);
-            setError((await res.json().catch(() => null))?.error ?? "Could not unlock.");
-            input.current?.focus();
-            input.current?.select();
-            return;
-          }
-        } catch {
-          setBusy(false);
-          setError("Could not reach the server. Check your connection and try again.");
-          return;
-        }
-        // Stay busy until the next page commits, so the button never snaps back while the router navigates.
-        router.push(sameOriginPath(next));
-        router.refresh();
-      }}
-    >
+    <form className="mt-7 space-y-4" noValidate onSubmit={submit}>
       <div>
         <label htmlFor={`${id}-pw`} className="block text-[14px] font-semibold">
           Demo password
@@ -54,20 +69,19 @@ export function UnlockForm() {
             id={`${id}-pw`}
             name="password"
             type={shown ? "text" : "password"}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (error) setError(null);
+            }}
             autoComplete="current-password"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
             enterKeyHint="go"
-            required
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
-            className={[
-              "block h-[52px] w-full rounded-(--r-ctl) bg-(--paper) pr-14 pl-4 text-[16px] text-(--ink) ring-1 transition-[box-shadow,background-color] duration-150 placeholder:text-(--ink-3)",
-              // Focus is the app-wide focus ring (editorial.css); the field also brightens to card white.
-              "hover:ring-(--ink-3) focus:bg-(--card)",
-              error ? "ring-(--reject)" : "ring-(--hair-2)",
-            ].join(" ")}
+            className={INPUT}
           />
           <button
             type="button"
@@ -80,15 +94,14 @@ export function UnlockForm() {
             {shown ? <EyeOff className="size-5" strokeWidth={2} aria-hidden /> : <Eye className="size-5" strokeWidth={2} aria-hidden />}
           </button>
         </div>
-      </div>
-
-      <div aria-live="assertive">
-        {error && (
-          <p id={errorId} role="alert" className="flex items-start gap-2 rounded-(--r-ctl) bg-(--reject-soft) px-3.5 py-3 text-[14px] leading-snug font-medium text-(--reject)">
-            <CircleAlert className="mt-px size-[18px] shrink-0" strokeWidth={2.25} aria-hidden />
-            {error}
-          </p>
-        )}
+        <div aria-live="assertive">
+          {error && (
+            <p id={errorId} role="alert" className="mt-2 flex items-start gap-1.5 text-[14px] leading-snug font-medium text-(--short)">
+              <CircleAlert className="mt-px size-[17px] shrink-0" strokeWidth={2.25} aria-hidden />
+              {error}
+            </p>
+          )}
+        </div>
       </div>
 
       <button

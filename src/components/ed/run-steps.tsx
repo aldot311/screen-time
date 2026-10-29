@@ -26,7 +26,13 @@ export function RunStepsEd({ status, step, error }: { status: VideoStatus; step:
               <span
                 className={[
                   "relative grid size-7 shrink-0 place-items-center rounded-full",
-                  done ? "bg-(--pass-soft) text-(--pass)" : failed ? "bg-(--short) text-white" : active ? "bg-(--ink) text-white" : "bg-(--wash) text-(--ink-3)",
+                  done
+                    ? "bg-(--pass-soft) text-(--pass)"
+                    : failed
+                      ? "bg-(--short) text-white"
+                      : active
+                        ? "bg-(--ink) text-white"
+                        : "bg-(--wash) text-(--ink-3)",
                 ].join(" ")}
               >
                 {done ? (

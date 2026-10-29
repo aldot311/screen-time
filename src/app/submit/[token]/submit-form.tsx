@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Check, Upload } from "lucide-react";
 import { Spinner } from "@/components/ed/pending-link";
-import { safeUploadName } from "@/lib/campaign/upload-name";
+import { requestFilePrefix, requestNonce, safeUploadName } from "@/lib/campaign/upload-name";
 
 type State = { kind: "idle" } | { kind: "sending"; name: string; pct: number | null } | { kind: "sent"; name: string } | { kind: "error"; message: string };
 
@@ -18,7 +18,7 @@ export function SubmitForm({ token, consent, mode, campaignId }: { token: string
       let res: Response;
       if (mode === "blob") {
         const { upload } = await import("@vercel/blob/client");
-        const blob = await upload(`campaigns/${campaignId}/files/${safeUploadName(file)}`, file, {
+        const blob = await upload(`campaigns/${campaignId}/files/${requestFilePrefix(requestNonce(token) ?? "")}${safeUploadName(file)}`, file, {
           access: "public",
           handleUploadUrl: "/api/blob-upload",
           clientPayload: token,

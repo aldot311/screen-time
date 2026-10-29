@@ -248,7 +248,8 @@ export async function listCampaigns(): Promise<Campaign[]> {
   const ids = keys.map((k) => /^campaigns\/([^/]+)\/campaign\.json$/.exec(k)?.[1]).filter(isValidId);
   const stored = (await Promise.all(ids.map((id) => getCampaign(id)))).filter((c): c is Campaign => c !== null);
   stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return [...stored, previewCampaign()];
+  // The labelled preview fills an empty store; once real runs exist it would sit beside them with different numbers.
+  return stored.length ? stored : [previewCampaign()];
 }
 
 export async function getCampaign(id: string): Promise<Campaign | null> {

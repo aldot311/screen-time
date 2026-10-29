@@ -11,11 +11,7 @@ export default function Loading() {
           <span className="ed-skel h-4 w-24 rounded-full" />
         </div>
       </header>
-      <main
-        className="mx-auto w-full max-w-[1200px] px-4 pb-24 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8"
-        aria-busy="true"
-        aria-label="Loading report"
-      >
+      <main className="mx-auto w-full max-w-[1200px] px-4 pb-24 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8" aria-busy="true" aria-label="Loading report">
         <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
           <div className="lg:sticky lg:top-[76px] lg:self-start">
             <div className="-mx-4 bg-(--wash) px-4 py-3 sm:mx-0 sm:rounded-(--r-card) sm:py-4 lg:py-5">

@@ -4,8 +4,9 @@
 // rejected look-alike. Own controls (44 px targets), tap-to-play, and a docked mode: the same <video> element moves
 // into a floating frosted dock so playback never restarts when the page scrolls it away.
 //
-// First paint is never black: the stored still is the poster (and a blurred copy fills any letterbox). The still is a
-// different moment than frame 0, so no boxes are drawn until the video itself shows a frame (after play or a seek).
+// First paint is never black: the stored still is the poster (and a blurred copy fills any letterbox) until the video
+// has decoded a frame. The still is a different moment than frame 0, so boxes are drawn only over real video frames.
+// Rejected boxes SAM was unsure of (confidence under 0.5) and specks under 0.1% of the frame are not drawn: they drift.
 // Labels are laid out so the counted and rejected tags never overlap each other, never leave the frame, and the paused
 // play glyph moves off any label.
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
@@ -18,6 +19,8 @@ export interface OverlayBox {
   objectId: number;
   box: Box;
   verdict: VerifyVerdict;
+  /** SAM's confidence for this box, when the run recorded it. */
+  confidence?: number;
 }
 
 export interface PlayerHandle {
@@ -60,8 +63,7 @@ interface Rect {
   w: number;
   h: number;
 }
-const hit = (a: Rect, b: Rect, pad = 0) =>
-  a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
+const hit = (a: Rect, b: Rect, pad = 0) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
 
 export const Player = forwardRef<PlayerHandle, Props>(function Player(
   {
@@ -85,6 +87,9 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
   const video = useRef<HTMLVideoElement>(null);
   const frameBox = useRef<HTMLDivElement>(null);
   const stopAt = useRef<number | null>(null);
+  // A stop point only counts once the jump to the new start has landed; otherwise a stale frame from before the jump
+  // (past the new end) would stop playback at once.
+  const stopArmed = useRef(false);
   const [frame, setFrame] = useState(0);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(ambient);
@@ -106,7 +111,8 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       const v = video.current;
       if (!v) return;
       v.currentTime = Math.max(0, Math.floor(sec * FPS) + 0.5) / FPS;
-      stopAt.current = end !== undefined && end < durationSec - 0.1 ? end : null;
+      stopAt.current = end !== undefined && end < durationSec - 0.05 ? end : null;
+      stopArmed.current = false;
       void v.play().catch(() => {
         // Autoplay with sound refused: play muted rather than show nothing.
         v.muted = true;
@@ -144,10 +150,15 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
     if (!v) return;
     let handle = 0;
     let raf = 0;
-    const report = (t: number) => {
-      if (stopAt.current !== null && t >= stopAt.current) {
+    const report = (sec: number) => {
+      let t = sec;
+      if (stopAt.current !== null && stopArmed.current && t >= stopAt.current) {
+        // Stop exactly at the end of the stretch, not a frame or two past it.
+        const end = stopAt.current;
         stopAt.current = null;
         v.pause();
+        v.currentTime = end;
+        t = end;
       }
       setFrame(Math.floor(t * FPS + 1e-6));
       setTime(t);
@@ -167,6 +178,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       raf = requestAnimationFrame(loop);
     }
     const onSeeked = () => {
+      stopArmed.current = true;
       setFramed(true);
       report(v.currentTime);
     };
@@ -179,12 +191,17 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       setPlaying(false);
       onPlayingChange?.(false);
     };
-    const onLoaded = () => setLoaded(true);
-    if (v.readyState >= 2) setLoaded(true);
+    // A decoded frame is on screen: drop the poster and draw that frame's boxes.
+    const onLoaded = () => {
+      setLoaded(true);
+      setFramed(true);
+    };
+    if (v.readyState >= 2) onLoaded();
     v.addEventListener("seeked", onSeeked);
     v.addEventListener("play", onPlay);
     v.addEventListener("pause", onPause);
     v.addEventListener("loadeddata", onLoaded);
+    v.addEventListener("ended", onPause);
     return () => {
       if (hasRvfc) v.cancelVideoFrameCallback(handle);
       cancelAnimationFrame(raf);
@@ -192,16 +209,24 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       v.removeEventListener("play", onPlay);
       v.removeEventListener("pause", onPause);
       v.removeEventListener("loadeddata", onLoaded);
+      v.removeEventListener("ended", onPause);
     };
   }, [onTime, onPlayingChange]);
 
-  const current = useMemo(() => (framed && showBoxes ? (byFrame.get(frame) ?? []) : []), [framed, showBoxes, byFrame, frame]);
+  const current = useMemo(
+    () =>
+      framed && showBoxes
+        ? (byFrame.get(frame) ?? []).filter(
+            (b) =>
+              ((b.box.x2 - b.box.x1 + 1) * (b.box.y2 - b.box.y1 + 1)) / (width * height) >= 0.001 &&
+              (b.verdict === "match" || b.confidence === undefined || b.confidence >= 0.5),
+          )
+        : [],
+    [framed, showBoxes, byFrame, frame, width, height],
+  );
   const wide = width / height >= 9 / 16;
   const showGlyph = !ambient && !playing && !docked;
-  const layout = useMemo(
-    () => layoutLabels(current, width, height, size, ambient, showGlyph),
-    [current, width, height, size, ambient, showGlyph],
-  );
+  const layout = useMemo(() => layoutLabels(current, width, height, size, ambient, showGlyph), [current, width, height, size, ambient, showGlyph]);
 
   const toggle = () => {
     const v = video.current;
@@ -227,7 +252,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
         <video
           ref={video}
           src={src}
-          poster={poster}
+          poster={loaded ? undefined : poster}
           className="absolute inset-0 size-full object-contain"
           autoPlay={ambient}
           muted={muted}
@@ -239,7 +264,11 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
         <div
           ref={frameBox}
           className="pointer-events-none absolute top-1/2 left-1/2 max-h-full max-w-full -translate-x-1/2 -translate-y-1/2"
-          style={{ aspectRatio: `${width} / ${height}`, width: wide ? "100%" : "auto", height: wide ? "auto" : "100%" }}
+          style={{
+            aspectRatio: `${width} / ${height}`,
+            width: wide ? "100%" : "auto",
+            height: wide ? "auto" : "100%",
+          }}
         >
           {current.map((b) => {
             const match = b.verdict === "match";
@@ -282,12 +311,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
         ) : (
           <>
             {!ambient && (
-              <button
-                type="button"
-                onClick={toggle}
-                className="absolute inset-0 size-full cursor-pointer"
-                aria-label={playing ? "Pause" : "Play"}
-              />
+              <button type="button" onClick={toggle} className="absolute inset-0 size-full cursor-pointer" aria-label={playing ? "Pause" : "Play"} />
             )}
             {showGlyph && layout.glyph && (
               <span
@@ -298,9 +322,9 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
               </span>
             )}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3">
-              <span className="ed-glass-dark ed-tc rounded-full px-2.5 py-1 text-[12px] text-white">
+              <span className="ed-glass-dark ed-tc rounded-full px-2.5 py-1 text-[12px] whitespace-nowrap text-white">
                 {timecode(time)}
-                {!ambient && <span className="text-white/60"> / {timecode(durationSec)}</span>}
+                {!ambient && size.w >= 200 && <span className="text-white/60"> / {timecode(durationSec)}</span>}
               </span>
               <span className="pointer-events-auto flex gap-2">
                 {ambient ? (
@@ -310,7 +334,11 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
                     className="ed-press ed-glass-dark grid size-11 place-items-center rounded-full text-white active:bg-black/60"
                     aria-label={playing ? "Pause replay" : "Play replay"}
                   >
-                    {playing ? <Pause className="size-4" fill="currentColor" strokeWidth={0} /> : <Play className="ml-0.5 size-4" fill="currentColor" strokeWidth={0} />}
+                    {playing ? (
+                      <Pause className="size-4" fill="currentColor" strokeWidth={0} />
+                    ) : (
+                      <Play className="ml-0.5 size-4" fill="currentColor" strokeWidth={0} />
+                    )}
                   </button>
                 ) : (
                   <button
@@ -398,7 +426,13 @@ function layoutLabels(
         }
       }
     }
-    if (!best) best = { x: xs[0], y: Math.min(Math.max(r.y + 4, pad), H - LABEL_H - pad), w, h: LABEL_H };
+    if (!best)
+      best = {
+        x: xs[0],
+        y: Math.min(Math.max(r.y + 4, pad), H - LABEL_H - pad),
+        w,
+        h: LABEL_H,
+      };
     // Still colliding: stack it under the tag it hits.
     while (placed.some((p) => hit(p, best!, 2)) && best.y + LABEL_H * 2 + 6 < H - pad) best = { ...best, y: best.y + LABEL_H + 4 };
     placed.push({ ...best, objectId: b.objectId, match, text });
@@ -407,12 +441,26 @@ function layoutLabels(
   let glyph: { top: string } | null = null;
   if (withGlyph) {
     for (const fy of [0.5, 0.68, 0.32, 0.8, 0.2]) {
-      const c = { x: W / 2 - GLYPH / 2, y: fy * H - GLYPH / 2, w: GLYPH, h: GLYPH };
+      const c = {
+        x: W / 2 - GLYPH / 2,
+        y: fy * H - GLYPH / 2,
+        w: GLYPH,
+        h: GLYPH,
+      };
       if (!placed.some((p) => hit(p, c, 6))) {
         glyph = { top: `${fy * 100}%` };
         break;
       }
     }
   }
-  return { labels: placed.map(({ objectId, match, text, x, y }) => ({ objectId, match, text, x, y })), glyph };
+  return {
+    labels: placed.map(({ objectId, match, text, x, y }) => ({
+      objectId,
+      match,
+      text,
+      x,
+      y,
+    })),
+    glyph,
+  };
 }

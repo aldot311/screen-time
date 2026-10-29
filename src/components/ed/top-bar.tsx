@@ -9,6 +9,11 @@ export function TopBar({ back, right, appNav = true }: { back?: { href: string; 
   return (
     <header className="ed-glass sticky top-0 z-30 border-b border-(--hair)/70 pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex h-14 w-full max-w-[1200px] items-center gap-3 pr-[max(16px,env(safe-area-inset-right))] pl-[max(8px,env(safe-area-inset-left))] sm:pl-6 lg:pr-8 lg:pl-8">
+        {back && (
+          <PendingLink href="/" className="mr-1 hidden h-11 items-center rounded-full px-2 md:inline-flex" hint="none" aria-label="Screen-Time home">
+            <Wordmark />
+          </PendingLink>
+        )}
         {back ? (
           <PendingLink
             href={back.href}
@@ -26,10 +31,13 @@ export function TopBar({ back, right, appNav = true }: { back?: { href: string; 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {appNav && (
             <nav aria-label="App" className="hidden items-center gap-1 md:flex">
-              <PendingLink href="/campaigns" className="inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) hover:bg-(--wash) hover:text-(--ink) active:bg-(--hair)">
-                Campaigns
-              </PendingLink>
-              <PendingLink href="/campaigns/new" className="inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) hover:bg-(--wash) hover:text-(--ink) active:bg-(--hair)">
+              {/* No link that repeats the back link beside it. */}
+              {back?.href !== "/campaigns" && (
+                <PendingLink href="/campaigns" className="inline-flex h-11 items-center rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) [@media(hover:hover)]:hover:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink) active:bg-(--hair)">
+                  Campaigns
+                </PendingLink>
+              )}
+              <PendingLink href="/campaigns/new" className="inline-flex h-11 items-center rounded-full px-3.5 text-[14px] font-semibold text-(--ink-2) [@media(hover:hover)]:hover:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink) active:bg-(--hair)">
                 New campaign
               </PendingLink>
             </nav>

@@ -3,7 +3,7 @@
 Per-frame precision and recall of "brand product on screen" against hand-checked labels, on real runs of the full
 pipeline (SAM 3.1 tracking → Muse Spark look-alike check → metrics), 15 fps.
 
-- Test set: 21 vertical clips (15 filmed by Aldo, 6 Pexels stock), 23 clip/product targets: an Alani Nu can,
+- Test set: 20 labelled vertical clips (15 filmed by Aldo, 5 Pexels stock; a sixth stock clip was never labelled), 23 clip/product targets (clip11, clip14 and clip15 each show two products): an Alani Nu can,
   a Stanley tumbler, a New Balance sneaker, generic sneakers, cans, a bottle and a cup, plus a coconut-water look-alike
   that must be rejected and a clip with no product.
 - Labels: drafted by two independent Claude vision passes over frame-numbered 5 fps grids, kept where both agree

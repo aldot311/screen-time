@@ -63,8 +63,9 @@ describe("campaign routes", () => {
     const bad = await campaigns.POST(json({ name: "x" }));
     expect(bad.status).toBe(400);
     const list = (await (await campaigns.GET()).json()) as { id: string }[];
-    expect(list.at(-1)?.id).toBe("preview");
-    expect(list).toHaveLength(4);
+    // Real campaigns replace the labelled preview in the list (it stays reachable by its URL).
+    expect(list.map((c) => c.id)).not.toContain("preview");
+    expect(list).toHaveLength(3);
   });
 
   it("returns a campaign with its videos, and 404 for an unknown one", async () => {

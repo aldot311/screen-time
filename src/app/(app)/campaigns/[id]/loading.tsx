@@ -15,7 +15,7 @@ export default function Loading() {
               <div className="ed-skel mt-2 h-7 w-2/3 max-w-[300px] rounded-[10px]" />
               <div className="ed-skel mt-5 h-5 w-64 rounded-full" />
             </div>
-            <div className="flex gap-2 overflow-hidden">
+            <div className="flex gap-2 overflow-hidden lg:hidden">
               {Array.from({ length: 6 }, (_, i) => (
                 <div key={i} className="flex w-[80px] shrink-0 flex-col items-center gap-1.5 pt-1">
                   <div className="ed-skel h-[124px] w-[72px] rounded-[22px]" />

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { TriangleAlert } from "lucide-react";
+import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { getCampaign, getVideo } from "@/lib/campaign/store";
 import { loadShowcase } from "@/lib/campaign/showcase";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -25,7 +25,10 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
   const { id, videoId } = await params;
   const [campaign, video, showcase] = await Promise.all([getCampaign(id), getVideo(id, videoId), loadShowcase()]);
   if (!campaign || !video) notFound();
-  const running = video.status === "running" || video.status === "uploaded";
+  // A creator's link submission waits for the brand to start it; the brand's own upload starts by itself. Only poll
+  // while something is actually going to change.
+  const waiting = video.status === "uploaded" && Boolean(video.consent);
+  const running = video.status === "running" || (video.status === "uploaded" && !video.consent);
   const synthetic = Boolean(video.synthetic ?? campaign.synthetic);
   const title = humanTitle(video.title);
 
@@ -41,7 +44,7 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
     <>
       <AutoRefresh active={running} everyMs={1500} />
       <TopBar back={{ href: `/campaigns/${campaign.id}`, label: campaign.brand }} />
-      <main className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(env(safe-area-inset-bottom)+132px)] sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 lg:pb-24">
+      <main className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(env(safe-area-inset-bottom)+128px)] sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 lg:pb-24">
         {video.status === "done" && video.report ? (
           <ReportClient
             report={video.report}
@@ -86,6 +89,11 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
                   </span>
                   Live · updates every 1.5 s
                 </p>
+              ) : waiting ? (
+                <p className="inline-flex h-8 items-center gap-1.5 rounded-full bg-(--card) px-3 text-[13px] font-semibold text-(--ink-2) shadow-(--sh-1) ring-1 ring-(--hair)">
+                  <ShieldCheck className="size-4 text-(--pass)" strokeWidth={2.25} aria-hidden />
+                  Consent recorded
+                </p>
               ) : (
                 <p className="inline-flex h-8 items-center gap-1.5 rounded-full bg-(--short) px-3 text-[13px] font-semibold text-white">
                   <TriangleAlert className="size-4" strokeWidth={2.5} aria-hidden />
@@ -95,16 +103,20 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
               <h1 id="run-h" className="ed-display mt-4 text-[32px] leading-[1.08] sm:text-[40px]">
                 {video.status === "failed"
                   ? "The analysis stopped before it finished."
-                  : video.status === "uploaded"
-                    ? "Uploaded. The analysis starts in a moment."
-                    : video.status === "done"
-                      ? "This run finished without a report."
-                      : `Screen-Time is watching for ${campaign.brand}.`}
+                  : waiting
+                    ? "Ready to analyse."
+                    : video.status === "uploaded"
+                      ? "Uploaded. The analysis starts in a moment."
+                      : video.status === "done"
+                        ? "This run finished without a report."
+                        : `Screen-Time is watching for ${campaign.brand}.`}
               </h1>
               <p className="mt-3 max-w-[60ch] text-[16px] leading-[1.55] text-(--ink-2)">
-                {video.status === "failed" || video.status === "done"
-                  ? "Nothing from this video is counted yet. The reason is shown under the step that stopped. Once it is fixed, run it again; the video does not need to be uploaded again."
-                  : `Looking for “${campaign.prompt}”, checking each find against ${campaign.productDescription}, then measuring and checking the contract.`}
+                {waiting && video.consent
+                  ? `Sent by ${video.creator} through a request link on ${new Date(video.consent.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · consent recorded. Start the analysis when you are ready; it takes about a minute.`
+                  : video.status === "failed" || video.status === "done"
+                    ? "Nothing from this video is counted yet. The reason is shown under the step that stopped. Once it is fixed, run it again; the video does not need to be uploaded again."
+                    : `Looking for “${campaign.prompt}”, checking each find against ${campaign.productDescription}, then measuring and checking the contract.`}
               </p>
 
               <div className="mt-6 rounded-(--r-card) bg-(--wash)/60 p-2 ring-1 ring-(--hair)">
@@ -112,7 +124,15 @@ export default async function VideoPage({ params }: PageProps<"/campaigns/[id]/v
               </div>
 
               {video.status === "failed" && !video.step && video.error && (
-                <p className="mt-4 max-w-[60ch] rounded-(--r-ctl) bg-(--short-soft) px-4 py-3 text-[14.5px] text-(--short)">{friendlyError(video.error)}</p>
+                <p className="mt-4 max-w-[60ch] rounded-(--r-ctl) bg-(--short-soft) px-4 py-3 text-[14.5px] text-(--short)">
+                  {friendlyError(video.error)}
+                </p>
+              )}
+
+              {waiting && !synthetic && (
+                <div className="mt-6">
+                  <RunAgain campaignId={campaign.id} videoId={video.id} first />
+                </div>
               )}
 
               {(video.status === "failed" || video.status === "done") &&

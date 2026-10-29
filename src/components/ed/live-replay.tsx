@@ -1,47 +1,76 @@
 "use client";
 
-// The landing page's proof: a real run replayed. The clip loops muted with SAM's boxes on it, the strip fills only
-// while the brand's product is on screen, the counter adds up those seconds, and each contract term ticks off at the
-// moment the replay has shown enough to settle it.
+// The landing page's proof: a real run replayed. The clip loops muted with SAM's boxes on it, the lanes fill only with
+// what has played (lime while the brand's product is on screen, hatched red for the look-alike, violet when the brand
+// is said), the counter adds up those seconds, and each contract term ticks off at the exact moment its threshold is
+// crossed. With reduced motion the replay waits on a clear Play control instead of starting by itself.
 //
-// Layout: on a phone the video is the hero at full card width, with the strip as its scrubber right under it, then
-// the counter beside the object crops, then the contract. From sm up the video sits left and the counter, crops and
-// contract fill the column beside it (no empty band), with the strip across the bottom.
-import { useMemo, useState } from "react";
-import { Check, CircleHelp, X } from "lucide-react";
-import { FPS, type TermResult, type VideoMetrics, type VideoReport } from "@/lib/types";
-import { countedBefore, framesToSegments, timecode, verdictOf } from "@/components/format";
-import { Player } from "./player";
-import { Strip } from "./strip";
+// Layout: on a phone the video is the hero at full card width, with the lanes right under it, then the counter beside
+// the object crops, then the contract. From sm up the video sits left and the counter, crops and contract fill the
+// column beside it, with the lanes across the bottom.
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Check, CircleHelp, Play, X } from "lucide-react";
+import { FPS, type Mention, type TermResult, type VideoMetrics, type VideoReport } from "@/lib/types";
+import { countedBefore, framesToSegments, tenths, timecode, verdictOf } from "@/components/format";
+import { Player, type PlayerHandle } from "./player";
+import { LandingLanes } from "./landing-lanes";
 import { Figure, VerdictPill } from "./bits";
 
 interface Props {
   report: VideoReport;
   videoUrl: string;
+  poster?: string;
   cropUrls?: Record<string, string>;
   names?: Record<string, string>;
 }
 
 type TermState = "open" | "pass" | "fail" | "unsure";
 
-export function LiveReplay({ report, videoUrl, cropUrls = {}, names = {} }: Props) {
+const REDUCED = "(prefers-reduced-motion: reduce)";
+function subscribeReduced(cb: () => void) {
+  const mq = window.matchMedia(REDUCED);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
+export function LiveReplay({ report, videoUrl, poster, cropUrls = {}, names = {} }: Props) {
   const [time, setTime] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const player = useRef<PlayerHandle>(null);
+  const reduced = useSyncExternalStore(subscribeReduced, () => window.matchMedia(REDUCED).matches, () => false);
+
+  // Reduced motion: hold the replay on its first frame until the viewer asks for it.
+  useEffect(() => {
+    if (reduced) player.current?.seek(0);
+  }, [reduced]);
+
   const m = report.metrics;
   const duration = report.info.durationSec;
   const counted = countedBefore(m, time);
   const heard = m.mentions.filter((x) => x.startSec <= time);
-  const rejected = useMemo(
-    () => framesToSegments((report.detections ?? []).filter((d) => d.verdict !== "match").map((d) => d.frame)),
-    [report.detections],
-  );
+  // The same look-alike boxes the player draws (it skips unsure ones and specks), so the lane and the video agree.
+  const rejected = useMemo(() => {
+    const area = report.info.width * report.info.height;
+    return framesToSegments(
+      (report.detections ?? [])
+        .filter(
+          (d) =>
+            d.verdict !== "match" &&
+            (d.confidence === undefined || d.confidence >= 0.5) &&
+            ((d.box.x2 - d.box.x1 + 1) * (d.box.y2 - d.box.y1 + 1)) / area >= 0.001,
+        )
+        .map((d) => d.frame),
+    );
+  }, [report.detections, report.info.width, report.info.height]);
   const firstSeen = useMemo(() => {
     const out = new Map<number, number>();
     for (const d of report.detections ?? []) out.set(d.objectId, Math.min(out.get(d.objectId) ?? Infinity, d.frame / FPS));
     return out;
   }, [report.detections]);
+  const settle = useMemo(() => report.terms.map((t) => settlesAt(t, m, duration)), [report.terms, m, duration]);
 
-  const states: TermState[] = report.terms.map((t) =>
-    time < settlesAt(t, m, duration) ? "open" : t.pass === true ? "pass" : t.pass === false ? "fail" : "unsure",
+  const states: TermState[] = report.terms.map((t, i) =>
+    time < settle[i] ? "open" : t.pass === true ? "pass" : t.pass === false ? "fail" : "unsure",
   );
   const settled = states.filter((s) => s !== "open").length;
   const allSettled = report.terms.length > 0 && settled === report.terms.length;
@@ -50,34 +79,39 @@ export function LiveReplay({ report, videoUrl, cropUrls = {}, names = {} }: Prop
     <div className="rounded-[28px] bg-(--card) p-2.5 shadow-(--sh-3) ring-1 ring-black/[0.04] sm:p-5">
       <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-[minmax(0,262px)_minmax(0,1fr)] sm:grid-rows-[auto_1fr_auto]">
         {/* The video: full card width on a phone. */}
-        <div className="sm:row-span-2">
+        <div className="relative sm:row-span-2">
           <Player
+            ref={player}
             src={videoUrl}
+            poster={poster}
             width={report.info.width}
             height={report.info.height}
             boxes={report.detections ?? []}
             durationSec={duration}
             onTime={setTime}
+            onPlayingChange={setPlaying}
             ambient
             rounded="rounded-[20px] sm:rounded-[18px]"
           />
+          {reduced && !playing && (
+            <button
+              type="button"
+              onClick={() => player.current?.toggle()}
+              className="ed-press ed-glass-dark absolute top-1/2 left-1/2 inline-flex h-14 -translate-x-1/2 -translate-y-1/2 items-center gap-2.5 rounded-full pr-6 pl-5 whitespace-nowrap text-[16px] font-semibold text-white shadow-(--sh-2) active:bg-black/60"
+            >
+              <Play className="size-5" fill="currentColor" strokeWidth={0} aria-hidden />
+              Play the replay
+            </button>
+          )}
         </div>
 
-        {/* The strip: the scrubber under the video on a phone, across the whole card from sm up. */}
+        {/* The lanes: right under the video on a phone, across the whole card from sm up. */}
         <div className="mt-4 px-1.5 sm:col-span-2 sm:row-start-3 sm:mt-5 sm:px-1">
-          <Strip
-            durationSec={duration}
-            segments={m.segments}
-            mentions={m.mentions}
-            rejected={rejected}
-            playheadSec={time}
-            fillTo={time}
-            size="compact"
-          />
+          <LandingLanes durationSec={duration} segments={m.segments} rejected={rejected} mentions={m.mentions} timeSec={time} />
         </div>
 
         {/* Counter and crops: side by side on a phone, stacked in the right column from sm up. */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-5 gap-y-4 px-2 pt-5 pb-1 sm:col-start-2 sm:row-start-1 sm:grid-cols-1 sm:px-0 sm:pt-1 sm:pb-0">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-5 gap-y-3 px-2 pt-5 pb-1 sm:col-start-2 sm:row-start-1 sm:grid-cols-1 sm:gap-y-4 sm:px-0 sm:pt-1 sm:pb-0">
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-(--ink-2)">Product on screen</p>
             <p className="mt-1 flex items-baseline gap-1">
@@ -87,7 +121,7 @@ export function LiveReplay({ report, videoUrl, cropUrls = {}, names = {} }: Prop
               <span className="ed-display text-[20px] text-(--ink-2) sm:text-[22px]">s</span>
             </p>
             <p className="mt-1.5 text-[13px] leading-snug text-(--ink-3)">
-              of <span className="tabular">{duration.toFixed(1)}</span> s, counted so far
+              of <span className="tabular">{tenths(duration)}</span> s, counted so far
             </p>
           </div>
 
@@ -140,9 +174,9 @@ export function LiveReplay({ report, videoUrl, cropUrls = {}, names = {} }: Prop
           </p>
         </div>
 
-        {/* The contract: ticks off as the replay settles each term. */}
+        {/* The contract: each term ticks at the moment the replay crosses its threshold. */}
         {report.terms.length > 0 && (
-          <div className="mt-3 sm:col-start-2 sm:row-start-2 sm:mt-4 sm:self-end">
+          <div className="mt-2 sm:col-start-2 sm:row-start-2 sm:mt-4 sm:self-end">
             <div className="flex min-h-8 items-center justify-between gap-3 px-2 sm:px-0">
               <p className="text-[13px] font-semibold text-(--ink)">The contract</p>
               <span className="relative grid min-h-8 place-items-end">
@@ -196,14 +230,53 @@ export function LiveReplay({ report, videoUrl, cropUrls = {}, names = {} }: Prop
   );
 }
 
-/** When the replay has shown enough to settle a term (same rule as the app's landing demo). */
+/**
+ * The moment the replay has shown enough to settle a term: the frame on which its threshold is crossed. Terms that
+ * fail or cannot be checked only settle at the end, since the whole video has to play before a miss is certain.
+ */
 function settlesAt(t: TermResult, metrics: VideoMetrics, durationSec: number): number {
   const end = durationSec - 0.2;
-  if (t.pass !== true) return end;
-  const frames = metrics.visibleFrames;
-  if (t.term.rule?.kind === "min_seconds_total" && frames) {
-    const nth = frames[Math.ceil(t.term.rule.seconds * FPS) - 1];
-    return nth === undefined ? end : (nth + 1) / FPS;
+  const rule = t.term.rule;
+  if (t.pass !== true || !rule) return end;
+  const frames = visibleFrames(metrics);
+  // The time the nth counted frame has finished showing.
+  const nth = (fs: number[], n: number) => {
+    const f = fs[Math.max(1, n) - 1];
+    return f === undefined ? end : (f + 1) / FPS;
+  };
+  const need = (sec: number) => Math.ceil(sec * FPS - 1e-6);
+  switch (rule.kind) {
+    case "min_seconds_total":
+      return nth(frames, need(rule.seconds));
+    case "min_seconds_within":
+      return nth(frames.filter((f) => f < rule.withinFirstSec * FPS - 1e-6), need(rule.seconds));
+    case "mentioned":
+      return nthMention(metrics.mentions, rule.minTimes, rule.withinFirstSec) ?? end;
+    case "first_seen_before":
+      return frames.length ? (frames[0] + 1) / FPS : end;
+    case "min_continuous": {
+      let run = 0;
+      for (let i = 0; i < frames.length; i++) {
+        run = i > 0 && frames[i] === frames[i - 1] + 1 ? run + 1 : 1;
+        if (run >= need(rule.seconds)) return (frames[i] + 1) / FPS;
+      }
+      return end;
+    }
+    default:
+      return t.evidence.at(-1)?.endSec ?? end;
   }
-  return t.evidence.at(-1)?.endSec ?? end;
+}
+
+function nthMention(mentions: Mention[], n: number, withinFirstSec?: number): number | undefined {
+  const ms = mentions
+    .filter((x) => withinFirstSec === undefined || x.startSec < withinFirstSec)
+    .sort((a, b) => a.startSec - b.startSec);
+  return ms[Math.max(1, n) - 1]?.endSec;
+}
+
+function visibleFrames(metrics: VideoMetrics): number[] {
+  if (metrics.visibleFrames) return [...metrics.visibleFrames].sort((a, b) => a - b);
+  const out: number[] = [];
+  for (const s of metrics.segments) for (let f = Math.round(s.startSec * FPS); f < Math.round(s.endSec * FPS); f++) out.push(f);
+  return out;
 }

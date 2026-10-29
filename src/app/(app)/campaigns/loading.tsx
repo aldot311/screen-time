@@ -11,7 +11,7 @@ export default function Loading() {
             <div className="ed-skel h-10 w-52 rounded-[12px] sm:h-14 sm:w-80" />
             <div className="ed-skel mt-3 h-4 w-64 rounded-full" />
           </div>
-          <div className="ed-skel h-11 w-[84px] rounded-full sm:w-[160px]" />
+          <div className="ed-skel hidden h-11 w-[170px] rounded-full md:block" />
         </div>
         <div className="mt-7 grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
