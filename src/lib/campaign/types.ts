@@ -20,6 +20,8 @@ export interface Campaign {
   creators?: CampaignCreator[];
   /** What the brand pays a creator for one delivered video, in US dollars, unless the creator has their own fee. */
   fee?: number;
+  /** "open": check each tracked object with open-weight Muse Spark Open (where this deployment has a host for it). */
+  checkEngine?: "open";
 }
 
 export interface CampaignCreator {

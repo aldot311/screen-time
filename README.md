@@ -35,7 +35,10 @@ upload ──▶ normalize ──▶ track ──▶ verify ──▶ listen ─
    mask per frame.
 3. **Verify.** Muse Spark looks at crops of each tracked object (first, middle and largest appearance) and decides
    whether it is the brand's product, a look-alike, or unclear. Only matches count, and every rejection carries
-   its reason.
+   its reason. A campaign can switch this check to Meta's open-weight **Muse Spark Open**, served by Fireworks
+   (the run receipt names the model and host; if the host fails, hosted Muse Spark checks that object instead).
+   On the labelled objects it scores 35 of 37 against hosted Spark's 37 of 37, with no look-alike counted
+   ([docs/ACCURACY.md](docs/ACCURACY.md)).
 4. **Prompt recovery (agentic).** If nothing SAM tracked is the product, Muse Spark looks at frames from the video.
    If the product is there, it names it the way SAM is likelier to find it, and SAM runs once more. On our test
    clips "tumbler" found nothing; Spark suggested "cup", and the second pass found the Stanley for 10.1 s. For a clip
@@ -70,6 +73,7 @@ pnpm dev                     # http://localhost:3000
 | Variable | Purpose |
 |---|---|
 | `META_MODEL_API_KEY` | Meta Model API key (required for runs) |
+| `OPEN_BASE_URL`, `OPEN_MODEL`, `OPEN_API_KEY` | An OpenAI-compatible host for Muse Spark Open (optional; turns on the campaign's open-weight switch). `OPEN_PROVIDER` names the host on receipts; on OpenRouter, `OPEN_PROVIDER_ONLY=fireworks` pins the provider |
 | `SCREEN_TIME_PASSWORD` | 12+ characters; required in production for any change (create, upload, run) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob store; without it, data lives in `data/store` |
 | `SCREEN_TIME_LINK_SECRET` | Random, 32+ characters (`openssl rand -base64 32`); signs "request video from creator" links. Without it in production, request links are off |

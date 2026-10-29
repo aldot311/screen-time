@@ -17,6 +17,8 @@ import { UploadVideos } from "@/components/ed/upload-videos";
 import { CampaignCover } from "@/components/ed/product-photo";
 import { CampaignCreators } from "@/components/ed/campaign-creators";
 import { FeeEditor } from "@/components/ed/fee-editor";
+import { EngineSwitch } from "@/components/ed/engine-switch";
+import { openWeightConfig } from "@/lib/meta/open-weight";
 import { feeFor, payout, payoutLine } from "@/lib/campaign/money";
 import { reviewFlags, reviewReason } from "@/lib/campaign/review";
 
@@ -90,6 +92,8 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
   const lookalikes = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict !== "match").length ?? 0), 0);
   const csv = `/api/campaigns/${campaign.id}/export.csv`;
   const canUpload = !campaign.synthetic;
+  // Only the host's name reaches the page; the key stays on the server.
+  const openHost = openWeightConfig();
   const countLine = oneHandle
     ? `${plural(videos.length, "test video")} from ${oneHandle}`
     : `${plural(videos.length, "video")} from ${plural(handles.size, "creator")}`;
@@ -174,6 +178,9 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                   <FeeEditor endpoint={`/api/campaigns/${campaign.id}`} fee={campaign.fee ?? null} label="Campaign fee per video" editable={canUpload} />
                   {canUpload && <span className="hidden text-[13px] text-(--ink-3) sm:inline">· a creator&rsquo;s own fee overrides it</span>}
                 </div>
+              )}
+              {canUpload && openHost && (
+                <EngineSwitch endpoint={`/api/campaigns/${campaign.id}`} engine={campaign.checkEngine === "open" ? "open" : "hosted"} provider={openHost.provider} />
               )}
 
               {/* The decision in money leads; the sentence below says why. */}

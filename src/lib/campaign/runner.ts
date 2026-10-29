@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+import { openWeightConfig } from "@/lib/meta/open-weight";
 import { API_KEY_ENV } from "@/lib/meta/http";
 import { CostGuard } from "@/lib/meta";
 import { runVideo } from "@/lib/pipeline/run";
@@ -95,6 +96,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
         productImageUrl,
         productImageSource: productImageUrl ? campaign.productImageUrl : undefined,
         guard: new CostGuard({ ...budget(), ledgerPath }),
+        openWeight: campaign.checkEngine === "open" ? (openWeightConfig() ?? undefined) : undefined,
         onStep: (step) =>
           write(async (v) => {
             // Tracking starts right after normalization, so the normalized copy is complete here.

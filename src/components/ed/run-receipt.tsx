@@ -50,6 +50,7 @@ export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
         <dt className="text-(--ink-3)">Models</dt>
         <dd>
           {receipt.models.sam} · {receipt.models.spark} · {receipt.models.transcribe}
+          {receipt.models.check && <span className="block">Object check: {receipt.models.check}</span>}
         </dd>
         <dt className="text-(--ink-3)">Sampling</dt>
         <dd>Every frame at {receipt.fps} fps (the video is re-encoded to {receipt.fps} fps first)</dd>

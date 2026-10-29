@@ -181,6 +181,7 @@ export interface RunReceipt {
   runId: string;
   startedAt: string;
   fps: number;
-  models: { sam: string; spark: string; transcribe: string };
+  /** `check` is set when the object check ran on open-weight Muse Spark Open instead of `spark`. */
+  models: { sam: string; spark: string; transcribe: string; check?: string };
   calls: ReceiptCall[];
 }

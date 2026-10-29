@@ -68,6 +68,26 @@ describe("campaign routes", () => {
     expect(list).toHaveLength(3);
   });
 
+  it("switches the object check to Muse Spark Open only where a host is set up", async () => {
+    const { id } = await newCampaign("Open weights");
+    const patch = (body: unknown) =>
+      campaignById.PATCH(new Request("http://localhost/api", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }), params({ id }));
+    delete process.env.OPEN_BASE_URL;
+    expect((await patch({ checkEngine: "open" })).status).toBe(409);
+    Object.assign(process.env, { OPEN_BASE_URL: "https://open.test/v1", OPEN_MODEL: "meta/muse-spark-open", OPEN_API_KEY: "k" });
+    try {
+      expect(((await (await patch({ checkEngine: "open" })).json()) as { checkEngine?: string }).checkEngine).toBe("open");
+      expect(((await (await patch({ fee: 300 })).json()) as { checkEngine?: string; fee?: number })).toMatchObject({ checkEngine: "open", fee: 300 });
+      expect((await (await patch({ checkEngine: "hosted" })).json()) as object).not.toHaveProperty("checkEngine");
+      expect((await patch({ checkEngine: "gpt" })).status).toBe(400);
+      expect((await patch({ checkEngine: "open", fee: 1 })).status).toBe(400);
+    } finally {
+      delete process.env.OPEN_BASE_URL;
+      delete process.env.OPEN_MODEL;
+      delete process.env.OPEN_API_KEY;
+    }
+  });
+
   it("returns a campaign with its videos, and 404 for an unknown one", async () => {
     const res = await campaignById.GET(new Request("http://localhost"), params({ id: "preview" }));
     const body = (await res.json()) as { campaign: { synthetic: boolean }; videos: unknown[] };

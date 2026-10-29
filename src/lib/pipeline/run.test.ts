@@ -574,3 +574,48 @@ describe("toChecks", () => {
     expect(toChecks(undefined)).toEqual([]);
   });
 });
+
+describe("runVideo with open-weight Muse Spark Open", () => {
+  const open = { baseUrl: "https://open.test/v1", model: "meta/muse-spark-open", apiKey: "open-key", provider: "Fireworks" };
+  const withOpen = (hosted: FetchLike, reply: () => Response) => {
+    const openCalls: { model: string; auth: string | null }[] = [];
+    const fetch: FetchLike = async (url, init) => {
+      if (url.startsWith(open.baseUrl)) {
+        openCalls.push({ model: JSON.parse(String(init?.body)).model, auth: new Headers(init?.headers).get("authorization") });
+        return reply();
+      }
+      return hosted(url, init);
+    };
+    return { fetch, openCalls };
+  };
+
+  it("checks each object on the open-weight host and names it on the receipt", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: hosted, paths } = fakeApi("match");
+    const { fetch, openCalls } = withOpen(hosted, () =>
+      Response.json({ choices: [{ message: { content: JSON.stringify({ verdict: "lookalike", visibility: "clear", reason: "Different flavor." }) } }] }),
+    );
+    const report = await runVideo({ ...base(dir, src, guard, fetch), openWeight: open });
+    expect(openCalls.length).toBeGreaterThan(0);
+    expect(openCalls[0]).toEqual({ model: "meta/muse-spark-open", auth: "Bearer open-key" });
+    expect(report.tracks.every((t) => t.verdict === "lookalike")).toBe(true);
+    expect(report.receipt?.models.check).toBe("muse-spark-open (open weights, Fireworks)");
+    const checks = report.receipt!.calls.filter((c) => c.purpose.startsWith("Check object"));
+    expect(checks.every((c) => c.model === "muse-spark-open")).toBe(true);
+    // Hosted Spark still reads the contract; it never checked an object.
+    expect(paths.filter((p) => p === "/v1/responses").length).toBeGreaterThan(0);
+  });
+
+  it("falls back to hosted Muse Spark when the open host fails, keeping the failed call on the receipt", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch } = withOpen(fakeApi("match").fetch, () => Response.json({ error: { message: "overloaded" } }, { status: 503 }));
+    const report = await runVideo({ ...base(dir, src, guard, fetch), openWeight: open });
+    expect(report.tracks.every((t) => t.verdict === "match")).toBe(true);
+    const checks = report.receipt!.calls.filter((c) => c.purpose.startsWith("Check object"));
+    expect(checks.some((c) => c.model === "muse-spark-open" && c.output.startsWith("failed: Fireworks returned 503"))).toBe(true);
+    expect(checks.some((c) => c.model === "muse-spark-1.3" && c.output.startsWith("match"))).toBe(true);
+    // Both calls are charged: the receipt still adds up to the report's cost.
+    const total = report.receipt!.calls.reduce((n, c) => n + c.usd, 0);
+    expect(Math.abs(total - report.cost.usd)).toBeLessThan(1e-9);
+  });
+});

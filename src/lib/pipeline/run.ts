@@ -6,6 +6,8 @@ import { CostGuard, CostLimitError, MetaApiError, MODELS, samVideo, sparkJson, t
 import { checkTerms, computeMetrics, findDisclosures, findMentions, frameSamples } from "@/lib/metrics";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
+import type { SparkContentPart } from "@/lib/meta/client";
+import { openJson, openModelName, type OpenWeightConfig } from "@/lib/meta/open-weight";
 import { evenFrames, filmstripBoxes } from "@/lib/frames";
 export { evenFrames } from "@/lib/frames";
 import type { StepId } from "@/lib/campaign/types";
@@ -73,6 +75,8 @@ export interface RunInput {
   runId?: string;
   /** Called with everything found so far each time a stage adds to it. Best effort: a throw is ignored. */
   onProgress?: (live: LiveProgress) => void | Promise<void>;
+  /** Check each tracked object with open-weight Muse Spark Open on this host instead of hosted Muse Spark. */
+  openWeight?: OpenWeightConfig;
 }
 
 
@@ -326,7 +330,13 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     detections: tagDetections(parsed.detections, verifications),
     // Everything reserved and settled for this video: SAM as billed, Spark and transcription as reserved.
     cost: { samFrames, usd: spend.usd },
-    receipt: { runId: input.runId ?? `${input.videoId}-${startedAt}`, startedAt, fps: FPS, models: { ...MODELS }, calls: spend.calls },
+    receipt: {
+      runId: input.runId ?? `${input.videoId}-${startedAt}`,
+      startedAt,
+      fps: FPS,
+      models: { ...MODELS, ...(input.openWeight ? { check: `${openModelName(input.openWeight)} (open weights, ${input.openWeight.provider})` } : {}) },
+      calls: spend.calls,
+    },
   };
 }
 
@@ -348,30 +358,45 @@ async function verifyTrack(
     }),
   );
   const withPhoto = Boolean(input.productImageUrl);
-  await spend.reserve(SPARK_RESERVE_USD, `verify ${input.videoId} obj${track.objectId}`);
-  const out = await spend.timed(
-    {
-      model: MODELS.spark,
-      purpose: `Check object ${track.objectId + 1} against the product`,
-      input: `${images.length} crop${images.length === 1 ? "" : "s"} of the object${withPhoto ? " + the product photo" : ""} + the description`,
-    },
-    SPARK_RESERVE_USD,
-    () =>
-      sparkJson<VerifyOutput>(
-        {
-          name: "product_check",
-          schema: VERIFY_SCHEMA,
-          strict: true,
-          input: [
-            { type: "input_text", text: verifyPrompt(input.productDescription, input.prompt, withPhoto) },
-            // The reference photo goes first, as the prompt says.
-            ...(withPhoto ? [input.productImageUrl!] : []).concat(images).map((image_url) => ({ type: "input_image" as const, image_url })),
-          ],
-        },
-        input.client,
-      ),
-    (r) => `${r.verdict}, ${r.visibility}`,
-  );
+  const parts: SparkContentPart[] = [
+    { type: "input_text", text: verifyPrompt(input.productDescription, input.prompt, withPhoto) },
+    // The reference photo goes first, as the prompt says.
+    ...(withPhoto ? [input.productImageUrl!] : []).concat(images).map((image_url) => ({ type: "input_image" as const, image_url })),
+  ];
+  const call = (model: string) => ({
+    model,
+    purpose: `Check object ${track.objectId + 1} against the product`,
+    input: `${images.length} crop${images.length === 1 ? "" : "s"} of the object${withPhoto ? " + the product photo" : ""} + the description`,
+  });
+  const verdictLine = (r: VerifyOutput) => `${r.verdict}, ${r.visibility}`;
+  const hosted = async () => {
+    await spend.reserve(SPARK_RESERVE_USD, `verify ${input.videoId} obj${track.objectId}`);
+    return spend.timed(
+      call(MODELS.spark),
+      SPARK_RESERVE_USD,
+      () => sparkJson<VerifyOutput>({ name: "product_check", schema: VERIFY_SCHEMA, strict: true, input: parts }, input.client),
+      verdictLine,
+    );
+  };
+  let out: VerifyOutput;
+  const open = input.openWeight;
+  if (open) {
+    // Muse Spark Open is priced like hosted Spark, so the same reservation covers it. A failed open call stays on the
+    // receipt and the object is checked by hosted Muse Spark instead, so one host outage never costs the report.
+    await spend.reserve(SPARK_RESERVE_USD, `verify-open ${input.videoId} obj${track.objectId}`);
+    try {
+      out = await spend.timed(
+        { ...call(openModelName(open)), purpose: `Check object ${track.objectId + 1} against the product (open weights, ${open.provider})` },
+        SPARK_RESERVE_USD,
+        () => openJson<VerifyOutput>(open, { name: "product_check", schema: VERIFY_SCHEMA, input: parts }, { fetch: input.client?.fetch }),
+        verdictLine,
+      );
+    } catch {
+      out = await hosted();
+    }
+  } else {
+    out = await hosted();
+  }
   if (withPhoto) photo.used = true;
   const checks = toChecks(out.checks);
   return { objectId: track.objectId, verdict: out.verdict, visibility: out.visibility, reason: out.reason, ...(checks.length ? { checks } : {}) };
