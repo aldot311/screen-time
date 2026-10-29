@@ -69,4 +69,7 @@ export interface VideoEntry {
   requestNonce?: string;
   /** While a run is in progress: what it has found so far, for the live analysis view. Cleared when the run ends. */
   live?: LiveProgress;
+  /** A manager's own decision when it differs from the recommendation, with the reason, kept beside the original
+   *  result. Cleared when the video is run again. */
+  override?: { decision: "pay" | "hold"; reason: string; at: string };
 }

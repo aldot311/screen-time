@@ -31,8 +31,8 @@ describe("campaignCsv", () => {
     expect(rows[0]).toBe(CSV_HEADER.join(","));
     // clip01: frames 18..77 of 167, all three terms checked and met.
     // Preview reports predate disclosure checks and product photos.
-    expect(rows[1]).toBe("@aldo.tile,clip01.mp4 (synthetic preview),done,4,35.9,1.2,4,56.2,0,3,0,0,0,0,not checked,,no,pay,");
-    expect(rows[2]).toBe('@aldo.tile,"a, b",uploaded,,,,,,,,,,,,,,,,');
+    expect(rows[1]).toBe("@aldo.tile,clip01.mp4 (synthetic preview),done,4,35.9,1.2,4,56.2,0,3,0,0,0,0,not checked,,no,pay,,pay,");
+    expect(rows[2]).toBe('@aldo.tile,"a, b",uploaded,,,,,,,,,,,,,,,,,,');
   });
 
   it("writes whether and where the sponsorship was disclosed, and whether the product photo was used", () => {
@@ -49,22 +49,22 @@ describe("campaignCsv", () => {
       withReport({ disclosure: { spoken: [], onScreen: [], onScreenChecked: false } }),
     ]);
     const rows = csv.trimEnd().split("\r\n");
-    expect(CSV_HEADER.slice(-5)).toEqual(["disclosed", "disclosed_where", "product_photo_used", "recommendation", "fee_usd"]);
-    expect(rows[1].endsWith(",yes,said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5,yes,pay,")).toBe(true);
-    expect(rows[2].endsWith(",no,,no,pay,")).toBe(true);
-    expect(rows[3].endsWith(",not checked,,no,pay,")).toBe(true);
+    expect(CSV_HEADER.slice(-7)).toEqual(["disclosed", "disclosed_where", "product_photo_used", "recommendation", "fee_usd", "final_decision", "override_reason"]);
+    expect(rows[1].endsWith(",yes,said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5,yes,pay,,pay,")).toBe(true);
+    expect(rows[2].endsWith(",no,,no,pay,,pay,")).toBe(true);
+    expect(rows[3].endsWith(",not checked,,no,pay,,pay,")).toBe(true);
   });
 
   it("adds the recommendation and the creator's fee", () => {
     const v = previewVideos()[0];
     const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
-    expect(rows[1].endsWith(",pay,450")).toBe(true);
+    expect(rows[1].endsWith(",pay,450,pay,")).toBe(true);
   });
 
   it("adds the recommendation and the creator's fee", () => {
     const v = previewVideos()[0];
     const rows = campaignCsv([v], { fee: 300, creators: [{ handle: v.creator, addedAt: "", fee: 450 }] }).trimEnd().split("\r\n");
-    expect(rows[1].endsWith(",pay,450")).toBe(true);
+    expect(rows[1].endsWith(",pay,450,pay,")).toBe(true);
   });
 
   it("leaves the recommendation off a video a later one from the same creator replaced", () => {
@@ -72,7 +72,13 @@ describe("campaignCsv", () => {
     const older = { ...v, id: "a", createdAt: "2026-10-01T00:00:00Z" };
     const newer = { ...v, id: "b", createdAt: "2026-10-02T00:00:00Z" };
     const rows = campaignCsv([older, newer], { fee: 300 }).trimEnd().split("\r\n");
-    expect(rows[1].endsWith(",superseded,")).toBe(true);
-    expect(rows[2].endsWith(",pay,300")).toBe(true);
+    expect(rows[1].endsWith(",superseded,,,")).toBe(true);
+    expect(rows[2].endsWith(",pay,300,pay,")).toBe(true);
+  });
+
+  it("writes a manager's override and its reason beside the recommendation", () => {
+    const v = { ...previewVideos()[0], override: { decision: "hold" as const, reason: "Logo hidden by a sticker", at: "2026-10-29T00:00:00Z" } };
+    const rows = campaignCsv([v], { fee: 300 }).trimEnd().split("\r\n");
+    expect(rows[1].endsWith(",pay,300,hold,Logo hidden by a sticker")).toBe(true);
   });
 });

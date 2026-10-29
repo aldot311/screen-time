@@ -383,6 +383,21 @@ export async function putVideo(v: VideoEntry): Promise<VideoEntry> {
   return saved;
 }
 
+/** Read-modify-write of one video entry, safe against a concurrent write (ETag on Blob, a queue locally). */
+export async function updateVideo(
+  campaignId: string,
+  videoId: string,
+  mutate: (v: VideoEntry) => VideoEntry | Promise<VideoEntry>,
+): Promise<VideoEntry | null> {
+  if (campaignId === PREVIEW_ID) throw new ReadOnlyError();
+  if (!isValidId(campaignId) || !isValidId(videoId)) return null;
+  return backend().updateJson<VideoEntry>(videoKey(campaignId, videoId), async (v) => {
+    const next = await mutate(v);
+    if (next.id !== videoId || next.campaignId !== campaignId) throw new Error("A video update cannot change its id");
+    return { ...next, updatedAt: new Date().toISOString() };
+  });
+}
+
 const EXTENSIONS: Record<string, string> = { "video/mp4": "mp4", "video/quicktime": "mov" };
 
 /** Stores a video file ("source" upload or "normalized" copy) and returns its playable URL. */

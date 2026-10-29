@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TermResult, VideoReport } from "@/lib/types";
 import { feeFor, payout, payoutLine, usd } from "./money";
-import { getCampaign } from "./store";
+import { getCampaign, getVideo, putVideo } from "./store";
 import type { Campaign, VideoEntry } from "./types";
 
 const term = (pass: boolean | null): TermResult => ({ term: { text: "t", rule: null }, pass, detail: "" }) as TermResult;
@@ -61,6 +61,11 @@ describe("payout", () => {
     expect(payoutLine(p)).toBe("Pay 1 creator no fee set · hold 1 ($200)");
   });
 
+  it("counts a manager's override instead of the recommendation", () => {
+    const v = { ...video("@a", report(true)), override: { decision: "hold" as const, reason: "wrong flavor in the end card", at: "" } };
+    expect(payoutLine(payout({ fee: 100 }, [v]))).toBe("Hold 1 ($100)");
+  });
+
   it("starts with Hold when nobody delivered", () => {
     expect(payoutLine(payout({ fee: 50 }, [video("@a", report(false))]))).toBe("Hold 1 ($50)");
   });
@@ -69,6 +74,7 @@ describe("payout", () => {
 const campaigns = await import("@/app/api/campaigns/route");
 const one = await import("@/app/api/campaigns/[id]/route");
 const creators = await import("@/app/api/campaigns/[id]/creators/route");
+const override = await import("@/app/api/campaigns/[id]/videos/[videoId]/override/route");
 
 describe("fee routes", () => {
   const params = <T extends object>(p: T) => ({ params: Promise.resolve(p) });
@@ -112,5 +118,27 @@ describe("fee routes", () => {
     await creators.PATCH(json({ handle: "maya", fee: null }, "PATCH"), params({ id }));
     expect((await getCampaign(id))?.creators?.[0].fee).toBeUndefined();
     expect((await creators.PATCH(json({ handle: "@nobody", fee: 5 }, "PATCH"), params({ id }))).status).toBe(404);
+  });
+
+  it("records a manager's override beside the result, refuses unfinished videos, and removes it", async () => {
+    const res = await campaigns.POST(json({ name: "Overrides", brand: "B", prompt: "can", productDescription: "a can", brandTerms: [], contractTerms: [] }));
+    const { id } = (await res.json()) as Campaign;
+    const base = { campaignId: id, creator: "@a", title: "x.mp4", videoUrl: "", step: null, createdAt: "2026-10-29T00:00:00Z", updatedAt: "" };
+    await putVideo({ ...base, id: "done1", status: "done", report: report(true) });
+    await putVideo({ ...base, id: "busy1", status: "running" });
+    const p = (videoId: string) => params({ id, videoId });
+
+    expect((await override.POST(json({ decision: "hold", reason: "ok" }), p("done1"))).status).toBe(400); // reason too short
+    expect((await override.POST(json({ decision: "maybe", reason: "the logo is covered" }), p("done1"))).status).toBe(400);
+    expect((await override.POST(json({ decision: "hold", reason: "the logo is covered" }), p("busy1"))).status).toBe(409);
+    expect((await override.POST(json({ decision: "hold", reason: "the logo is covered" }), p("nope1"))).status).toBe(404);
+
+    expect((await override.POST(json({ decision: "hold", reason: "  the logo is covered " }), p("done1"))).status).toBe(200);
+    const saved = await getVideo(id, "done1");
+    expect(saved?.override).toMatchObject({ decision: "hold", reason: "the logo is covered" });
+    expect(saved?.report?.terms[0].pass).toBe(true); // the result itself is untouched
+
+    expect((await override.DELETE(json(null, "DELETE"), p("done1"))).status).toBe(200);
+    expect((await getVideo(id, "done1"))?.override).toBeUndefined();
   });
 });

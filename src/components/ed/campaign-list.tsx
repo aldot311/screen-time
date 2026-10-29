@@ -48,6 +48,10 @@ export interface Row {
   rejected: Segment[];
   /** The fee for this creator's video, when one is set: shown as what the verdict pays or holds. */
   fee?: number | null;
+  /** The manager's own decision, when they overrode the recommendation. */
+  override?: "pay" | "hold";
+  /** Muse Spark was unsure or a number landed near its threshold: worth a look before deciding. */
+  flagged?: boolean;
 }
 
 type Filter = "all" | "delivered" | "short" | "review";
@@ -187,9 +191,16 @@ function CreatorCard({ r, eager }: { r: Row; eager: boolean }) {
           <>
             <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
               <VerdictPill verdict={r.verdict} />
-              {r.fee != null && r.verdict !== "pending" && (
+              {(r.fee != null || r.override) && r.verdict !== "pending" && (
                 <span className="text-[12.5px] font-semibold whitespace-nowrap text-(--ink) tabular">
-                  {r.verdict === "delivered" ? "Pay" : r.verdict === "short" ? "Hold" : "Review"} {usd(r.fee)}
+                  {r.override ? (r.override === "pay" ? "Pay" : "Hold") : r.verdict === "delivered" ? "Pay" : r.verdict === "short" ? "Hold" : "Review"}
+                  {r.fee != null && ` ${usd(r.fee)}`}
+                  {r.override && <span className="font-medium text-(--ink-3)"> · your call</span>}
+                </span>
+              )}
+              {r.flagged && !r.override && (
+                <span className="inline-flex h-6 items-center rounded-full bg-(--review-soft) px-2 text-[12px] font-semibold whitespace-nowrap text-(--review)">
+                  Look first
                 </span>
               )}
               {r.verdict === "delivered" && r.terms > 0 && (

@@ -18,6 +18,7 @@ import { CampaignCover } from "@/components/ed/product-photo";
 import { CampaignCreators } from "@/components/ed/campaign-creators";
 import { FeeEditor } from "@/components/ed/fee-editor";
 import { feeFor, payout, payoutLine } from "@/lib/campaign/money";
+import { reviewFlags } from "@/lib/campaign/review";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,8 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
       mentions: r ? r.metrics.mentions : [],
       rejected: r ? framesToSegments((r.detections ?? []).filter((d) => d.verdict !== "match").map((d) => d.frame)) : [],
       fee: feeFor(campaign, v.creator),
+      override: v.override?.decision,
+      flagged: r ? reviewFlags(r).length > 0 : false,
     };
   });
 

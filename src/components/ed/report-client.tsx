@@ -17,6 +17,8 @@ import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decisi
 import { usd } from "@/lib/campaign/money";
 import { AnalysisReplay } from "./analysis-replay";
 import { RunReceiptCard } from "./run-receipt";
+import { reviewFlags } from "@/lib/campaign/review";
+import type { VideoEntry } from "@/lib/campaign/types";
 
 interface Props {
   report: VideoReport;
@@ -34,6 +36,9 @@ interface Props {
   fee?: number | null;
   /** Open the player at this second instead of the product's best moment. */
   startAt?: number;
+  /** A manager's own decision, and where to save one (absent on the preview). */
+  override?: VideoEntry["override"];
+  overrideEndpoint?: string;
 }
 
 /** Fields the backend is adding to the report: the photo the run actually compared with, and whether the on-screen
@@ -74,7 +79,7 @@ const Range = ({ a, b }: { a: number; b: number }) => (
   </Tc>
 );
 
-export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt }: Props) {
+export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint }: Props) {
   const extras = report as VideoReport & ReportExtras;
   // Only the photo this run used: a photo added to the campaign later was not part of this check.
   const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
@@ -377,12 +382,24 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
       {/* Phones: the decision comes first, above the video, so the answer is on screen before anything plays. */}
       {verdict !== "pending" && (
         <p className={`flex min-h-12 items-center gap-2.5 rounded-(--r-card) px-3 py-2 text-[14.5px] leading-snug md:hidden ${tone.card}`}>
-          <span className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold tabular ${tone.badge}`}>
-            <tone.Icon className="size-4" strokeWidth={3} aria-hidden />
-            {decisionWord(verdict)}
-            {fee !== null && ` ${usd(fee)}`}
-          </span>
-          <span className="min-w-0 text-(--ink-2)">{phoneReason}</span>
+          {override ? (
+            <>
+              <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-(--ink) px-3 text-[14px] font-semibold text-white tabular">
+                {override.decision === "pay" ? "Pay" : "Hold"}
+                {fee !== null && ` ${usd(fee)}`}
+              </span>
+              <span className="min-w-0 text-(--ink-2)">Your call · Screen-Time said {decisionWord(verdict).toLowerCase()}</span>
+            </>
+          ) : (
+            <>
+              <span className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold tabular ${tone.badge}`}>
+                <tone.Icon className="size-4" strokeWidth={3} aria-hidden />
+                {decisionWord(verdict)}
+                {fee !== null && ` ${usd(fee)}`}
+              </span>
+              <span className="min-w-0 text-(--ink-2)">{phoneReason}</span>
+            </>
+          )}
         </p>
       )}
       <div className="min-w-0 md:sticky md:top-[76px] md:self-start">
@@ -487,7 +504,15 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
 
         {/* What to do about it: a recommendation, then a way to send the report to whoever decides. */}
         <div className="-mt-6 space-y-3 sm:-mt-4">
-          <PayOrHold verdict={verdict} creator={creator} terms={report.terms} fee={fee} />
+          <PayOrHold
+            verdict={verdict}
+            creator={creator}
+            terms={report.terms}
+            fee={fee}
+            flags={synthetic ? [] : reviewFlags(report)}
+            override={override}
+            overrideEndpoint={overrideEndpoint}
+          />
           <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
             <ShareReport title={`${title} · ${creator}`} />
             {!synthetic && <AnalysisReplay report={report} videoUrl={videoUrl} brand={brand} />}

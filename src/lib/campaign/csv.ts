@@ -27,6 +27,8 @@ export const CSV_HEADER = [
   "product_photo_used",
   "recommendation",
   "fee_usd",
+  "final_decision",
+  "override_reason",
 ];
 
 type Cell = string | number | null;
@@ -73,6 +75,9 @@ export function videoRow(v: VideoEntry, fees: Fees = {}, latest = true): Cell[] 
     r.usedProductPhoto ? "yes" : "no",
     decision,
     decision && decision !== "superseded" ? feeFor(fees, v.creator) : null,
+    // What the manager decided: their override, else the recommendation.
+    decision === "superseded" ? null : (v.override?.decision ?? decision),
+    decision === "superseded" ? null : (v.override?.reason ?? null),
   ];
 }
 

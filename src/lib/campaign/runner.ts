@@ -59,6 +59,7 @@ export async function startRun(campaignId: string, videoId: string, now = Date.n
     error: undefined,
     report: undefined,
     live: undefined,
+    override: undefined,
   });
   return { ok: true, campaign, video: running };
 }

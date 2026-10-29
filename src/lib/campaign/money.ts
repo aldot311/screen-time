@@ -65,7 +65,8 @@ export function payout(campaign: Pick<Campaign, "fee" | "creators">, videos: Vid
   const empty = (): Bucket => ({ creators: 0, amount: 0, noFee: 0 });
   const out: Payout = { pay: empty(), hold: empty(), review: empty(), anyFee: false };
   for (const v of latest.values()) {
-    const d = decisionOf(verdictOf(v.report));
+    // A manager's override wins over the recommendation.
+    const d = v.override?.decision ?? decisionOf(verdictOf(v.report));
     if (!d) continue;
     const fee = feeFor(campaign, v.creator);
     const b = out[d];
