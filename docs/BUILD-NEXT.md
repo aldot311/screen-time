@@ -40,11 +40,9 @@ Aldo approved every item below on 2026-10-29.
 12. Remaining design-judge items from round 3 (alignment, focus/error states, mini player polish, one bottom bar on
     /campaigns/new), then re-score with all five judges until a round finds nothing material.
 
-## State at the time of writing
-- Uncommitted: the five features (product photo, disclosure check, creator roster with bulk links, pay-or-hold with
-  share, term picker) plus their review fixes; 317 tests pass. A deep review (Codex + Gemini) was running; commit
-  once it is clean.
-- Latest pushed commit before this: a2a209e. Preview: https://screen-time-lhkpobeb0-aldos-projects-dcad187d.vercel.app
-- Vercel env set for preview and production: META_MODEL_API_KEY, BLOB_STORE_HOST, SCREEN_TIME_LINK_SECRET,
-  SCREEN_TIME_PASSWORD, BLOB_READ_WRITE_TOKEN. Production not deployed yet (needs Aldo's OK).
-- The stanley-live-demo campaign (prompt recovery, in-app run) exists only in the local store, not in Blob.
+## State
+- 2026-10-29: the five features plus two deep review rounds are committed (545e7a2) and pushed. Preview:
+  https://screen-time-gyxfq1zmq-aldos-projects-dcad187d.vercel.app (Vercel login). Production not deployed (needs Aldo's OK).
+- Accepted low findings: "sponsored by" also matches a creator describing someone else's sponsored video; bulk links
+  for a roster with no explicit list are not capped (the roster itself has no cap yet).
+- The stanley-live-demo campaign exists only in the local store, not in Blob.
