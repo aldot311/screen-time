@@ -24,6 +24,16 @@ The 13.3 s is the different-flavor Alani can in clip05; SAM alone also counts th
 clip12 and clip13. Not measured yet: the gain from the product photo (these runs predate it) and a held-out set
 filmed by other people.
 
+Object by object (data/labels/objects.json, judged from the crops Muse Spark saw; four objects too blurred to judge are
+left out): hosted Muse Spark 1.3 called 37 of 37 tracked objects correctly, 29 products and 8 other things (a different
+Alani flavor, a Stanley beside the can, a Stanley lid, leather dress shoes among sneakers, an Alani can under the
+Stanley prompt). `pnpm tsx --tsconfig tsconfig.json scripts/open-weight.mts`.
+
+Open-weight comparison: Meta released Muse Spark Open (816B, open weights) on 2026-10-15. The Meta Model API does not
+list it for this account (checked 2026-10-29: GET /v1/models, and muse-spark-open / muse-spark-open-816b return the same
+404 as a nonsense model id). Baseten, Fireworks, Groq, Modal, Together and OpenRouter serve it. The script above runs
+the same check on it with `--run` once OPEN_BASE_URL, OPEN_MODEL and OPEN_API_KEY point at one of them.
+
 Analysis rate: every video is re-encoded to 15 fps before SAM 3.1, and SAM tracks every one of those frames; labels
 and scores use the same frames.
 

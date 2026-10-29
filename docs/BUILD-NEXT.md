@@ -45,6 +45,10 @@ Aldo approved every item below on 2026-10-29.
   accuracy page + ablation, revision request / look flags / override, try a sample, photo beside crop + feature
   checks, follow-up agent (Muse Spark tool calling), proof clip + per-report share card. Production redeployed with
   all of it on 2026-10-29 (screen-time-inky.vercel.app) and checked: a visitor's sample run goes live end to end.
+- Item 11 (open-weight): built and waiting on one provider key. Muse Spark Open exists (released 2026-10-15) but
+  the Meta Model API does not serve it to this key; scripts/open-weight.mts compares it with hosted Muse Spark on the
+  37 labelled objects (hosted: 37/37) as soon as OPEN_BASE_URL / OPEN_MODEL / OPEN_API_KEY are set (OpenRouter or
+  Baseten; Aldo signs up, the key goes in with set-secret.sh).
 - Fixed on the way to production (never seen locally): Vercel's ffmpeg is 7.0.2 (no drawtext, no frame count on a
   stream copy) and Blob's weak ETags broke every update of a large document. Linux test path: Docker (see memory).
 - Production reports from before tonight have no receipts, feature checks or live progress; re-running the hero

@@ -1,0 +1,263 @@
+{
+ "method": "Each object SAM 3.1 tracked in the labelled test set, judged from the three crops Muse Spark saw (data/out/<target>/<clip>/<clip>-obj<id>-<n>.jpg) against the target's product description: 'product', 'other' (a different product), or 'unsure' (too blurred to tell; left out of scores). One visual pass by Claude on 2026-10-29, written down before any open-weight run.",
+ "objects": [
+  {
+   "clip": "clip01",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip02",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip03",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip04",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip05",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "other",
+   "note": "different Alani flavor (blue and white can)"
+  },
+  {
+   "clip": "clip10",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip10",
+   "target": "alani-can",
+   "objectId": 1,
+   "truth": "other",
+   "note": "cream tumbler, not the Alani can"
+  },
+  {
+   "clip": "clip11",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip12",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip12",
+   "target": "alani-can",
+   "objectId": 1,
+   "truth": "other",
+   "note": "Stanley tumbler held beside the can"
+  },
+  {
+   "clip": "clip13",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip13",
+   "target": "alani-can",
+   "objectId": 1,
+   "truth": "other",
+   "note": "Stanley tumbler held beside the can"
+  },
+  {
+   "clip": "clip14",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip15",
+   "target": "alani-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip15",
+   "target": "alani-can",
+   "objectId": 1,
+   "truth": "other",
+   "note": "Stanley lid from above"
+  },
+  {
+   "clip": "stock/stock03",
+   "target": "blue-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock06",
+   "target": "coffee-cup",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip08",
+   "target": "new-balance-sneaker",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip08",
+   "target": "new-balance-sneaker",
+   "objectId": 1,
+   "truth": "unsure",
+   "note": "too blurred to tell"
+  },
+  {
+   "clip": "stock/stock04",
+   "target": "singaraja-can",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 1,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 2,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 3,
+   "truth": "unsure",
+   "note": "too blurred to tell"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 5,
+   "truth": "unsure",
+   "note": "too blurred to tell"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 6,
+   "truth": "other",
+   "note": "black leather dress shoe"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 7,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 8,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 9,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 10,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 11,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 12,
+   "truth": "unsure",
+   "note": "too blurred to tell"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 14,
+   "truth": "other",
+   "note": "black leather dress shoe"
+  },
+  {
+   "clip": "stock/stock01",
+   "target": "sneakers",
+   "objectId": 15,
+   "truth": "product"
+  },
+  {
+   "clip": "clip06",
+   "target": "stanley-tumbler",
+   "objectId": 1,
+   "truth": "product"
+  },
+  {
+   "clip": "clip07",
+   "target": "stanley-tumbler",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip11",
+   "target": "stanley-tumbler",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip14",
+   "target": "stanley-tumbler",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "clip14",
+   "target": "stanley-tumbler",
+   "objectId": 1,
+   "truth": "other",
+   "note": "Alani can, not the Stanley"
+  },
+  {
+   "clip": "clip15",
+   "target": "stanley-tumbler",
+   "objectId": 0,
+   "truth": "product"
+  },
+  {
+   "clip": "stock/stock05",
+   "target": "water-bottle",
+   "objectId": 0,
+   "truth": "product"
+  }
+ ]
+}

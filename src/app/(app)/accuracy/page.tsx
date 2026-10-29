@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowUpRight } from "lucide-react";
 import data from "@/lib/accuracy-data.json";
+import objects from "@/lib/open-weight-data.json";
 import { TopBar } from "@/components/ed/top-bar";
 import { PendingLink } from "@/components/ed/pending-link";
 import { DISPLAY } from "@/components/ed/campaign-ui";
@@ -123,6 +124,20 @@ export default function AccuracyPage() {
           </p>
         </section>
 
+        <section aria-labelledby="obj-h" className="mt-12">
+          <h2 id="obj-h" className="ed-display text-[26px] leading-tight">
+            Object by object
+          </h2>
+          <p className="mt-2 max-w-[62ch] text-[15px] leading-[1.55] text-(--ink-2)">
+            Every object SAM 3.1 tracked was also labelled as the product or something else (a different flavor, a Stanley beside the can, a
+            leather shoe among sneakers). Muse Spark called{" "}
+            <span className="font-semibold text-(--ink) tabular">
+              {Math.round((objects.hosted.accuracy ?? 0) * objects.hosted.objects)} of {objects.hosted.objects}
+            </span>{" "}
+            clearly visible objects correctly: no look-alike counted, no product missed. Four objects too blurred to judge are left out.
+          </p>
+        </section>
+
         <section aria-labelledby="miss-h" className="mt-12">
           <h2 id="miss-h" className="ed-display text-[26px] leading-tight">
             Where it is wrong
@@ -164,8 +179,9 @@ export default function AccuracyPage() {
               it. Precision is the share of counted frames that were right; recall is the share of real frames that were counted.
             </li>
             <li>
-              <span className="font-semibold text-(--ink)">Not yet measured.</span> The gain from the product photo (the test set predates it), and a
-              held-out set filmed by other people, which is being recorded now.
+              <span className="font-semibold text-(--ink)">Not yet measured.</span> The gain from the product photo (the test set predates it); a
+              held-out set filmed by other people, which is being recorded now; and the same object check on Meta&rsquo;s open-weight Muse Spark
+              Open, which is ready to run once a hosting provider is connected.
             </li>
           </ul>
         </section>
