@@ -2,12 +2,15 @@
 
 // The follow-up agent on a report: Muse Spark with tools reads the report and the creator's other videos, re-checks a
 // waiting re-cut, drafts the note to the creator and makes a pay/hold call. Its steps show as it works. Nothing leaves
-// without the brand: the note is an editable draft, and a re-cut request becomes a link only when approved here.
+// without the brand: the note is an editable draft, and a re-cut request becomes a link only when approved here, with
+// the demo password. On the example reports a visitor runs it without the password: it then only reads stored results.
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Bot, Check, ChevronDown, Copy, Link2, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Bot, Check, ChevronDown, Copy, Link2, LockKeyhole, RotateCcw } from "lucide-react";
 import type { AgentRun } from "@/lib/agent/campaign-agent";
-import { agentRunning } from "@/lib/agent/state";
+import type { AgentAccess } from "@/lib/agent/public";
+import { AGENT_MAX_USD, agentRunning } from "@/lib/agent/state";
 import { ApiError } from "@/components/api-error";
 import { Spinner } from "./pending-link";
 import { useFlash } from "./use-flash";
@@ -22,10 +25,13 @@ const TOOL_LABEL: Record<string, string> = {
   answer: "Summed up",
 };
 
-export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; agent?: AgentRun; creator: string }) {
+export function AgentPanel({ endpoint, agent, creator, access = "owner" }: { endpoint: string; agent?: AgentRun; creator: string; access?: AgentAccess }) {
   const router = useRouter();
+  const path = usePathname();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A visitor past a limit sees the newest finished run, with the limit's fixed text from the server.
+  const [notice, setNotice] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [link, setLink] = useState<{ url: string; expires: string } | null>(null);
   const [copied, flash] = useFlash();
@@ -51,6 +57,8 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
   const running = agentRunning(agent);
   const draft = note ?? agent?.note ?? "";
   const shell = "rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair) sm:p-5";
+  const unlock = `/unlock?next=${encodeURIComponent(path)}`;
+  const cost = `About $0.10, at most $${AGENT_MAX_USD.toFixed(2)}`;
 
   return (
     <section aria-labelledby="agent-h" className={shell}>
@@ -65,8 +73,21 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
           </h2>
           {!agent && (
             <p className="mt-1.5 max-w-[60ch] text-[14.5px] leading-[1.5] text-(--ink-2)">
-              Reads this report and {creator}&rsquo;s other videos, re-checks a re-cut they sent, drafts the note to them and makes the
-              pay/hold call. About $0.10.
+              {access === "public" ? (
+                <>Reads this report and {creator}&rsquo;s other videos, drafts the note to them and makes the pay/hold call. </>
+              ) : (
+                <>
+                  Reads this report and {creator}&rsquo;s other videos, re-checks a re-cut they sent, drafts the note to them and makes the
+                  pay/hold call.{" "}
+                </>
+              )}
+              <span className="tabular">{access === "public" ? `${cost}.` : `${cost}, plus a run’s cost if it re-checks a re-cut.`}</span>
+            </p>
+          )}
+          {access === "public" && (
+            <p className="mt-1.5 max-w-[60ch] text-[13.5px] leading-[1.5] text-(--ink-3)">
+              No password needed on this example report. It reads the stored results; nothing is sent to the creator. Approving a re-cut
+              link needs the demo password.
             </p>
           )}
 
@@ -148,6 +169,14 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
                     </div>
                   ) : agent.recut.approvedAt ? (
                     <p className="mt-2 text-[13px] text-(--ink-3)">Approved. Make a new link from the campaign&rsquo;s creator list if you need it again.</p>
+                  ) : access !== "owner" ? (
+                    <Link
+                      href={unlock}
+                      className="ed-press mt-2 inline-flex h-11 items-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold text-(--ink) ring-1 ring-(--hair-2) active:bg-(--wash)"
+                    >
+                      <LockKeyhole className="size-4" aria-hidden />
+                      Unlock to approve
+                    </Link>
                   ) : (
                     <button
                       type="button"
@@ -170,7 +199,10 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
               )}
               <details className="group">
                 <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[13px] font-semibold text-(--ink-2) [&::-webkit-details-marker]:hidden">
-                  How it got there: {agent.steps.length} steps · ${agent.usd.toFixed(2)} of Muse Spark
+                  <span className="tabular">
+                    How it got there: {agent.steps.length} steps · ${agent.usd.toFixed(2)} of Muse Spark
+                    {agent.origin === "public" && " · run by a visitor"}
+                  </span>
                   <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
                 </summary>
             {agent.steps.length > 0 && (
@@ -193,21 +225,46 @@ export function AgentPanel({ endpoint, agent, creator }: { endpoint: string; age
             </div>
           )}
 
-          {!running && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={async () => {
-                if (await post(endpoint)) router.refresh();
-              }}
-              className={[
-                "ed-press mt-3 inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-[14px] font-semibold disabled:cursor-wait",
-                agent ? "text-(--ink-2) ring-1 ring-(--hair-2) active:bg-(--wash)" : "bg-(--ink) text-white active:bg-black/85",
-              ].join(" ")}
+          {!running && access === "locked" && (
+            <Link
+              href={unlock}
+              className="ed-press mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-(--ink) px-4 text-[14px] font-semibold text-white active:bg-black/85"
             >
-              {busy ? <Spinner className="size-4" /> : agent ? <RotateCcw className="size-4" aria-hidden /> : <Bot className="size-4" aria-hidden />}
-              {agent ? "Run it again" : "Run the follow-up agent"}
-            </button>
+              <LockKeyhole className="size-4" aria-hidden />
+              Enter the demo password to run it
+            </Link>
+          )}
+          {!running && access !== "locked" && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={async () => {
+                  const out = (await post(endpoint)) as { mode?: string; reason?: string } | null;
+                  if (!out) return;
+                  setNotice(out.mode === "replay" ? (out.reason ?? "Today's visitor runs of the agent are used up.") : null);
+                  router.refresh();
+                }}
+                className={[
+                  "ed-press inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-[14px] font-semibold disabled:cursor-wait",
+                  agent ? "text-(--ink-2) ring-1 ring-(--hair-2) active:bg-(--wash)" : "bg-(--ink) text-white active:bg-black/85",
+                ].join(" ")}
+              >
+                {busy ? <Spinner className="size-4" /> : agent ? <RotateCcw className="size-4" aria-hidden /> : <Bot className="size-4" aria-hidden />}
+                {agent ? "Run it again" : "Run the follow-up agent"}
+              </button>
+              {/* Before the first run the intro gives the cost; after it, beside the button that spends it again. */}
+              {agent && <span className="tabular text-[13px] text-(--ink-3)">{cost}</span>}
+            </div>
+          )}
+          {notice && (
+            <p role="status" className="mt-3 max-w-[60ch] rounded-(--r-inner) bg-(--wash) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--ink-2)">
+              <span className="font-semibold text-(--ink)">{notice}</span> This is the newest finished run. To run it again today,{" "}
+              <Link href={unlock} className="font-medium text-(--ink) underline">
+                enter the demo password
+              </Link>
+              .
+            </p>
           )}
           {error && (
             <p role="alert" className="mt-2 text-[13px]">
