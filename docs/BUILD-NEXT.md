@@ -41,19 +41,22 @@ Aldo approved every item below on 2026-10-29.
     /campaigns/new), then re-score with all five judges until a round finds nothing material.
 
 ## State
+- 2026-11-03: the site's main content is the friends' LaCroix campaign (lacroix-strawberry-peach, built by
+  scripts/build-lacroix.mts). The Alani Nu, Stanley and stock campaigns are archived: kept in the store, hidden from
+  the site (src/lib/campaign/visibility.ts). Accuracy is re-measured on the 11 LaCroix Reels (docs/ACCURACY.md), and the
+  follow-up agent runs without the password on the example LaCroix reports, capped per visitor and per day.
 - Items 1-10 done and pushed (latest b53e071): money + phone verdict, live view + replay, receipt + compiled rules,
   accuracy page + ablation, revision request / look flags / override, try a sample, photo beside crop + feature
   checks, follow-up agent (Muse Spark tool calling), proof clip + per-report share card. Production redeployed with
   all of it on 2026-10-29 (screen-time-inky.vercel.app) and checked: a visitor's sample run goes live end to end.
-- Item 11 (open-weight): built and waiting on one provider key. Muse Spark Open exists (released 2026-10-15) but
-  the Meta Model API does not serve it to this key; scripts/open-weight.mts compares it with hosted Muse Spark on the
-  37 labelled objects (hosted: 37/37) as soon as OPEN_BASE_URL / OPEN_MODEL / OPEN_API_KEY are set (OpenRouter or
-  Baseten; Aldo signs up, the key goes in with set-secret.sh).
+- Item 11 (open-weight): done. Muse Spark Open exists (released 2026-10-15) but the Meta Model API does not serve it
+  to this key; scripts/open-weight.mts runs it on OpenRouter, pinned to Fireworks. On the 12 labelled LaCroix objects
+  it scores 10/12 against hosted Muse Spark's 12/12, with no look-alike counted (docs/ACCURACY.md).
 - Fixed on the way to production (never seen locally): Vercel's ffmpeg is 7.0.2 (no drawtext, no frame count on a
   stream copy) and Blob's weak ETags broke every update of a large document. Linux test path: Docker (see memory).
 - Showcase campaign "Alani Nu: launch, with product photo" (alani-nu-launch) built in production: the 12 test
-  clips re-run with a $300 fee and the product photo (scripts/build-showcase.mts, $1.17); the landing links to it.
-  The test-runs campaign is untouched (accuracy and the landing table are measured on it).
+  clips re-run with a $300 fee and the product photo (scripts/build-showcase.mts, $1.17). Archived on 2026-11-03,
+  with the test-runs campaign; the landing and the accuracy page now use the LaCroix campaign.
 - Round 5 (two judges, Codex and Gemini) scored 7-9 on design and 7-9 on the hackathon criteria (demo 7 from Codex); its fixes are in
   35de1ac and live in production. Left, by the judges: data only Aldo can get (other creators' Reels, a held-out
   set with person-checked labels, a clip with a spoken or on-screen #ad under a disclosure term, an open-weight
