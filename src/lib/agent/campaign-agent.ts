@@ -10,7 +10,7 @@ import { verdictOf } from "@/components/format";
 import { reviewFlags } from "@/lib/campaign/review";
 import { feeFor, isTestSet } from "@/lib/campaign/money";
 import type { Campaign, VideoEntry } from "@/lib/campaign/types";
-import { AGENT_MAX_TURNS, AGENT_TURN_USD } from "./state";
+import { AGENT_DEADLINE_MS, AGENT_MAX_TURNS, AGENT_TURN_TIMEOUT_MS, AGENT_TURN_USD } from "./state";
 
 export { AGENT_MAX_TURNS, AGENT_MAX_USD, AGENT_STALE_MS, AGENT_TURN_USD, agentRunning } from "./state";
 
@@ -168,6 +168,9 @@ export async function runAgent(
     origin?: AgentRun["origin"];
     /** False in a visitor's run: analyze_video is not offered, and refused if called anyway. */
     allowAnalyze?: boolean;
+    /** Overrides AGENT_TURN_TIMEOUT_MS and AGENT_DEADLINE_MS (tests). */
+    turnTimeoutMs?: number;
+    deadlineMs?: number;
   },
 ): Promise<AgentRun> {
   const { campaign, video } = world;
@@ -250,21 +253,37 @@ export async function runAgent(
       for (const v of await world.history()) if (v.status === "done" && v.report && v.createdAt > latest.createdAt) latest = v;
     }
     const prompt = instructions(campaign, video, { canAnalyze, newer: latest.id === video.id ? undefined : latest });
+    const began = performance.now();
+    const turnTimeoutMs = opts.turnTimeoutMs ?? AGENT_TURN_TIMEOUT_MS;
+    let retried = false;
     for (let turn = 0; turn < AGENT_MAX_TURNS; turn++) {
+      if (performance.now() - began > (opts.deadlineMs ?? AGENT_DEADLINE_MS)) throw new Error("The agent ran out of time. Try again in a minute.");
       await opts.guard.reserve(AGENT_TURN_USD, `agent ${video.id} turn ${turn + 1}`);
       run.usd = Math.round((run.usd + AGENT_TURN_USD) * 1e6) / 1e6;
       const t0 = performance.now();
-      const res = await metaRequest(
-        "/responses",
-        {
-          headers: { "Content-Type": "application/json" },
-          makeBody: () =>
-            JSON.stringify({ model: MODELS.spark, instructions: prompt, input, tools: offered, tool_choice: "auto", reasoning: { effort: "low" } }),
-          retryNetworkErrors: false,
-        },
-        opts.client,
-      );
-      const body = (await res.json()) as { status?: string; output?: ({ type: string } & Record<string, unknown>)[] };
+      let body: { status?: string; output?: ({ type: string } & Record<string, unknown>)[] };
+      try {
+        const res = await metaRequest(
+          "/responses",
+          {
+            headers: { "Content-Type": "application/json" },
+            makeBody: () =>
+              JSON.stringify({ model: MODELS.spark, instructions: prompt, input, tools: offered, tool_choice: "auto", reasoning: { effort: "low" } }),
+            retryNetworkErrors: false,
+            timeoutMs: turnTimeoutMs,
+          },
+          opts.client,
+        );
+        body = (await res.json()) as typeof body;
+      } catch (err) {
+        const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+        if (!timedOut) throw err;
+        console.warn(`agent ${video.id}: turn ${turn + 1} got no answer in ${turnTimeoutMs} ms${retried ? "" : "; asking again"}`);
+        if (retried) throw new Error("Muse Spark did not answer in time. Try again in a minute.");
+        retried = true;
+        continue;
+      }
+      console.info(`agent ${video.id}: turn ${turn + 1} answered in ${Math.round(performance.now() - t0)} ms`);
       if (body.status && body.status !== "completed") throw new Error(`Muse Spark stopped: ${body.status}`);
       const output = body.output ?? [];
       const calls = output.filter((o) => o.type === "function_call") as unknown as FunctionCall[];

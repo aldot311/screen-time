@@ -237,4 +237,38 @@ describe("a visitor's run and a finished re-cut", () => {
     expect(run).toMatchObject({ status: "failed", error: "Blob list failed" });
     expect(bodies).toHaveLength(0);
   });
+  // A turn that never answers waits only until it is aborted: Muse Spark stalled mid-run on Vercel (2026-11-03), and
+  // with no timeout the run sat at "running" until the function was killed.
+  const hangs = (hangFor: number, then: Item[][]) => {
+    const { fetch: answer, bodies } = script(then);
+    let calls = 0;
+    const fetch = async (url: string, init?: RequestInit) => {
+      if (calls++ < hangFor)
+        return new Promise<Response>((_, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
+      return answer(url, init);
+    };
+    return { fetch, bodies, calls: () => calls };
+  };
+
+  it("asks again once when a turn gets no answer in time, and finishes", async () => {
+    const { fetch, calls } = hangs(1, [[say("All good.")]]);
+    const run = await runAgent(world(), { guard: await guard(), client: { apiKey: "k", fetch }, turnTimeoutMs: 20 });
+    expect(run).toMatchObject({ status: "done", summary: "All good." });
+    expect(calls()).toBe(2);
+    expect(run.usd).toBe(0.04);
+  });
+
+  it("fails with a plain reason when the retry gets no answer either, never stuck running", async () => {
+    const { fetch, calls } = hangs(2, []);
+    const run = await runAgent(world(), { guard: await guard(), client: { apiKey: "k", fetch }, turnTimeoutMs: 20 });
+    expect(run).toMatchObject({ status: "failed", error: "Muse Spark did not answer in time. Try again in a minute." });
+    expect(calls()).toBe(2);
+  });
+
+  it("starts no turn past its deadline", async () => {
+    const { fetch, bodies } = script([[call("get_report", {})], [say("late")]]);
+    const run = await runAgent(world(), { guard: await guard(), client: { apiKey: "k", fetch }, deadlineMs: -1 });
+    expect(run).toMatchObject({ status: "failed", error: "The agent ran out of time. Try again in a minute." });
+    expect(bodies).toHaveLength(0);
+  });
 });

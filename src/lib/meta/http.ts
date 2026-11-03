@@ -106,6 +106,8 @@ export async function metaRequest(
     makeBody?: () => BodyInit;
     // Off for billed calls: a connection can drop after the server accepted (and charged) the request.
     retryNetworkErrors?: boolean;
+    /** Per attempt, response body included: past it the request fails with a TimeoutError instead of waiting on. */
+    timeoutMs?: number;
   },
   opts: ClientOptions = {},
 ): Promise<Response> {
@@ -123,7 +125,8 @@ export async function metaRequest(
   for (let attempt = 0; ; attempt++) {
     let res: Response;
     try {
-      res = await doFetch(url, { method: init.method ?? "POST", headers, body: init.makeBody?.() });
+      const signal = init.timeoutMs ? AbortSignal.timeout(init.timeoutMs) : undefined;
+      res = await doFetch(url, { method: init.method ?? "POST", headers, body: init.makeBody?.(), ...(signal ? { signal } : {}) });
     } catch (err) {
       if (init.retryNetworkErrors === false || attempt >= maxRetries) throw err;
       await sleep(backoffDelayMs(attempt, null, delayOpts));

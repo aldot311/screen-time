@@ -4,6 +4,10 @@
 export const AGENT_STALE_MS = 6 * 60 * 1000;
 
 export const AGENT_MAX_TURNS = 8;
+/** One Muse Spark turn normally answers in 2–10 s. Past this it is retried once (as a turn of its own), then the run fails. */
+export const AGENT_TURN_TIMEOUT_MS = 45_000;
+/** No new turn starts after this, so a run always ends (and says so) well inside the function's 300 s. */
+export const AGENT_DEADLINE_MS = 200_000;
 /** What one Muse Spark turn reserves (as each Spark call in the pipeline). */
 export const AGENT_TURN_USD = 0.02;
 /** The most one run's own turns can reserve: every turn at its fixed price ($0.16). A re-check of a re-cut is a run
