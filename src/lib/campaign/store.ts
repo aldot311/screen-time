@@ -260,9 +260,20 @@ export function blobBackend(): Backend {
   return {
     kind: "blob",
     async readJson(key) {
-      const res = await getFresh(key);
-      if (!res || res.statusCode !== 200) return null;
-      return JSON.parse(await new Response(res.stream).text());
+      // The CDN's copy, checked against the store's own ETag (head reads metadata, not through the CDN): a run page
+      // polling every 1.5 s otherwise sees no step move for a minute. Only a stale copy costs the consistent read.
+      // The body is read as soon as it arrives: left waiting on head(), Next's server fetch had already consumed it.
+      const [cached, meta] = await Promise.all([
+        getFresh(key).then(async (res) => (res && res.statusCode === 200 ? { text: await new Response(res.stream).text(), etag: res.blob.etag } : null)),
+        head(key).catch((err: unknown) => {
+          if (err instanceof BlobNotFoundError) return null;
+          throw err;
+        }),
+      ]);
+      if (!meta) return null;
+      if (cached && strongEtag(cached.etag) === strongEtag(meta.etag)) return JSON.parse(cached.text);
+      const current = await consistentRead(key);
+      return current ? JSON.parse(current.text) : null;
     },
     async writeJson(key, value) {
       await put(key, JSON.stringify(value), {
