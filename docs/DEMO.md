@@ -6,7 +6,8 @@ real production value. (Flow from the round-4 hackathon judge, 2026-10-29.)
 
 ## Before recording
 
-- Production: https://screen-time-inky.vercel.app, unlocked with the demo password in the browser you record.
+- Production: https://screen-time-inky.vercel.app. Every beat below works without the demo password (the sample run,
+  the example reports and the follow-up agent on them), so the screen can be recorded by a script.
 - Campaign: "LaCroix: Strawberry Peach creators" (`lacroix-strawberry-peach`), the friends' Reels: real handles, fee
   $300, product photo, three terms (on screen at least 3 s in total, says LaCroix, discloses the ad). Use it for the
   report and money beats.
@@ -21,44 +22,40 @@ real production value. (Flow from the round-4 hackathon judge, 2026-10-29.)
 
 ## Script
 
-**0:00–0:15 · The problem** (impact)
-Landing page, hero playing.
-> "Brands pay creators for screen time they can't check. The contract says three seconds on screen, say the name, tag
-> it #ad. Today someone scrubs every video by hand, or nobody checks. Screen-Time checks every frame."
+The voiceover is generated (ElevenLabs Eleven v4); its word timings drive the captions. About 300 words (2 minutes of speech); the other minute is the screen: the live run and the agent steps play without narration.
+Every number is read from the live site or src/lib/accuracy-data.json on the day of recording.
 
-**0:15–0:55 · Live run** (Meta tooling, demo)
-Upload the Reel with the Stanley beside the can. Stay on the run page while the steps fill in.
-> "SAM 3.1 is tracking every can-shaped thing in every frame: here are its boxes on the filmstrip. Now Muse Spark
-> checks each object against the brand's photo: the Alani can, yes; the Stanley next to it, no, and here's why, in its
-> own words. Voice Transcribe is listening for the brand name and for an ad disclosure. The seconds are measured and the
-> contract terms tick."
+**0:00–0:14 · The problem** (impact). Landing page, Ash's Reel playing in the hero.
+> Brands pay creators to show their product. The contract says: three seconds on screen, say the name, disclose the
+> ad. Today someone scrubs every Reel by hand, or nobody checks at all. Screen-Time checks every frame.
 
-**0:55–1:30 · The verdict, with money** (impact)
-The finished report. Point at the top line, then the contract.
-> "Hold, three hundred dollars: the creator never said the brand name. Every term links to the exact second that
-> proves it. Muse Spark turned each plain-English term into a rule, shown right here."
-Tap *Copy revision request*; show the text briefly.
+**0:14–0:52 · A live run** (Meta tooling, demo). *Run it on a sample video*; stay on the run page while the steps fill
+in; cut the wait.
+> This is a real run on Meta's API. SAM 3.1 finds the can in every frame; those are its boxes. Muse Spark compares
+> each object against the brand's product photo, and says why in its own words. Muse Voice Transcribe listens for the
+> brand name and for the disclosure. Then Muse Spark checks each contract term, written in plain English.
 
-**1:30–2:05 · The agent follows up** (Meta tooling, depth)
-*Run the follow-up agent*. Let the steps appear.
-> "Muse Spark with tools reads the report, checks this creator's other videos, drafts the note and queues a re-cut
-> request. Nothing is sent until I approve." Approve the link.
-Upload the re-cut through the link (cut), run it, and show the campaign card flip to *Pay $300*.
+**0:52–1:16 · The pay case** (impact). Ash's re-cut report; tap *Play the proof* on one term.
+> Ash's Reel: pay three hundred dollars. Thirteen seconds on screen, LaCroix said out loud, "this is an ad" at ten
+> seconds. Every term links to the exact second that proves it.
 
-**2:05–2:30 · The campaign** (impact)
-The campaign page.
-> "Across the campaign: pay these creators this much, hold these. Export it as CSV for finance."
-Flash *Proof clip (MP4)*: the creator's video with the evidence burned in, ready to send.
+**1:16–1:44 · The holds** (impact, depth). Ash's first take (banner), then Aldo's Pamplemousse report, then the Poppi
+card on the landing page.
+> Her first take never said the brand, so the fee was held until the re-cut. This creator grabbed the wrong flavor:
+> Muse Spark read Pamplemousse off the can, so nothing counts. And a Poppi can on the table is another brand, ignored.
 
-**2:30–2:50 · Why you can trust it** (technical depth)
-/accuracy.
-> "Measured frame by frame against labels: SAM alone counts a different flavor as the product; with Muse Spark,
-> precision goes from 89 to 97.7 percent and look-alike seconds drop to zero. Here's where it's still wrong."
-Open the run receipt on a report: every Meta API call, time and cost.
+**1:44–2:14 · The follow-up agent** (Meta tooling, depth). Peter's report; *Run the follow-up agent*; let the steps
+appear.
+> Peter never disclosed the ad. The follow-up agent, Muse Spark with tools, reads the report and his other videos,
+> drafts the note asking for a disclosure, and queues a re-cut request. Nothing is sent until the brand approves.
 
-**2:50–3:00 · Close**
-> "About ten cents of Meta API per video. Proof your product was seen."
+**2:14–2:34 · The campaign** (impact). The LaCroix campaign page; point at the money line, then *Export CSV*.
+> Across ten creators: pay six, hold three, one still to come. The first take is marked replaced by the re-cut, so the
+> money adds up. Export it for finance. Screen-Time never moves money; you pay as you normally do.
 
-## Backup if a live run is slow
+**2:34–2:52 · Why you can trust it** (technical depth). /accuracy.
+> We labelled every frame of these Reels. Ninety-eight percent precision, ninety-nine percent recall. Without Muse
+> Spark, SAM alone counts the wrong flavor; with it, zero seconds. And here is where it is still wrong.
 
-Use *Replay analysis* on a finished report: the same steps, replayed from the real run without re-billing.
+**2:52–3:00 · Close.** Run receipt on Ash's report, then the landing page.
+> Every Meta call is on the receipt: about ten to twenty-two cents a Reel. Screen-Time. Proof your product was seen.

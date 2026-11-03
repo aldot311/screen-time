@@ -112,3 +112,15 @@ describe("creator fee route", () => {
     expect((await patch("@nobody", 5)).status).toBe(404);
   });
 });
+
+describe("request links for plain-name roster entries", () => {
+  it("signs the canonical @handle, so the link the submit route checks is valid", async () => {
+    const { issueRequest } = await import("./roster");
+    const { verifyRequestToken } = await import("./requests");
+    const secret = "test-link-secret-at-least-32-characters";
+    const issued = await issueRequest("lacroix", "Michael K", secret, new Date("2026-11-03T00:00:00Z"));
+    expect(issued.creator).toBe("@Michael K");
+    const token = issued.path.replace("/submit/", "");
+    expect(await verifyRequestToken(token, secret, Date.parse("2026-11-04T00:00:00Z") / 1000)).toMatchObject({ creator: "@Michael K", campaignId: "lacroix" });
+  });
+});

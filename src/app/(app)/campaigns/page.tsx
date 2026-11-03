@@ -38,8 +38,9 @@ async function summarize(c: Campaign) {
     running: videos.filter((v) => v.status === "running" || (v.status === "uploaded" && !v.consent)).length,
     waiting: videos.filter((v) => v.status === "uploaded" && v.consent).length,
     stopped: videos.filter((v) => v.status === "failed").length,
-    // Exact per-video values summed once and floored only for display, exactly as the roll-up does.
-    seconds: done.reduce((s, v) => s + (v.report?.metrics.secondsOnScreen ?? 0), 0),
+    // Exact per-video values summed once and floored only for display, exactly as the roll-up does; a take a re-cut
+    // replaced is left out, as in the money.
+    seconds: done.filter((v) => !r.replacedBy.has(v.id)).reduce((s, v) => s + (v.report?.metrics.secondsOnScreen ?? 0), 0),
     // The same money line as the campaign page.
     money: payoutLine(r.payout, r.unit, r.pending),
   };

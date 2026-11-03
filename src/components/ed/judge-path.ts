@@ -1,5 +1,6 @@
 // The example reports every judge-facing link points at: the friends' LaCroix campaign (scripts/build-lacroix.mts).
-// Ash is the main face: her re-cut is the pay case and her first take, which never says LaCroix, the hold case.
+// Ash is the main face: her re-cut is the pay case, and her first take (never says LaCroix) shows a re-cut replacing a
+// hold. The hold case itself is a take that still decides the money: Aldo's wrong-flavor can.
 
 export const LACROIX = "lacroix-strawberry-peach";
 
@@ -7,10 +8,10 @@ export const LACROIX = "lacroix-strawberry-peach";
 export const CASES = {
   /** Ash's re-cut: Delivered, every term met. */
   pay: "ash-recut",
-  /** Ash's first take: held for never saying LaCroix; its page points to the re-cut. */
-  hold: "ash",
-  /** A Pamplemousse can, rejected as a look-alike, so nothing is counted. */
-  lookalike: "aldo",
+  /** A Pamplemousse can, rejected as a look-alike, so nothing is counted and the fee is held. */
+  hold: "aldo",
+  /** Ash's first take: held for never saying LaCroix until her re-cut replaced it; its page points to the re-cut. */
+  firstTake: "ash",
   /** Peter's Reel: held for no ad disclosure, the case the follow-up agent works on. */
   agent: "peter",
 } as const;

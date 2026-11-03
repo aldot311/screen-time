@@ -41,7 +41,7 @@ export default function UnlockPage() {
                 href={`/campaigns/${PUBLIC_AGENT_DEMO.campaignId}/videos/${PUBLIC_AGENT_DEMO.videoId}`}
                 className="-mx-1 inline-flex min-h-11 items-center rounded-full px-1 font-semibold text-(--ink) underline decoration-(--hair-2) decoration-2 underline-offset-4 hover:decoration-(--ink) active:opacity-70"
               >
-                Ash&rsquo;s first take
+                Peter&rsquo;s Reel
               </PendingLink>
             </p>
           </div>

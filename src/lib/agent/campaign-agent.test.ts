@@ -8,7 +8,7 @@ import type { Campaign, VideoEntry } from "@/lib/campaign/types";
 import type { TermResult, VideoReport } from "@/lib/types";
 import { runAgent, type AgentWorld } from "./campaign-agent";
 
-const campaign = { id: "c", name: "Fall", brand: "Alani Nu", fee: 300, creators: [] } as unknown as Campaign;
+const campaign = { id: "c", name: "Fall", brand: "Alani Nu", fee: 300, creators: [{ handle: "@maya", addedAt: "" }] } as unknown as Campaign;
 const term = (pass: boolean): TermResult => ({ term: { text: "Say the brand name at least once", rule: { kind: "mentioned", minTimes: 1 } }, pass, evidence: [], detail: pass ? "Mentioned 1 time." : "Mentioned 0 times (needs 1 time)." });
 const report = (pass: boolean) =>
   ({
@@ -213,6 +213,15 @@ describe("a visitor's run and a finished re-cut", () => {
     expect(JSON.parse(String(second[1].output)).error).toMatch(/The call is pay/);
     expect(run.recut).toBeUndefined();
     expect(run.recommendation).toEqual({ decision: "pay", reason: "The re-cut met every term." });
+  });
+
+  it("treats a test set's later clip as a separate test, not a re-cut", async () => {
+    const testSet = { ...campaign, creators: [] } as unknown as Campaign;
+    const later = video("clip02", { report: report(true), createdAt: "2026-10-29T00:00:00Z" });
+    const { fetch, bodies } = script([[call("recommend_payout", { decision: "hold", reason: "Fell short." }, "a")], [say("Hold.")]]);
+    const run = await runAgent(world({ campaign: testSet, history: async () => [video("v1"), later] }), { guard: await guard(), client: { apiKey: "k", fetch } });
+    expect(bodies[0].instructions).not.toContain("id clip02");
+    expect(run.recommendation).toEqual({ decision: "hold", reason: "Fell short." });
   });
 
   it("ends as a failed run when the creator's videos cannot be read, never stuck running", async () => {

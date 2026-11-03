@@ -4,6 +4,8 @@
 // column; "unclear" is an object Muse Spark could not tell, which is not counted either but is not a look-alike.
 import { AREA_SATURATION, PROMINENCE_WEIGHTS, SMALL_AREA } from "@/lib/metrics/compute";
 import type { VerifyVerdict } from "@/lib/types";
+import accuracy from "@/lib/accuracy-data.json";
+import { pct as pct1, summarize } from "./accuracy-summary";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -29,6 +31,16 @@ export function receiptUsd(usd: number): string {
 }
 
 /** What a report's Meta API cost is made of, in one line. */
+/** Precision and recall in one line each, with the measured figures (src/lib/accuracy-data.json), so the report says
+ *  what they mean without a trip to /accuracy. */
+export function accuracyGloss(): string {
+  const v = summarize(accuracy).verified;
+  return (
+    `Precision ${pct1(v.precision)}: of the seconds Screen-Time counted, the share that really showed the product. ` +
+    `Recall ${pct1(v.recall)}: of the seconds the product really showed, the share it counted. Measured frame by frame on labelled test Reels.`
+  );
+}
+
 export function costGloss(): string {
   const r = RECEIPT_RATES;
   return (

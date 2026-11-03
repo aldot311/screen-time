@@ -93,3 +93,23 @@ describe("executeAgent", () => {
     expect((await stored()).agent).toEqual(newer);
   });
 });
+
+describe("a visitor's run never costs an example report its finished run", () => {
+  const curated: AgentRun = { status: "done", startedAt: "2026-11-02T09:00:00.000Z", steps: [], usd: 0.04, summary: "Owner's run.", recut: { reason: "Say it.", approvedAt: "2026-11-02T10:00:00.000Z" } };
+
+  it("puts the finished run back when the visitor's run fails", async () => {
+    await updateVideo("c1", "v1", (v) => ({ ...v, agent: { ...running, prior: curated } }));
+    ledger.mode = "setup-fails";
+    await executeAgent(campaign, (await getVideo("c1", "v1"))!, { public: true });
+    expect((await getVideo("c1", "v1"))?.agent).toEqual(curated);
+  });
+
+  it("replaces the finished run once the visitor's run finishes", async () => {
+    await updateVideo("c1", "v1", (v) => ({ ...v, agent: { ...running, prior: curated } }));
+    const run = await executeAgent(campaign, (await getVideo("c1", "v1"))!, { public: true });
+    const stored = (await getVideo("c1", "v1"))?.agent;
+    expect(stored).toMatchObject({ status: "done", origin: "public", startedAt: STARTED });
+    expect(stored?.prior).toBeUndefined();
+    expect(run.status).toBe("done");
+  });
+});

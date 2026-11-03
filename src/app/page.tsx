@@ -7,11 +7,12 @@ import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
 import { TopBar } from "@/components/ed/top-bar";
 import { Wordmark } from "@/components/ed/bits";
-import { clipName, pct, pct0, sampleRows, summarize, targetName, type SampleRow } from "@/components/ed/accuracy-summary";
+import { clipLabel, clipVideoId, pct, pct0, sampleRows, summarize, targetName, type SampleRow } from "@/components/ed/accuracy-summary";
 import { lookalikeCards, type VerdictCardData } from "@/components/ed/showcase-cards";
 import { demoMedia } from "@/components/ed/demo-media";
 import { CASES, CONTACT_EMAIL, JUDGE_HREF, LACROIX, OWN_VIDEO_HREF, campaignHref, reportHref } from "@/components/ed/judge-path";
-import { getCampaign, getVideo } from "@/lib/campaign/store";
+import { getCampaign, getVideo, listVideos } from "@/lib/campaign/store";
+import { handleKey } from "@/lib/campaign/handle";
 import { tenths } from "@/components/format";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,8 @@ const DEMO_SCRIPT: { title: string; text: string; href?: string }[] = [
   { title: "The problem", text: "Brands pay creators for screen time they cannot check." },
   { title: "Run the sample", text: "The real pipeline, live: SAM 3.1 tracks, Muse Spark checks each find, Voice Transcribe listens." },
   { title: "The pay case", text: "Ash’s re-cut: delivered, every term met. Play one proof second.", href: reportHref(CASES.pay) },
-  { title: "The hold case", text: "Ash’s first take never says LaCroix, so the fee is held until the re-cut.", href: reportHref(CASES.hold) },
+  { title: "The hold case", text: "Aldo’s can is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },
+  { title: "The re-cut", text: "Ash’s first take never says LaCroix; her re-cut replaces it and pays.", href: reportHref(CASES.firstTake) },
   { title: "Accuracy, in one line", text: "Precision with and without Muse Spark, measured frame by frame.", href: "/accuracy" },
   { title: "The follow-up agent", text: "Muse Spark drafts the note and a re-cut request; nothing is sent until you approve.", href: reportHref(CASES.agent) },
 ];
@@ -80,11 +82,14 @@ export default async function Landing() {
   const { hero } = showcase;
   const cards = lookalikeCards(showcase);
   const lacroixRead = getCampaign(LACROIX).catch(() => null);
-  const [heroCampaign, lacroix, rows] = await Promise.all([
+  const [heroCampaign, lacroix, rows, lacroixVideos] = await Promise.all([
     !hero ? null : hero.video.campaignId === LACROIX ? lacroixRead : getCampaign(hero.video.campaignId).catch(() => null),
     lacroixRead,
     linkedRows(),
+    listVideos(LACROIX).catch(() => []),
   ]);
+  // Creators with a checked Reel in the showcase campaign (a re-cut is the same creator), counted, never typed in.
+  const checkedCreators = new Set(lacroixVideos.filter((v) => v.status === "done").map((v) => handleKey(v.creator))).size;
   const acc = summarize(data);
   const heroSec = hero ? Math.round(hero.video.report.info.durationSec) : null;
   const demo = demoMedia(hero?.video.thumbUrl);
@@ -379,7 +384,7 @@ export default async function Landing() {
         <section className="bg-(--ink) text-white">
           <div className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
             <h2 className="ed-display max-w-[20ch] text-[34px] leading-[1.04] sm:text-[48px]">
-              {lacroix ? "See ten friends’ Reels checked." : "See it on real campaigns."}
+              {lacroix && checkedCreators > 0 ? `See ${checkedCreators} creators’ Reels checked.` : "See it on real campaigns."}
             </h2>
             {lacroix && (
               <p className="mt-3 max-w-[52ch] text-[16px] leading-[1.6] text-white/70">
@@ -480,7 +485,8 @@ function testSetLine(acc: ReturnType<typeof summarize>): string {
 async function linkedRows(): Promise<(SampleRow & { href?: string })[]> {
   return Promise.all(
     sampleRows(data).map(async (r) => {
-      const v = await getVideo(LACROIX, clipName(r.clip)).catch(() => null);
+      const id = clipVideoId(r.clip);
+      const v = id ? await getVideo(LACROIX, id).catch(() => null) : null;
       return { ...r, href: v?.status === "done" ? reportHref(v.id) : undefined };
     }),
   );
@@ -495,7 +501,7 @@ function RowBody({ r, linked = false }: { r: SampleRow; linked?: boolean }) {
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-[15px] font-semibold">
-            <span className="font-medium text-(--ink-3) tabular">{clipName(r.clip)}</span> · {targetName(r.target)}
+            <span className="font-medium text-(--ink-3)">{clipLabel(r.clip)}</span> · {targetName(r.target)}
           </span>
           {r.weak && <WeakTag label={`Weakest ${r.weak}`} />}
         </span>

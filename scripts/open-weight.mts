@@ -83,8 +83,9 @@ function score(rows: { truth: string; verdict: string }[]) {
 }
 
 async function openVerdict(c: Case): Promise<{ verdict: string; ms: number; usd: number; raw?: string }> {
+  // A missing photo or crop stops the run: a dropped image would shift which one the prompt calls the reference photo.
   const images = await Promise.all(
-    [...(photoPath ? [photoPath] : []), ...c.crops].map(async (p) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${(await readFile(p).catch(() => Buffer.alloc(0))).toString("base64")}` } })),
+    [...(photoPath ? [photoPath] : []), ...c.crops].map(async (p) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${(await readFile(p)).toString("base64")}` } })),
   );
   const body = {
     model: process.env.OPEN_MODEL,

@@ -81,6 +81,9 @@ describe("featuredFirst", () => {
 
   it("puts Ash's videos first, re-cut before the take it replaced, on the showcase campaign", () => {
     expect(featuredFirst(SHOWCASE_CAMPAIGN, videos).map((x) => x.id)).toEqual(["ash-recut", "ash", "george", "peter"]);
+    // A live upload as "@ash" is Ash too, and the newest of hers leads.
+    const live = v("ash-live", "@ash", "5");
+    expect(featuredFirst(SHOWCASE_CAMPAIGN, [...videos, live]).map((x) => x.id)).toEqual(["ash-live", "ash-recut", "ash", "george", "peter"]);
   });
 
   it("leaves any other campaign, or a store without the hero video, in its own order", () => {

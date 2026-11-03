@@ -126,6 +126,13 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
   const videos = await listVideos(TRY_ID);
   const live = newest(videos).find((v) => (v.status === "running" || v.status === "uploaded") && now.getTime() - Date.parse(v.updatedAt) < JOIN_MS);
   if (live) return { mode: "joined", video: live };
+  // The sample's own copy of the video, made once (and read back after that) before any slot is taken, so a copy that
+  // fails costs no visitor or day slot and leaves no start window held.
+  const url = await sampleUrl().catch((err: unknown) => {
+    console.error("The sample video could not be prepared", err);
+    return null;
+  });
+  if (!url) return { mode: "unavailable", status: 503, error: "The sample could not be prepared. Try again in a minute." };
 
   const limits = tryLimits();
   const replay = (limit: TryLimit): TryResult => {
@@ -155,7 +162,6 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
     const done = newest(await listVideos(TRY_ID)).find((v) => v.status === "done" && v.report);
     return done ? { mode: "replay", video: done } : { mode: "unavailable", status: 429, error: "The sample is starting for someone else. Try again in a minute." };
   }
-  const url = await sampleUrl();
   const at = now.toISOString();
   const video = await putVideo({
     id: newVideoId("sample"),

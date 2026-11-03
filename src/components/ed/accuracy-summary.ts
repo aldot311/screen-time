@@ -52,6 +52,31 @@ export function targetName(target: string): string {
 /** "stock/stock01" → "stock01": the folder is not part of the clip's name. */
 export const clipName = (clip: string) => clip.replace(/^.*\//, "");
 
+/**
+ * The measured LaCroix clips (data/labels/lacroix) and the campaign video each one is, with the creator's name. The
+ * accuracy runs are separate runs of the same Reels, so a report's numbers can differ a little from its row. Michael
+ * K's Reel (lc-6-michael) is measured but not in the campaign yet: it is the live upload in the demo.
+ */
+const MEASURED: Record<string, { creator: string; videoId?: string }> = {
+  "lc-1-george": { creator: "George", videoId: "george" },
+  "lc-1-michael": { creator: "Michael", videoId: "michael" },
+  "lc-2-jamal": { creator: "Jamal", videoId: "jamal" },
+  "lc-4-lana": { creator: "Lana", videoId: "lana" },
+  "lc-6-michael": { creator: "Michael K" },
+  "lc-7a-ash": { creator: "Ash, first take", videoId: "ash" },
+  "lc-7b-ash": { creator: "Ash, re-cut", videoId: "ash-recut" },
+  "lc-8-peter": { creator: "Peter", videoId: "peter" },
+  "lc-10-aldo": { creator: "Aldo", videoId: "aldo" },
+  "lc-11-jon": { creator: "Jon", videoId: "jon" },
+  "lc-12-aldo": { creator: "Aldo 2", videoId: "aldo-2" },
+};
+
+/** A clip as people know it: the creator's name for a measured LaCroix Reel, else the clip's own name. */
+export const clipLabel = (clip: string) => MEASURED[clipName(clip)]?.creator ?? clipName(clip);
+
+/** The campaign video a measured clip is, when there is one. */
+export const clipVideoId = (clip: string) => MEASURED[clipName(clip)]?.videoId;
+
 /** A clip with nothing to find: a look-alike (SAM alone counted something there) or no product at all. */
 export type ZeroKind = "lookalike" | "empty";
 

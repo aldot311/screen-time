@@ -90,7 +90,8 @@ export function creatorEntry(
   const mine = videos
     .filter((v) => sameHandle(v.creator, c.handle))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const v = mine[0];
+  // The take that decides, by the money's rule: the newest one, unless it stopped and an earlier one is still in play.
+  const v = mine.find((x) => x.status !== "failed") ?? mine[0];
   const base = { handle: c.handle, expiresAt: c.request?.expiresAt, videos: mine.length };
   const linkNewer = c.request && (!v || Date.parse(c.request.sentAt) > Date.parse(v.createdAt));
   if (c.request && linkNewer) {

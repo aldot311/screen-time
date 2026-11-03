@@ -2,6 +2,7 @@
 // dates are recorded: the campaign JSON sits in a public store, and the link itself is the creator's upload credential.
 import { sameHandle } from "./handle";
 import { createRequestToken, newNonce, REQUEST_TTL_DAYS } from "./requests";
+import { Creator } from "./schema";
 import type { Campaign, CampaignCreator, VideoEntry } from "./types";
 
 /** Handles compare ignoring case and a leading "@": "@Maya", "maya" and "MAYA" are one creator. */
@@ -56,8 +57,10 @@ export interface IssuedRequest {
   record: NonNullable<CampaignCreator["request"]>;
 }
 
-/** A signed, expiring, one-video link for one creator. */
-export async function issueRequest(campaignId: string, creator: string, secret: string, now = new Date()): Promise<IssuedRequest> {
+/** A signed, expiring, one-video link for one creator. The handle is signed in its canonical "@" form, the only form
+ *  the submit route accepts: a roster entry written as a plain name ("Peter") would otherwise mint a dead link. */
+export async function issueRequest(campaignId: string, name: string, secret: string, now = new Date()): Promise<IssuedRequest> {
+  const creator = Creator.parse(name);
   const exp = Math.floor(now.getTime() / 1000) + REQUEST_TTL_DAYS * 86400;
   const nonce = newNonce();
   const token = await createRequestToken({ campaignId, creator, exp, nonce }, secret);

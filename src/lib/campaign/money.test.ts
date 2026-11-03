@@ -144,6 +144,21 @@ describe("rollup", () => {
     expect(payoutLine(r.payout, r.unit, r.pending)).toBe("Pay 5 videos $1,500 · hold 6 ($1,800) · 1 pending ($300)");
   });
 
+  it("keeps the earlier take deciding when a re-cut stops, so the hold can still be decided", () => {
+    const c = { fee: 300, creators: [{ handle: "Ash", addedAt: "" }] };
+    const first = { ...video("Ash", miss(), "2026-10-29T00:01:00Z"), id: "take-1" };
+    const stopped = { ...video("@Ash", undefined, "2026-10-29T00:02:00Z"), id: "take-2", status: "failed" as const };
+    const r = rollup(c, [first, stopped]);
+    expect(r.deciding.map((v) => v.id)).toEqual([first.id]);
+    expect(r.replacedBy.size).toBe(0);
+    expect(r.pending.creators).toBe(0);
+    expect(payoutLine(r.payout, r.unit)).toBe("Hold 1 ($300)");
+    expect(creatorEntry(c.creators[0], [first, stopped], "c", Date.parse("2026-10-30T00:00:00Z")).status).toBe("short");
+    // Control: a re-cut that is still running does replace it, and the creator is pending.
+    const running = { ...stopped, status: "running" as const };
+    expect(rollup(c, [first, running]).pending.creators).toBe(1);
+  });
+
   it("always adds up, and agrees with the Creators panel on who is still pending", () => {
     // A small seeded generator, so a failure names a fixture that can be replayed.
     let seed = 7;

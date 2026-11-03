@@ -15,7 +15,8 @@ const jsonAt = args.indexOf("--json");
 const jsonPath = jsonAt >= 0 ? args[jsonAt + 1] : null;
 // --labels scores one labelled set (the LaCroix Reels live in data/labels/lacroix); the default reads every set.
 const labelsAt = args.indexOf("--labels");
-const outDir = args.find((a, i) => !a.startsWith("--") && i !== jsonAt + 1 && i !== labelsAt + 1) ?? "data/out";
+const flagValue = (i: number) => (jsonAt >= 0 && i === jsonAt + 1) || (labelsAt >= 0 && i === labelsAt + 1);
+const outDir = args.find((a, i) => !a.startsWith("--") && !flagValue(i)) ?? "data/out";
 const labelsDir = labelsAt >= 0 ? args[labelsAt + 1] : "data/labels";
 
 interface Target {

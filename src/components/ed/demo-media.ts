@@ -1,10 +1,7 @@
-// The landing page's demo video. It is embedded once public/demo.mp4 exists, with public/demo-poster.jpg as its poster
-// (else the hero's still) and public/demo.vtt as its captions when present; until then the section shows the script
-// and a labelled placeholder. Checked on the server with fs on each render, never fetched by the browser. The paths are
-// written out in full so the build's file tracing ships the files with the page (on Vercel, public/ is otherwise only
-// on the CDN, not beside the function).
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+// The landing page's demo video: public/demo.mp4, with public/demo-poster.jpg as its poster (else the hero's still) and
+// public/demo.vtt as its captions. DEMO_FILES says which of them are committed; set it in the same commit that adds the
+// files. Until the video is there the section shows the script and a labelled placeholder. (A file check at request
+// time would not work on Vercel: public/ is served from the CDN, not shipped beside the page's function.)
 
 export interface DemoMedia {
   src: string;
@@ -22,13 +19,9 @@ export function demoMediaFrom(found: { video: boolean; poster: boolean; captions
   };
 }
 
+/** Which demo files are in public/. */
+export const DEMO_FILES = { video: false, poster: false, captions: false };
+
 export function demoMedia(fallbackPoster?: string): DemoMedia | null {
-  return demoMediaFrom(
-    {
-      video: existsSync(join(process.cwd(), "public", "demo.mp4")),
-      poster: existsSync(join(process.cwd(), "public", "demo-poster.jpg")),
-      captions: existsSync(join(process.cwd(), "public", "demo.vtt")),
-    },
-    fallbackPoster,
-  );
+  return demoMediaFrom(DEMO_FILES, fallbackPoster);
 }

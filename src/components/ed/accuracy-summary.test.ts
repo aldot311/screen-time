@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import data from "@/lib/accuracy-data.json";
-import { clipName, missSeconds, pct, pct0, sampleRows, scoresOf, summarize, targetName, weakest, type AccuracyData, type AccuracyRow } from "./accuracy-summary";
+import { clipLabel, clipName, clipVideoId, missSeconds, pct, pct0, sampleRows, scoresOf, summarize, targetName, weakest, type AccuracyData, type AccuracyRow } from "./accuracy-summary";
 
 const row = (clip: string, target: string, truthSec: number, predictedSec: number, precision: number | null, recall: number | null): AccuracyRow => ({
   clip,
@@ -120,6 +120,12 @@ describe("names and percentages", () => {
     expect(targetName("stanley-tumbler")).toBe("Stanley tumbler");
     expect(clipName("stock/stock01")).toBe("stock01");
     expect(clipName("lc-7b-ash")).toBe("lc-7b-ash");
+    // A measured LaCroix Reel reads as its creator and links to its campaign video; an unknown clip keeps its name.
+    expect(clipLabel("lacroix/lc-7b-ash")).toBe("Ash, re-cut");
+    expect(clipVideoId("lacroix/lc-7b-ash")).toBe("ash-recut");
+    expect(clipVideoId("lacroix/lc-12-aldo")).toBe("aldo-2");
+    expect(clipVideoId("lacroix/lc-6-michael")).toBeUndefined();
+    expect(clipLabel("stock/stock01")).toBe("stock01");
   });
 
   it("formats measured fractions and says when there was nothing to measure", () => {

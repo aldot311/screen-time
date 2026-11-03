@@ -34,6 +34,11 @@ async function visitorKey(ip: string): Promise<string> {
 export async function startPublicAgent(ip: string, video: VideoEntry, now = new Date()): Promise<PublicAgentResult> {
   if (agentRunning(video.agent, now.getTime())) return { mode: "joined", video };
   const limits = publicAgentLimits();
+  // A visitor's run that died (stale "running") gives the finished run it set aside back before anything else.
+  if (video.agent?.status === "running" && video.agent.prior) {
+    const prior = video.agent.prior;
+    video = (await updateVideo(video.campaignId, video.id, (v) => (v.agent?.status === "running" && !agentRunning(v.agent, now.getTime()) && v.agent.prior ? { ...v, agent: prior } : v))) ?? video;
+  }
   const replay = (limit: PublicAgentLimit): PublicAgentResult => {
     const reason = PUBLIC_AGENT_LIMIT_TEXT[limit](limit === "visitor" ? limits.perVisitor : limits.perDay);
     return video.agent?.status === "done"
@@ -52,7 +57,9 @@ export async function startPublicAgent(ip: string, video: VideoEntry, now = new 
   let busy = false;
   const started = await updateVideo(video.campaignId, video.id, (v) => {
     busy = agentRunning(v.agent);
-    return busy ? v : { ...v, agent: { status: "running", startedAt: now.toISOString(), steps: [], usd: 0, origin: "public" } };
+    // The last finished run is kept aside (see AgentRun.prior) until this one finishes.
+    const prior = v.agent?.status === "done" ? v.agent : v.agent?.prior;
+    return busy ? v : { ...v, agent: { status: "running", startedAt: now.toISOString(), steps: [], usd: 0, origin: "public", ...(prior ? { prior } : {}) } };
   });
   if (!started) return { mode: "unavailable", status: 404, error: "Video not found" };
   return { mode: busy ? "joined" : "started", video: started };

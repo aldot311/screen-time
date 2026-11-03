@@ -482,8 +482,11 @@ export async function withLedgerFile<T>(fn: (ledgerPath: string) => Promise<T>):
     const after = JSON.parse(await readFile(path, "utf8")) as LedgerEntry[];
     const added = after.slice(seeded.length);
     if (added.length) {
-      const latest = ((await store.readJson(LEDGER_KEY)) as LedgerEntry[] | null) ?? [];
-      await store.writeJson(LEDGER_KEY, [...latest, ...added]);
+      // Appended against the version read (ETag), so two runs finishing together cannot drop each other's entries.
+      const appended = await store.updateJson<LedgerEntry[]>(LEDGER_KEY, (latest) => [...latest, ...added]);
+      if (!appended && !(await store.createJson(LEDGER_KEY, added))) {
+        await store.updateJson<LedgerEntry[]>(LEDGER_KEY, (latest) => [...latest, ...added]);
+      }
     }
     await rm(dir, { recursive: true, force: true });
   }

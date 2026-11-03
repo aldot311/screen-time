@@ -92,9 +92,11 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
   const running = rows.filter((r) => r.status === "running" || r.status === "starting").length;
   const waiting = rows.filter((r) => r.status === "waiting" || r.status === "uploaded").length;
   const stopped = rows.filter((r) => r.status === "failed").length;
-  // Exact per-video values summed once, floored only for display (the campaign list does the same).
-  const totalOnScreen = done.reduce((s, r) => s + (r.seconds ?? 0), 0);
-  const totalDuration = done.reduce((s, r) => s + (r.durationSec ?? 0), 0);
+  // Exact per-video values summed once, floored only for display (the campaign list does the same). A take a re-cut
+  // replaced is left out, as in the money: each creator's seconds are counted once.
+  const counted = done.filter((r) => !rolled.replacedBy.has(r.id));
+  const totalOnScreen = counted.reduce((s, r) => s + (r.seconds ?? 0), 0);
+  const totalDuration = counted.reduce((s, r) => s + (r.durationSec ?? 0), 0);
   // Look-alikes only, as the CSV counts them; an object Muse Spark could not make out is counted apart as unclear.
   const lookalikes = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict === "lookalike").length ?? 0), 0);
   const unclear = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict === "unclear").length ?? 0), 0);

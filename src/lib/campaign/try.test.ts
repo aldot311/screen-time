@@ -40,6 +40,28 @@ describe("startTry", () => {
     expect(await getCampaign(TRY_ID)).toBeNull();
   });
 
+  it("takes no slot when the sample video cannot be copied (Ash's re-cut is not in this store yet)", async () => {
+    const photo = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+    const photoUrl = await saveImageFile("lacroix-strawberry-peach", CAMPAIGN_FILES, "product-photo", photo);
+    // The same brief as the next test, since the sample campaign is created from it once.
+    await putCampaign({
+      id: "lacroix-strawberry-peach",
+      name: "LaCroix: Strawberry Peach creators",
+      brand: "LaCroix",
+      prompt: "drink can",
+      productDescription: "a pink LaCroix Strawberry Peach can",
+      brandTerms: ["LaCroix", "La Croix"],
+      contractTerms: ["On screen at least 3 seconds in total", "Says LaCroix out loud"],
+      fee: 300,
+      productImageUrl: photoUrl,
+      createdAt: day.toISOString(),
+    });
+    const early = new Date("2026-10-28T12:00:00Z");
+    expect(await startTry("7.7.7.7", early)).toMatchObject({ mode: "unavailable", status: 503 });
+    expect(await readDoc("try/2026-10-28/run-1.json")).toBeNull();
+    expect(await readDoc(`try/2026-10-28/start-${Math.floor(early.getTime() / 120_000)}.json`)).toBeNull();
+  });
+
   it("is a new sample, never the archived Alani one", () => {
     expect(TRY_ID).toBe("try-lacroix");
     expect(isArchived(TRY_ID)).toBe(false);

@@ -15,12 +15,17 @@ import { AGENT_MAX_USD, runAgent, type AgentRun } from "./campaign-agent";
 export async function executeAgent(campaign: Campaign, video: VideoEntry, opts: { public?: boolean } = {}): Promise<AgentRun> {
   const startedAt = video.agent?.startedAt ?? new Date().toISOString();
   const origin = opts.public ? ("public" as const) : video.agent?.origin;
-  // Writes land only on this run: never over a newer one, and an approval given once it finished stays.
+  // Writes land only on this run: never over a newer one, and an approval given once it finished stays. A visitor's
+  // run carries the finished run it set aside (AgentRun.prior) while it works; when it ends without finishing, that
+  // run comes back instead of the failure.
   const write = (agent: AgentRun) =>
     updateVideo(campaign.id, video.id, (v) => {
       if (v.agent?.startedAt !== agent.startedAt) return v;
+      const prior = v.agent.prior;
+      if (agent.status === "failed" && prior) return { ...v, agent: prior };
       const approvedAt = v.agent.recut?.approvedAt;
-      return { ...v, agent: approvedAt && agent.recut ? { ...agent, recut: { ...agent.recut, approvedAt } } : agent };
+      const next = approvedAt && agent.recut ? { ...agent, recut: { ...agent.recut, approvedAt } } : agent;
+      return { ...v, agent: agent.status === "running" && prior ? { ...next, prior } : next };
     });
   // Step writes go out one at a time, in order; a failed write never blocks the next.
   let queue = Promise.resolve();
@@ -32,8 +37,6 @@ export async function executeAgent(campaign: Campaign, video: VideoEntry, opts: 
       }));
   const finished: { run?: AgentRun; error?: unknown } = {};
   try {
-    // TODO(ledger): on Blob, withLedgerFile appends this run's entries with a plain read-then-write (store.ts), so two
-    // runs finishing together can drop each other's entries and the total cap undercounts. Per-run caps are exact.
     await withLedgerFile(async (ledgerPath) => {
       const { maxUsdPerRun, maxUsdTotal } = budget();
       const guard = new CostGuard({ maxUsdPerRun: opts.public ? Math.min(maxUsdPerRun, AGENT_MAX_USD) : maxUsdPerRun, maxUsdTotal, ledgerPath });
@@ -42,6 +45,7 @@ export async function executeAgent(campaign: Campaign, video: VideoEntry, opts: 
           campaign,
           video,
           history: async () => (await listVideos(campaign.id)).filter((v) => sameHandle(v.creator, video.creator)),
+          campaignVideos: () => listVideos(campaign.id),
           analyze: async (videoId) => {
             if (opts.public) throw new Error("Re-checking a new upload needs the demo password");
             const start = await startRun(campaign.id, videoId);

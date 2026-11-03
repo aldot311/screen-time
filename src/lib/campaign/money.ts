@@ -86,8 +86,8 @@ export interface Rollup {
 }
 
 /**
- * One decision per creator, from their newest video, the same one the Creators panel shows: a re-cut replaces the take
- * it fixes as soon as it is sent, and until it is checked that creator is pending. Roster creators who sent nothing are
+ * One decision per creator, from their newest video that did not stop: a re-cut replaces the take it fixes as soon as
+ * it is sent, and until it is checked that creator is pending; a re-cut that failed leaves the earlier take deciding. Roster creators who sent nothing are
  * pending too. A test set counts each clip on its own.
  */
 export function rollup(campaign: Pick<Campaign, "fee" | "creators">, videos: VideoEntry[]): Rollup {
@@ -98,8 +98,10 @@ export function rollup(campaign: Pick<Campaign, "fee" | "creators">, videos: Vid
     const key = unit === "video" ? v.id : handleKey(v.creator);
     const seen = newest.get(key);
     if (!seen) newest.set(key, { handle: v.creator, video: v });
-    // The earlier upload wins a tie, as in the Creators panel.
-    else if (!seen.video || v.createdAt > seen.video.createdAt) seen.video = v;
+    // The earlier upload wins a tie, as in the Creators panel. A take that stopped (failed) never replaces one that is
+    // still in play: a re-cut that could not be checked leaves the earlier finished take deciding.
+    else if (!seen.video || (v.createdAt > seen.video.createdAt && !(v.status === "failed" && seen.video.status !== "failed"))) seen.video = v;
+    else if (seen.video.status === "failed" && v.status !== "failed") seen.video = v;
   }
 
   const deciding: VideoEntry[] = [];

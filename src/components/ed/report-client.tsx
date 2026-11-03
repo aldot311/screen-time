@@ -17,7 +17,7 @@ import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decisi
 import { usd } from "@/lib/campaign/money";
 import { AnalysisReplay } from "./analysis-replay";
 import { RunReceiptCard } from "./run-receipt";
-import { costGloss, modelLine as modelSentence, notCounted, notCountedNote, notCountedPlay, phoneChip, prominenceGloss, receiptUsd, type NotCountedKind } from "./report-words";
+import { accuracyGloss, costGloss, modelLine as modelSentence, notCounted, notCountedNote, notCountedPlay, phoneChip, prominenceGloss, receiptUsd, type NotCountedKind } from "./report-words";
 import { ACTION_TILE } from "./action-style";
 import { AgentPanel } from "./agent-panel";
 import type { AgentAccess } from "@/lib/agent/public";
@@ -1180,6 +1180,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                   </a>
                 </p>
                 <p>{costGloss()}</p>
+                <p>{accuracyGloss()}</p>
               </>
             )}
           </div>

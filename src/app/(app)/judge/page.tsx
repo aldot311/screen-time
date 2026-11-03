@@ -29,11 +29,11 @@ const done = (v: VideoEntry | null): Done | null => (v?.status === "done" && v.r
 
 export default async function JudgePage() {
   const read = (id: string) => getVideo(LACROIX, id).then(done, () => null);
-  const [campaign, pay, hold, lookalike, agent] = await Promise.all([
+  const [campaign, pay, hold, firstTake, agent] = await Promise.all([
     getCampaign(LACROIX).catch(() => null),
     read(CASES.pay),
     read(CASES.hold),
-    read(CASES.lookalike),
+    read(CASES.firstTake),
     read(CASES.agent),
   ]);
   const acc = summarize(data);
@@ -76,17 +76,19 @@ export default async function JudgePage() {
             <Go href={open(pay)}>{pay ? `Open ${pay.creator}’s re-cut` : "Open the campaign"}</Go>
           </Step>
 
-          <Step n={3} title={hold ? `The hold case: ${hold.creator}’s first take` : "The hold case"} verdict={hold && verdictOf(hold.report)}>
+          <Step n={3} title={hold ? `The hold case: ${hold.creator}’s Reel` : "The hold case"} verdict={hold && verdictOf(hold.report)}>
             <p>
-              {hold ? `${missLine(hold)}${fee && verdictOf(hold.report) === "short" ? `, so ${fee} is held` : ""}. ` : ""}
-              The banner at the top points to the re-cut, which now decides pay or hold.
+              {hold ? `${lookalikeLine(hold)}${fee && verdictOf(hold.report) === "short" ? ` The ${fee} is held.` : ""} ` : ""}
+              The fee is held until the creator sends a Reel that meets the contract.
             </p>
-            <Go href={open(hold)}>{hold ? `Open ${hold.creator}’s first take` : "Open the campaign"}</Go>
+            <Go href={open(hold)}>{hold ? `Open ${hold.creator}’s Reel` : "Open the campaign"}</Go>
             <p className="mt-4">
-              <span className="font-semibold text-(--ink)">And a look-alike.</span>{" "}
-              {lookalike ? lookalikeLine(lookalike) : "Muse Spark rejects a can that is not the brand’s product, and it is never counted."}
+              <span className="font-semibold text-(--ink)">And a re-cut.</span>{" "}
+              {firstTake
+                ? `${firstTake.creator}’s first take: ${missLine(firstTake)}, so it was held. The banner at the top points to the re-cut, which replaced it and now decides pay.`
+                : "A creator’s re-cut replaces the take it fixes, and the money follows the re-cut."}
             </p>
-            <Go href={open(lookalike)}>{lookalike ? `Open ${lookalike.creator}’s Reel` : "Open the campaign"}</Go>
+            <Go href={open(firstTake)}>{firstTake ? `Open ${firstTake.creator}’s first take` : "Open the campaign"}</Go>
           </Step>
 
           <Step n={4} title="Check the accuracy">

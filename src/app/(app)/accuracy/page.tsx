@@ -5,7 +5,7 @@ import objects from "@/lib/open-weight-data.json";
 import { TopBar } from "@/components/ed/top-bar";
 import { DISPLAY } from "@/components/ed/campaign-ui";
 import { TrySample } from "@/components/ed/try-sample";
-import { clipName, missSeconds, pct, summarize, targetName, weakest, type AccuracyRow } from "@/components/ed/accuracy-summary";
+import { clipLabel, missSeconds, pct, summarize, targetName, weakest, type AccuracyRow } from "@/components/ed/accuracy-summary";
 import { tenths } from "@/components/format";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  *  under-counted most. Worded from their own figures, so a re-measure rewrites them. */
 function failures(rows: AccuracyRow[]) {
   const weak = weakest(rows);
-  const name = (r: AccuracyRow) => `${clipName(r.clip)} · ${targetName(r.target)}`;
+  const name = (r: AccuracyRow) => `${clipLabel(r.clip)} · ${targetName(r.target)}`;
   return [
     weak.precision && {
       key: "precision",
@@ -221,7 +221,7 @@ export default function AccuracyPage() {
               <tbody className="divide-y divide-(--hair)">
                 {verified.rows.map((r) => (
                   <tr key={`${r.clip}-${r.target}`} className="text-(--ink-2)">
-                    <td className="px-4 py-2 text-(--ink)">{clipName(r.clip)}</td>
+                    <td className="px-4 py-2 text-(--ink)">{clipLabel(r.clip)}</td>
                     <td className="px-3 py-2">{targetName(r.target)}</td>
                     <td className="px-3 py-2">{r.truthSec.toFixed(1)} s</td>
                     <td className="px-3 py-2">{r.predictedSec.toFixed(1)} s</td>

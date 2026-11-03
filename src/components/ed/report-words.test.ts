@@ -135,3 +135,12 @@ describe("phoneChip", () => {
     expect(phoneChip({ ...base, fee: "", override: { decision: "hold" } }).badge).toBe("Hold");
   });
 });
+
+describe("accuracyGloss", () => {
+  it("says what precision and recall mean, with the measured figures", async () => {
+    const { accuracyGloss } = await import("./report-words");
+    const text = accuracyGloss();
+    expect(text).toMatch(/^Precision \d+\.\d%: of the seconds Screen-Time counted/);
+    expect(text).toMatch(/Recall \d+\.\d%: of the seconds the product really showed/);
+  });
+});

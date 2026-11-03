@@ -1,5 +1,6 @@
 // Which real runs the landing page shows. They come from the LaCroix campaign (scripts/build-lacroix.mts); when a store
 // does not have them, the landing page leaves those parts out rather than inventing anything.
+import { sameHandle } from "./handle";
 import { getVideo } from "./store";
 import type { VideoEntry } from "./types";
 
@@ -67,8 +68,8 @@ export function featuredFirst<T extends { id: string; creator: string; createdAt
   if (campaignId !== HERO.campaignId) return videos;
   const face = videos.find((v) => v.id === HERO.videoId)?.creator;
   if (!face) return videos;
-  const theirs = videos.filter((v) => v.creator === face).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return [...theirs, ...videos.filter((v) => v.creator !== face)];
+  const theirs = videos.filter((v) => sameHandle(v.creator, face)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return [...theirs, ...videos.filter((v) => !sameHandle(v.creator, face))];
 }
 
 type Listed = { id: string; brand: string };

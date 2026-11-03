@@ -7,8 +7,8 @@ export const PUBLIC_AGENT: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["lacroix-strawberry-peach", new Set(["ash", "ash-recut", "george", "peter", "aldo", "aldo-2", "michael", "jamal", "lana", "jon"])],
 ]);
 
-/** The report pointed at for trying the agent: Ash's first take, which her finished re-cut replaces for pay or hold. */
-export const PUBLIC_AGENT_DEMO = { campaignId: "lacroix-strawberry-peach", videoId: "ash" } as const;
+/** The report pointed at for trying the agent: Peter's Reel, held for no disclosure, where it drafts a note and a re-cut. */
+export const PUBLIC_AGENT_DEMO = { campaignId: "lacroix-strawberry-peach", videoId: "peter" } as const;
 
 /** "owner": unlocked with the demo password. "public": a visitor on a listed example report. "locked": anyone else. */
 export type AgentAccess = "owner" | "public" | "locked";
