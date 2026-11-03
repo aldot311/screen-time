@@ -10,6 +10,8 @@
 //   pnpm tsx --tsconfig tsconfig.json scripts/open-weight.mts              # hosted side only
 //   OPEN_BASE_URL=https://openrouter.ai/api/v1 OPEN_MODEL=<provider's model id> OPEN_API_KEY=... \
 //     pnpm tsx --tsconfig tsconfig.json scripts/open-weight.mts --run [--json src/lib/open-weight-data.json]
+// --labels data/labels/lacroix scores one labelled set (its own objects.json); --photo product.jpg sends the brand's
+// reference photo first, as the app does when a campaign has one, so both sides judge the same images.
 // OPEN_USD_IN / OPEN_USD_OUT (per million tokens) price the open run; Baseten lists $1.25 / $4.25.
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -17,8 +19,9 @@ import type { VideoReport } from "@/lib/types";
 import { VERIFY_SCHEMA, verifyPrompt } from "@/lib/pipeline/prompts";
 
 const OUT = "data/out";
-const LABELS = "data/labels";
 const args = process.argv.slice(2);
+const LABELS = args.includes("--labels") ? args[args.indexOf("--labels") + 1] : "data/labels";
+const photoPath = args.includes("--photo") ? args[args.indexOf("--photo") + 1] : null;
 const run = args.includes("--run");
 const jsonPath = args.includes("--json") ? args[args.indexOf("--json") + 1] : null;
 
@@ -52,12 +55,18 @@ async function cases(): Promise<Case[]> {
     const dir = join(OUT, o.target, o.clip);
     const report: VideoReport = JSON.parse(await readFile(join(dir, "report.json"), "utf8"));
     const clipName = o.clip.split("/").pop()!;
+    // Crops are named per SAM pass since prompt recovery (<clip>-p<pass>-obj<id>-<n>.jpg); the report's tracks come
+    // from the last pass that found the product, or the first pass when none did. Older runs have no pass prefix.
+    const attempts = report.promptAttempts ?? [];
+    const pass = Math.max(0, attempts.map((a) => a.matched > 0).lastIndexOf(true));
+    const files = await readdir(dir);
+    const stem = files.includes(`${clipName}-p${pass}-obj${o.objectId}-0.jpg`) ? `${clipName}-p${pass}-obj${o.objectId}` : `${clipName}-obj${o.objectId}`;
     const brief = briefs.get(o.target) ?? { prompt: report.prompt, product: "" };
     out.push({
       ...o,
       truth: o.truth as "product" | "other",
       hosted: report.tracks.find((t) => t.objectId === o.objectId)?.verdict ?? "missing",
-      crops: [0, 1, 2].map((i) => join(dir, `${clipName}-obj${o.objectId}-${i}.jpg`)),
+      crops: [0, 1, 2].map((i) => join(dir, `${stem}-${i}.jpg`)),
       prompt: brief.prompt,
       product: brief.product,
     });
@@ -75,12 +84,14 @@ function score(rows: { truth: string; verdict: string }[]) {
 
 async function openVerdict(c: Case): Promise<{ verdict: string; ms: number; usd: number; raw?: string }> {
   const images = await Promise.all(
-    c.crops.map(async (p) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${(await readFile(p).catch(() => Buffer.alloc(0))).toString("base64")}` } })),
+    [...(photoPath ? [photoPath] : []), ...c.crops].map(async (p) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${(await readFile(p).catch(() => Buffer.alloc(0))).toString("base64")}` } })),
   );
   const body = {
     model: process.env.OPEN_MODEL,
-    messages: [{ role: "user", content: [{ type: "text", text: verifyPrompt(c.product, c.prompt, false) }, ...images.filter((i) => i.image_url.url.length > 40)] }],
+    messages: [{ role: "user", content: [{ type: "text", text: verifyPrompt(c.product, c.prompt, Boolean(photoPath)) }, ...images.filter((i) => i.image_url.url.length > 40)] }],
     response_format: { type: "json_schema", json_schema: { name: "product_check", schema: VERIFY_SCHEMA, strict: true } },
+    // OpenRouter only: send to this provider and never fall back (OPEN_PROVIDER_ONLY=fireworks), as the app does.
+    ...(process.env.OPEN_PROVIDER_ONLY ? { provider: { only: [process.env.OPEN_PROVIDER_ONLY], allow_fallbacks: false } } : {}),
   };
   const t0 = performance.now();
   const res = await fetch(`${process.env.OPEN_BASE_URL}/chat/completions`, {

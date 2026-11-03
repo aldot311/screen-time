@@ -1,5 +1,5 @@
 // Compare pipeline reports (data/out/<target>/<clip>/report.json) with labels (data/labels/<id>.json), frame by frame.
-// Usage: pnpm accuracy [data/out] [--json path]
+// Usage: pnpm accuracy [data/out] [--json path] [--labels data/labels/lacroix]
 //
 // Two ablation rows come from the same runs, with no new model calls:
 // - "SAM 3.1 alone": every frame where SAM drew a box for the prompt, before Muse Spark judged any object (so a
@@ -13,8 +13,10 @@ import { FPS, type VideoReport } from "@/lib/types";
 const args = process.argv.slice(2);
 const jsonAt = args.indexOf("--json");
 const jsonPath = jsonAt >= 0 ? args[jsonAt + 1] : null;
-const outDir = args.find((a, i) => !a.startsWith("--") && i !== jsonAt + 1) ?? "data/out";
-const labelsDir = "data/labels";
+// --labels scores one labelled set (the LaCroix Reels live in data/labels/lacroix); the default reads every set.
+const labelsAt = args.indexOf("--labels");
+const outDir = args.find((a, i) => !a.startsWith("--") && i !== jsonAt + 1 && i !== labelsAt + 1) ?? "data/out";
+const labelsDir = labelsAt >= 0 ? args[labelsAt + 1] : "data/labels";
 
 interface Target {
   name: string;
@@ -68,7 +70,7 @@ export interface Score {
   falseSecondsOnEmptyClips: number;
 }
 
-const labelFiles = (await readdir(labelsDir, { recursive: true })).filter((f) => f.endsWith(".json"));
+const labelFiles = (await readdir(labelsDir, { recursive: true })).filter((f) => f.endsWith(".json") && !f.endsWith("objects.json"));
 const labelled: Labels[] = await Promise.all(labelFiles.map(async (f) => JSON.parse(await readFile(join(labelsDir, f), "utf8"))));
 
 async function score(mode: Mode): Promise<Score> {

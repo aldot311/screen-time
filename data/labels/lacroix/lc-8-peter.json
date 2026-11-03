@@ -1,0 +1,23 @@
+{
+  "id": "lacroix/lc-8-peter",
+  "method": "Drafted by two independent Claude vision passes over 5 fps frame grids (one forward, one in reverse order); a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames.",
+  "checkedBy": "",
+  "targets": [
+    {
+      "name": "lacroix-can",
+      "prompt": "drink can",
+      "product": "a pink LaCroix Strawberry Peach sparkling water can: blue 'LaCroix' script over a yellow peach, red and yellow hearts, strawberries and green stripes near the base",
+      "brandTerms": [
+        "LaCroix",
+        "La Croix"
+      ],
+      "ranges": [
+        [
+          0,
+          247
+        ]
+      ],
+      "notes": "both passes agree"
+    }
+  ]
+}

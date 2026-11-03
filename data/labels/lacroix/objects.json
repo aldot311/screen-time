@@ -1,0 +1,18 @@
+{
+ "method": "Each object SAM 3.1 tracked in the LaCroix runs (data/out/lacroix-can/lacroix/<clip>/), judged from the three crops Muse Spark saw against the product photo: 'product', 'other' (a different product), or 'unsure' (too small to tell; left out of scores). One visual pass by Claude on 2026-11-03, written down before any open-weight run.",
+ "objects": [
+  { "clip": "lacroix/lc-1-george", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-1-george", "target": "lacroix-can", "objectId": 1, "truth": "unsure", "note": "a thin yellow sliver in the fridge door, too small to tell what it is" },
+  { "clip": "lacroix/lc-1-michael", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-10-aldo", "target": "lacroix-can", "objectId": 1, "truth": "other", "note": "LaCroix Pamplemousse, a different flavor (the label reads PAMPLEMOUSSE)" },
+  { "clip": "lacroix/lc-11-jon", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-12-aldo", "target": "lacroix-can", "objectId": 0, "truth": "other", "note": "a Poppi Raspberry Rose can, another brand" },
+  { "clip": "lacroix/lc-12-aldo", "target": "lacroix-can", "objectId": 1, "truth": "product" },
+  { "clip": "lacroix/lc-2-jamal", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-4-lana", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-6-michael", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-7a-ash", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-7b-ash", "target": "lacroix-can", "objectId": 0, "truth": "product" },
+  { "clip": "lacroix/lc-8-peter", "target": "lacroix-can", "objectId": 0, "truth": "product" }
+ ]
+}

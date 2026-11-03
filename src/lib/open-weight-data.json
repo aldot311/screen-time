@@ -1,8 +1,8 @@
 {
-  "measuredAt": "2026-10-29",
+  "measuredAt": "2026-11-03",
   "hosted": {
     "model": "muse-spark-1.3",
-    "objects": 37,
+    "objects": 12,
     "accuracy": 1,
     "precision": 1,
     "recall": 1,
@@ -12,14 +12,14 @@
   "open": {
     "model": "meta/muse-spark-open",
     "provider": "https://openrouter.ai/api/v1",
-    "objects": 37,
-    "accuracy": 0.9459459459459459,
+    "objects": 12,
+    "accuracy": 0.8333333333333334,
     "precision": 1,
-    "recall": 0.9310344827586207,
+    "recall": 0.8,
     "falseMatches": 0,
     "missedMatches": 2,
-    "medianMs": 413,
-    "usd": 0.22148224999999996
+    "medianMs": 905,
+    "usd": 0.11917575000000001
   },
-  "agreement": 0.9459459459459459
+  "agreement": 0.8333333333333334
 }

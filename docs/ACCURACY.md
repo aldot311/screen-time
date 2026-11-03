@@ -1,4 +1,47 @@
-# Accuracy (measured 2026-10-28)
+# Accuracy (measured 2026-11-03, the LaCroix Reels)
+
+Per-frame precision and recall of "brand product on screen" against checked labels, on real runs of the full
+pipeline (SAM 3.1 tracking → Muse Spark look-alike check against the product photo → metrics), 15 fps. This is the
+set the site shows.
+
+- Test set: 11 vertical Reels filmed by 9 creators for a LaCroix Strawberry Peach campaign (the captioned versions,
+  as posted), one product: the pink Strawberry Peach can. Two hold real look-alikes: a LaCroix Pamplemousse can (a
+  different flavor, the only can in the clip) and a Poppi Raspberry Rose can on the table beside the LaCroix. Others
+  have a Stanley-style tumbler or a fridge full of bottles in frame.
+- Labels: drafted by two independent Claude vision passes over frame-numbered 5 fps grids (one in order, one in
+  reverse), kept where both agree (or one is certain and the other unsure): data/labels/lacroix/. The passes
+  disagreed on 1 of 936 sampled frames. Both called the Pamplemousse can the product from the small grids; at full
+  resolution its label reads PAMPLEMOUSSE, so that clip was corrected to "no product" (noted in its file).
+- Reproduce: `pnpm run-clip --prompt "drink can" --product "<description>" --brand LaCroix --brand "La Croix"
+  --term ... --target lacroix-can --product-photo <photo> data/videos/lacroix/*.mp4`, then
+  `pnpm accuracy data/out --labels data/labels/lacroix --json src/lib/accuracy-data.json`.
+
+**Overall: precision 98.1%, recall 99.4%, F1 98.8%.** Look-alike clip (Pamplemousse): 0 s counted (correct).
+
+| Pipeline | Precision | Recall | F1 | Avg. error per Reel | Seconds counted on the look-alike clip |
+|---|---|---|---|---|---|
+| SAM 3.1 alone (every tracked object counts) | 95.0% | 99.4% | 97.2% | 0.56 s | 4.3 s |
+| SAM 3.1 + Muse Spark (confirmed objects only) | 98.1% | 99.4% | 98.8% | 0.17 s | 0.0 s |
+
+Object by object (data/labels/lacroix/objects.json, judged from the crops Muse Spark saw; one fridge-door sliver too
+small to judge is left out): hosted Muse Spark 1.3 called 12 of 12 correctly, 10 cans of the product and 2 other
+things (the Pamplemousse can, the Poppi can). Open-weight Muse Spark Open (`meta/muse-spark-open` on OpenRouter,
+pinned to Fireworks, same crops, same photo, same prompt): 10 of 12, 0 look-alikes counted, 2 real cans called
+"unclear" (Michael's in-hand can coming out of the fridge, Lana's blurred can), which the app would not count and
+would flag for a look. Precision 100%, recall 80%, median 905 ms per check, $0.12 for the 12 checks.
+`scripts/open-weight.mts --labels data/labels/lacroix --photo <photo> --run`.
+
+Where it is wrong:
+- Michael's Reel: the can is on screen 2.6 s by the labels, the app counted 3.1 s (SAM picks the can up a few frames
+  early as he pulls it out of the fridge). The contract asks for 3 s, so the app said pay where the labels say hold.
+  It did flag the report "worth a look: near a threshold".
+- Run-to-run: in this measured run Muse Spark matched George's small, blurred can (11.3 s); in the campaign run on
+  the site the same Reel's can came back "unclear" and counted 0 s, so the app holds it and flags it for a look.
+  Small cans can flip between runs; the app never counts an object it is unsure of.
+
+Cost of the 11 runs: $1.54 of Meta API ($0.106–0.220 per Reel), with the product photo and transcription.
+
+# Earlier test set (2026-10-28, the builder's own clips; not shown on the site)
 
 Per-frame precision and recall of "brand product on screen" against checked labels, on real runs of the full
 pipeline (SAM 3.1 tracking → Muse Spark look-alike check → metrics), 15 fps.

@@ -1,393 +1,201 @@
 {
-  "measuredAt": "2026-10-29",
+  "measuredAt": "2026-11-03",
   "fps": 15,
   "scores": [
     {
       "mode": "sam",
       "rows": [
         {
-          "clip": "clip01",
-          "target": "alani-can",
-          "truthSec": 4,
-          "predictedSec": 4.866666666666666,
-          "precision": 0.7945205479452054,
-          "recall": 0.9666666666666667
+          "clip": "lacroix/lc-1-george",
+          "target": "lacroix-can",
+          "truthSec": 11.2,
+          "predictedSec": 11.266666666666667,
+          "precision": 0.9526627218934911,
+          "recall": 0.9583333333333334
         },
         {
-          "clip": "clip02",
-          "target": "alani-can",
+          "clip": "lacroix/lc-1-michael",
+          "target": "lacroix-can",
+          "truthSec": 2.6,
+          "predictedSec": 3.066666666666667,
+          "precision": 0.8478260869565217,
+          "recall": 1
+        },
+        {
+          "clip": "lacroix/lc-10-aldo",
+          "target": "lacroix-can",
+          "truthSec": 0,
+          "predictedSec": 4.266666666666667,
+          "precision": 0,
+          "recall": null
+        },
+        {
+          "clip": "lacroix/lc-11-jon",
+          "target": "lacroix-can",
           "truthSec": 12,
           "predictedSec": 12,
           "precision": 1,
           "recall": 1
         },
         {
-          "clip": "clip03",
-          "target": "alani-can",
-          "truthSec": 5.8,
-          "predictedSec": 5.866666666666666,
-          "precision": 0.9772727272727273,
-          "recall": 0.9885057471264368
-        },
-        {
-          "clip": "clip04",
-          "target": "alani-can",
-          "truthSec": 9.2,
-          "predictedSec": 8.933333333333334,
-          "precision": 1,
-          "recall": 0.9710144927536232
-        },
-        {
-          "clip": "clip05",
-          "target": "alani-can",
-          "truthSec": 0,
-          "predictedSec": 13.266666666666667,
-          "precision": 0,
-          "recall": null
-        },
-        {
-          "clip": "clip06",
-          "target": "stanley-tumbler",
-          "truthSec": 11.4,
-          "predictedSec": 10.066666666666666,
-          "precision": 1,
-          "recall": 0.8830409356725146
-        },
-        {
-          "clip": "clip07",
-          "target": "stanley-tumbler",
-          "truthSec": 11,
-          "predictedSec": 11.333333333333334,
-          "precision": 0.9588235294117647,
-          "recall": 0.9878787878787879
-        },
-        {
-          "clip": "clip08",
-          "target": "new-balance-sneaker",
-          "truthSec": 1.6,
-          "predictedSec": 1.4666666666666666,
-          "precision": 1,
-          "recall": 0.9166666666666666
-        },
-        {
-          "clip": "clip09",
-          "target": "alani-can",
-          "truthSec": 0,
-          "predictedSec": 0,
-          "precision": null,
-          "recall": null
-        },
-        {
-          "clip": "clip10",
-          "target": "alani-can",
-          "truthSec": 4,
-          "predictedSec": 4.466666666666667,
-          "precision": 0.8955223880597015,
+          "clip": "lacroix/lc-12-aldo",
+          "target": "lacroix-can",
+          "truthSec": 21.333333333333332,
+          "predictedSec": 21.733333333333334,
+          "precision": 0.9815950920245399,
           "recall": 1
         },
         {
-          "clip": "clip11",
-          "target": "alani-can",
-          "truthSec": 7,
-          "predictedSec": 6.933333333333334,
-          "precision": 0.9807692307692307,
-          "recall": 0.9714285714285714
+          "clip": "lacroix/lc-2-jamal",
+          "target": "lacroix-can",
+          "truthSec": 14,
+          "predictedSec": 14.066666666666666,
+          "precision": 0.981042654028436,
+          "recall": 0.9857142857142858
         },
         {
-          "clip": "clip11",
-          "target": "stanley-tumbler",
-          "truthSec": 9,
-          "predictedSec": 7.466666666666667,
-          "precision": 0.9464285714285714,
-          "recall": 0.7851851851851852
-        },
-        {
-          "clip": "clip12",
-          "target": "alani-can",
-          "truthSec": 9.8,
-          "predictedSec": 10.6,
-          "precision": 0.9245283018867925,
-          "recall": 1
-        },
-        {
-          "clip": "clip13",
-          "target": "alani-can",
-          "truthSec": 9.333333333333334,
-          "predictedSec": 9.333333333333334,
+          "clip": "lacroix/lc-4-lana",
+          "target": "lacroix-can",
+          "truthSec": 12.133333333333333,
+          "predictedSec": 12.133333333333333,
           "precision": 1,
           "recall": 1
         },
         {
-          "clip": "clip14",
-          "target": "alani-can",
-          "truthSec": 3.2,
-          "predictedSec": 3.1333333333333333,
-          "precision": 1,
-          "recall": 0.9791666666666666
-        },
-        {
-          "clip": "clip14",
-          "target": "stanley-tumbler",
-          "truthSec": 3.6,
-          "predictedSec": 3.7333333333333334,
-          "precision": 0.8392857142857143,
-          "recall": 0.8703703703703703
-        },
-        {
-          "clip": "clip15",
-          "target": "alani-can",
-          "truthSec": 3.6,
-          "predictedSec": 3.6666666666666665,
-          "precision": 0.9818181818181818,
+          "clip": "lacroix/lc-6-michael",
+          "target": "lacroix-can",
+          "truthSec": 13.733333333333333,
+          "predictedSec": 14.533333333333333,
+          "precision": 0.944954128440367,
           "recall": 1
         },
         {
-          "clip": "clip15",
-          "target": "stanley-tumbler",
-          "truthSec": 3.4,
-          "predictedSec": 2.6,
-          "precision": 0.9743589743589743,
-          "recall": 0.7450980392156863
-        },
-        {
-          "clip": "stock/stock01",
-          "target": "sneakers",
-          "truthSec": 8.533333333333333,
-          "predictedSec": 8.133333333333333,
+          "clip": "lacroix/lc-7a-ash",
+          "target": "lacroix-can",
+          "truthSec": 11.866666666666667,
+          "predictedSec": 11.8,
           "precision": 1,
-          "recall": 0.953125
+          "recall": 0.9943820224719101
         },
         {
-          "clip": "stock/stock03",
-          "target": "blue-can",
-          "truthSec": 5.133333333333334,
-          "predictedSec": 5.133333333333334,
+          "clip": "lacroix/lc-7b-ash",
+          "target": "lacroix-can",
+          "truthSec": 13.333333333333334,
+          "predictedSec": 13.333333333333334,
           "precision": 1,
           "recall": 1
         },
         {
-          "clip": "stock/stock04",
-          "target": "singaraja-can",
-          "truthSec": 9,
-          "predictedSec": 9.066666666666666,
-          "precision": 0.9926470588235294,
+          "clip": "lacroix/lc-8-peter",
+          "target": "lacroix-can",
+          "truthSec": 16.533333333333335,
+          "predictedSec": 16.533333333333335,
+          "precision": 1,
           "recall": 1
-        },
-        {
-          "clip": "stock/stock05",
-          "target": "water-bottle",
-          "truthSec": 11.6,
-          "predictedSec": 11.733333333333333,
-          "precision": 0.9886363636363636,
-          "recall": 1
-        },
-        {
-          "clip": "stock/stock06",
-          "target": "coffee-cup",
-          "truthSec": 8,
-          "predictedSec": 8.066666666666666,
-          "precision": 0.9834710743801653,
-          "recall": 0.9916666666666667
         }
       ],
-      "precision": 0.8904448105436573,
-      "recall": 0.9596094096759876,
-      "f1": 0.9237342448194832,
-      "meanAbsErrorSec": 0.907246376811594,
-      "falseSecondsOnEmptyClips": 13.266666666666667
+      "precision": 0.9500247402276101,
+      "recall": 0.9943034697048162,
+      "f1": 0.9716599190283401,
+      "meanAbsErrorSec": 0.5575757575757575,
+      "falseSecondsOnEmptyClips": 4.266666666666667
     },
     {
       "mode": "verified",
       "rows": [
         {
-          "clip": "clip01",
-          "target": "alani-can",
-          "truthSec": 4,
-          "predictedSec": 4.866666666666666,
-          "precision": 0.7945205479452054,
-          "recall": 0.9666666666666667
+          "clip": "lacroix/lc-1-george",
+          "target": "lacroix-can",
+          "truthSec": 11.2,
+          "predictedSec": 11.266666666666667,
+          "precision": 0.9526627218934911,
+          "recall": 0.9583333333333334
         },
         {
-          "clip": "clip02",
-          "target": "alani-can",
+          "clip": "lacroix/lc-1-michael",
+          "target": "lacroix-can",
+          "truthSec": 2.6,
+          "predictedSec": 3.066666666666667,
+          "precision": 0.8478260869565217,
+          "recall": 1
+        },
+        {
+          "clip": "lacroix/lc-10-aldo",
+          "target": "lacroix-can",
+          "truthSec": 0,
+          "predictedSec": 0,
+          "precision": null,
+          "recall": null
+        },
+        {
+          "clip": "lacroix/lc-11-jon",
+          "target": "lacroix-can",
           "truthSec": 12,
           "predictedSec": 12,
           "precision": 1,
           "recall": 1
         },
         {
-          "clip": "clip03",
-          "target": "alani-can",
-          "truthSec": 5.8,
-          "predictedSec": 5.866666666666666,
-          "precision": 0.9772727272727273,
-          "recall": 0.9885057471264368
-        },
-        {
-          "clip": "clip04",
-          "target": "alani-can",
-          "truthSec": 9.2,
-          "predictedSec": 8.933333333333334,
-          "precision": 1,
-          "recall": 0.9710144927536232
-        },
-        {
-          "clip": "clip05",
-          "target": "alani-can",
-          "truthSec": 0,
-          "predictedSec": 0,
-          "precision": null,
-          "recall": null
-        },
-        {
-          "clip": "clip06",
-          "target": "stanley-tumbler",
-          "truthSec": 11.4,
-          "predictedSec": 10.066666666666666,
-          "precision": 1,
-          "recall": 0.8830409356725146
-        },
-        {
-          "clip": "clip07",
-          "target": "stanley-tumbler",
-          "truthSec": 11,
-          "predictedSec": 11.333333333333334,
-          "precision": 0.9588235294117647,
-          "recall": 0.9878787878787879
-        },
-        {
-          "clip": "clip08",
-          "target": "new-balance-sneaker",
-          "truthSec": 1.6,
-          "predictedSec": 1.4666666666666666,
-          "precision": 1,
-          "recall": 0.9166666666666666
-        },
-        {
-          "clip": "clip09",
-          "target": "alani-can",
-          "truthSec": 0,
-          "predictedSec": 0,
-          "precision": null,
-          "recall": null
-        },
-        {
-          "clip": "clip10",
-          "target": "alani-can",
-          "truthSec": 4,
-          "predictedSec": 4.133333333333334,
-          "precision": 0.967741935483871,
+          "clip": "lacroix/lc-12-aldo",
+          "target": "lacroix-can",
+          "truthSec": 21.333333333333332,
+          "predictedSec": 21.733333333333334,
+          "precision": 0.9815950920245399,
           "recall": 1
         },
         {
-          "clip": "clip11",
-          "target": "alani-can",
-          "truthSec": 7,
-          "predictedSec": 6.933333333333334,
-          "precision": 0.9807692307692307,
-          "recall": 0.9714285714285714
+          "clip": "lacroix/lc-2-jamal",
+          "target": "lacroix-can",
+          "truthSec": 14,
+          "predictedSec": 14.066666666666666,
+          "precision": 0.981042654028436,
+          "recall": 0.9857142857142858
         },
         {
-          "clip": "clip11",
-          "target": "stanley-tumbler",
-          "truthSec": 9,
-          "predictedSec": 7.466666666666667,
-          "precision": 0.9464285714285714,
-          "recall": 0.7851851851851852
-        },
-        {
-          "clip": "clip12",
-          "target": "alani-can",
-          "truthSec": 9.8,
-          "predictedSec": 10.266666666666667,
-          "precision": 0.9545454545454546,
-          "recall": 1
-        },
-        {
-          "clip": "clip13",
-          "target": "alani-can",
-          "truthSec": 9.333333333333334,
-          "predictedSec": 9.333333333333334,
+          "clip": "lacroix/lc-4-lana",
+          "target": "lacroix-can",
+          "truthSec": 12.133333333333333,
+          "predictedSec": 12.133333333333333,
           "precision": 1,
           "recall": 1
         },
         {
-          "clip": "clip14",
-          "target": "alani-can",
-          "truthSec": 3.2,
-          "predictedSec": 3.1333333333333333,
-          "precision": 1,
-          "recall": 0.9791666666666666
-        },
-        {
-          "clip": "clip14",
-          "target": "stanley-tumbler",
-          "truthSec": 3.6,
-          "predictedSec": 3.3333333333333335,
-          "precision": 0.94,
-          "recall": 0.8703703703703703
-        },
-        {
-          "clip": "clip15",
-          "target": "alani-can",
-          "truthSec": 3.6,
-          "predictedSec": 3.6666666666666665,
-          "precision": 0.9818181818181818,
+          "clip": "lacroix/lc-6-michael",
+          "target": "lacroix-can",
+          "truthSec": 13.733333333333333,
+          "predictedSec": 14.533333333333333,
+          "precision": 0.944954128440367,
           "recall": 1
         },
         {
-          "clip": "clip15",
-          "target": "stanley-tumbler",
-          "truthSec": 3.4,
-          "predictedSec": 2.6,
-          "precision": 0.9743589743589743,
-          "recall": 0.7450980392156863
-        },
-        {
-          "clip": "stock/stock01",
-          "target": "sneakers",
-          "truthSec": 8.533333333333333,
-          "predictedSec": 7.533333333333333,
+          "clip": "lacroix/lc-7a-ash",
+          "target": "lacroix-can",
+          "truthSec": 11.866666666666667,
+          "predictedSec": 11.8,
           "precision": 1,
-          "recall": 0.8828125
+          "recall": 0.9943820224719101
         },
         {
-          "clip": "stock/stock03",
-          "target": "blue-can",
-          "truthSec": 5.133333333333334,
-          "predictedSec": 5.133333333333334,
+          "clip": "lacroix/lc-7b-ash",
+          "target": "lacroix-can",
+          "truthSec": 13.333333333333334,
+          "predictedSec": 13.333333333333334,
           "precision": 1,
           "recall": 1
         },
         {
-          "clip": "stock/stock04",
-          "target": "singaraja-can",
-          "truthSec": 9,
-          "predictedSec": 9.066666666666666,
-          "precision": 0.9926470588235294,
+          "clip": "lacroix/lc-8-peter",
+          "target": "lacroix-can",
+          "truthSec": 16.533333333333335,
+          "predictedSec": 16.533333333333335,
+          "precision": 1,
           "recall": 1
-        },
-        {
-          "clip": "stock/stock05",
-          "target": "water-bottle",
-          "truthSec": 11.6,
-          "predictedSec": 11.733333333333333,
-          "precision": 0.9886363636363636,
-          "recall": 1
-        },
-        {
-          "clip": "stock/stock06",
-          "target": "coffee-cup",
-          "truthSec": 8,
-          "predictedSec": 8.066666666666666,
-          "precision": 0.9834710743801653,
-          "recall": 0.9916666666666667
         }
       ],
-      "precision": 0.9768602540834845,
-      "recall": 0.9556147359076786,
-      "f1": 0.9661207089970832,
-      "meanAbsErrorSec": 0.3333333333333333,
+      "precision": 0.9810935104752172,
+      "recall": 0.9943034697048162,
+      "f1": 0.9876543209876544,
+      "meanAbsErrorSec": 0.1696969696969697,
       "falseSecondsOnEmptyClips": 0
     }
   ]
