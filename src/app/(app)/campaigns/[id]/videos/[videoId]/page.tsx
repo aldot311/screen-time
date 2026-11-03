@@ -9,7 +9,7 @@ import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
 import { agentRunning } from "@/lib/agent/campaign-agent";
 import { feeFor, latestFinished } from "@/lib/campaign/money";
-import { sameHandle } from "@/lib/campaign/roster";
+import { handleKey, sameHandle } from "@/lib/campaign/handle";
 import { VerdictPill } from "@/components/ed/bits";
 import { PendingLink } from "@/components/ed/pending-link";
 
@@ -42,8 +42,9 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   const { id, videoId } = await params;
   const [campaign, video, showcase, all] = await Promise.all([getCampaign(id), getVideo(id, videoId), loadShowcase(), listCampaigns()]);
   if (!campaign || !video) notFound();
-  // When a brand has several campaigns, the back link names which one: "Stanley · Live demo".
-  const sibling = all.filter((c) => c.brand === campaign.brand).length > 1;
+  // When a brand has several campaigns, the back link names which one: "Stanley · Live demo". The sample's sandbox
+  // shares the showcase's brand, so it counts only on its own pages.
+  const sibling = all.filter((c) => c.brand === campaign.brand && (c.id !== TRY_ID || c.id === campaign.id)).length > 1;
   const short = campaign.name.replace(/^[^:]+:\s*/, "");
   // A name without a "Brand: " prefix, or one that is just the brand, adds nothing after the dot.
   const named = short && short !== campaign.name && short.toLowerCase() !== campaign.brand.toLowerCase();
@@ -63,16 +64,12 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   // A re-cut from a creator on the roster replaces this video for pay or hold. (A test set's clips from one handle
   // are separate tests, not re-cuts, so they never say this.)
   const onRoster = campaign.creators?.some((c) => sameHandle(c.handle, video.creator)) ?? false;
-  const newer = onRoster && video.status === "done" ? latestFinished(await listVideos(id)).get(video.creator.toLowerCase()) : undefined;
+  const newer = onRoster && video.status === "done" ? latestFinished(await listVideos(id)).get(handleKey(video.creator)) : undefined;
   const replacedBy = newer && newer.id !== video.id && newer.createdAt > video.createdAt ? newer : undefined;
 
   // Plain names for the tracked objects where the showcase has them; elsewhere the report names them from the brief.
   const names =
-    showcase.hero?.video.id === video.id && showcase.hero.video.campaignId === campaign.id
-      ? showcase.hero.names
-      : showcase.lookalike?.video.id === video.id && showcase.lookalike.video.campaignId === campaign.id
-        ? showcase.lookalike.names
-        : {};
+    [showcase.hero, ...showcase.lookalikes].find((s) => s?.video.id === video.id && s.video.campaignId === campaign.id)?.names ?? {};
 
   return (
     <>

@@ -60,12 +60,14 @@ describe("campaign routes", () => {
     expect((await newCampaign()).id).toBe("fall-creators");
     expect((await newCampaign()).id).toMatch(/^fall-creators-[a-z0-9]{6}$/);
     expect((await newCampaign("Preview")).id).toMatch(/^preview-[a-z0-9]{6}$/);
+    // An archived id is taken too: a new campaign never lands on (and overwrites) a hidden one.
+    expect((await newCampaign("Alani Nu: launch")).id).toMatch(/^alani-nu-launch-[a-z0-9]{6}$/);
     const bad = await campaigns.POST(json({ name: "x" }));
     expect(bad.status).toBe(400);
     const list = (await (await campaigns.GET()).json()) as { id: string }[];
     // Real campaigns replace the labelled preview in the list (it stays reachable by its URL).
     expect(list.map((c) => c.id)).not.toContain("preview");
-    expect(list).toHaveLength(3);
+    expect(list).toHaveLength(4);
   });
 
   it("switches the object check to Muse Spark Open only where a host is set up", async () => {
@@ -88,11 +90,18 @@ describe("campaign routes", () => {
     }
   });
 
-  it("returns a campaign with its videos, and 404 for an unknown one", async () => {
-    const res = await campaignById.GET(new Request("http://localhost"), params({ id: "preview" }));
-    const body = (await res.json()) as { campaign: { synthetic: boolean }; videos: unknown[] };
-    expect(body.campaign.synthetic).toBe(true);
-    expect(body.videos).toHaveLength(12);
+  it("returns a campaign with its videos, and 404 for an unknown or archived one", async () => {
+    // The preview is archived: not found on the site, readable by scripts that ask for archived campaigns.
+    expect((await campaignById.GET(new Request("http://localhost"), params({ id: "preview" }))).status).toBe(404);
+    vi.stubEnv("SCREEN_TIME_SHOW_ARCHIVED", "1");
+    try {
+      const res = await campaignById.GET(new Request("http://localhost"), params({ id: "preview" }));
+      const body = (await res.json()) as { campaign: { synthetic: boolean }; videos: unknown[] };
+      expect(body.campaign.synthetic).toBe(true);
+      expect(body.videos).toHaveLength(12);
+    } finally {
+      vi.unstubAllEnvs();
+    }
     expect((await campaignById.GET(new Request("http://localhost"), params({ id: "../etc" }))).status).toBe(404);
   });
 
@@ -184,9 +193,19 @@ describe("POST run", () => {
 
 describe("GET export.csv", () => {
   it("downloads one row per video as an attachment", async () => {
-    const res = await exportCsv.GET(new Request("http://localhost"), params({ id: "preview" }));
-    expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="preview.csv"');
-    expect(res.headers.get("Content-Type")).toContain("text/csv");
-    expect((await res.text()).trimEnd().split("\r\n")).toHaveLength(13);
+    // The preview's 12 labelled videos, read the way a script reads an archived campaign.
+    vi.stubEnv("SCREEN_TIME_SHOW_ARCHIVED", "1");
+    try {
+      const res = await exportCsv.GET(new Request("http://localhost"), params({ id: "preview" }));
+      expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="preview.csv"');
+      expect(res.headers.get("Content-Type")).toContain("text/csv");
+      expect((await res.text()).trimEnd().split("\r\n")).toHaveLength(13);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("does not export an archived campaign", async () => {
+    expect((await exportCsv.GET(new Request("http://localhost"), params({ id: "preview" }))).status).toBe(404);
   });
 });

@@ -1,7 +1,6 @@
 import { connection } from "next/server";
 import { NewCampaign } from "@/lib/campaign/schema";
-import { getCampaign, listCampaigns, putCampaign, randomSuffix, slugify } from "@/lib/campaign/store";
-import { PREVIEW_ID } from "@/lib/campaign/preview";
+import { freeCampaignId, listCampaigns, putCampaign } from "@/lib/campaign/store";
 import type { Campaign } from "@/lib/campaign/types";
 
 export async function GET() {
@@ -15,12 +14,6 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Invalid campaign", issues: parsed.error.issues }, { status: 400 });
   }
-  const campaign: Campaign = { id: await freeId(parsed.data.name), ...parsed.data, createdAt: new Date().toISOString() };
+  const campaign: Campaign = { id: await freeCampaignId(parsed.data.name), ...parsed.data, createdAt: new Date().toISOString() };
   return Response.json(await putCampaign(campaign), { status: 201 });
-}
-
-async function freeId(name: string): Promise<string> {
-  const slug = slugify(name);
-  if (slug !== PREVIEW_ID && !(await getCampaign(slug))) return slug;
-  return `${slugify(name, 40)}-${randomSuffix()}`;
 }

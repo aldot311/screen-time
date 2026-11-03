@@ -2,6 +2,7 @@
 import { disclosureWhere } from "@/lib/metrics/rules";
 import type { VideoReport } from "@/lib/types";
 import { prominenceOf, verdictOf } from "@/components/format";
+import { handleKey } from "./handle";
 import { decisionOf, feeFor, latestFinished } from "./money";
 import type { Campaign, VideoEntry } from "./types";
 
@@ -93,5 +94,5 @@ function disclosureCells(r: VideoReport): [Cell, Cell] {
 /** One row per video; `fees` (the campaign) adds what each recommendation pays or holds. */
 export function campaignCsv(videos: VideoEntry[], fees: Fees = {}): string {
   const latest = latestFinished(videos);
-  return [CSV_HEADER, ...videos.map((v) => videoRow(v, fees, latest.get(v.creator.toLowerCase()) === v))].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  return [CSV_HEADER, ...videos.map((v) => videoRow(v, fees, latest.get(handleKey(v.creator)) === v))].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }

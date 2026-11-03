@@ -21,6 +21,8 @@ import { EngineSwitch } from "@/components/ed/engine-switch";
 import { openWeightConfig } from "@/lib/meta/open-weight";
 import { feeFor, payout, payoutLine } from "@/lib/campaign/money";
 import { reviewFlags, reviewReason } from "@/lib/campaign/review";
+import { budget } from "@/lib/campaign/runner";
+import { maxVideoSeconds } from "@/lib/pipeline/run";
 
 export const dynamic = "force-dynamic";
 
@@ -288,7 +290,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
           {/* The side column follows the reader down the list, so it never leaves an empty column. */}
           <aside className="min-w-0 space-y-5 lg:sticky lg:top-[calc(env(safe-area-inset-top)+76px)] lg:-m-1 lg:max-h-[calc(100dvh-92px)] lg:self-start lg:overflow-y-auto lg:p-1 lg:[scrollbar-width:thin]">
             <CampaignActions csv={csv} filename={`${campaign.id}.csv`}>
-              {canUpload ? <UploadVideos campaignId={campaign.id} mode={mode} /> : null}
+              {canUpload ? <UploadVideos campaignId={campaign.id} mode={mode} maxSeconds={maxVideoSeconds(budget().maxUsdPerRun)} /> : null}
             </CampaignActions>
             <div className="hidden lg:block">
               <CampaignBriefCard campaign={campaign} />

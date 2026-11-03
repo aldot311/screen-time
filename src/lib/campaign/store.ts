@@ -1,6 +1,7 @@
 // Campaigns and videos as JSON documents, plus video files. Local filesystem under data/store/ in dev; Vercel Blob
 // when BLOB_READ_WRITE_TOKEN is set. Keys are built only from validated ids, so nothing can escape the store root.
-// The synthetic preview campaign is served from code and is read-only.
+// The synthetic preview campaign is served from code and is read-only. Archived campaigns (visibility.ts) read as not
+// found.
 import { createWriteStream } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,6 +12,7 @@ import { BlobNotFoundError, BlobPreconditionFailedError, del, get, head, list, p
 import type { LedgerEntry } from "@/lib/meta/cost-guard";
 import { ownBlobHost } from "./schema";
 import { PREVIEW_ID, previewCampaign, previewVideos } from "./preview";
+import { isArchived, isHidden } from "./visibility";
 import type { Campaign, VideoEntry } from "./types";
 
 /** Lowercase letters, digits and inner hyphens, 1-64 chars: safe in URLs, file names and blob paths. */
@@ -329,11 +331,13 @@ export async function listCampaigns(): Promise<Campaign[]> {
   const ids = keys.map((k) => /^campaigns\/([^/]+)\/campaign\.json$/.exec(k)?.[1]).filter(isValidId);
   const stored = (await Promise.all(ids.map((id) => getCampaign(id)))).filter((c): c is Campaign => c !== null);
   stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  // The labelled preview fills an empty store; once real runs exist it would sit beside them with different numbers.
-  return stored.length ? stored : [previewCampaign()];
+  // The labelled preview fills an empty store (unless it is archived); once real runs exist it would sit beside them
+  // with different numbers.
+  return stored.length || isHidden(PREVIEW_ID) ? stored : [previewCampaign()];
 }
 
 export async function getCampaign(id: string): Promise<Campaign | null> {
+  if (isHidden(id)) return null;
   if (id === PREVIEW_ID) return previewCampaign();
   if (!isValidId(id)) return null;
   return (await backend().readJson(campaignKey(id))) as Campaign | null;
@@ -348,11 +352,11 @@ export async function putCampaign(c: Campaign): Promise<Campaign> {
 
 /**
  * Changes a stored campaign without losing a change made at the same moment (by another request or instance).
- * `mutate` may run more than once and must not have side effects. Null when the campaign does not exist.
+ * `mutate` may run more than once and must not have side effects. Null when the campaign does not exist or is archived.
  */
 export async function updateCampaign(id: string, mutate: (c: Campaign) => Campaign | Promise<Campaign>): Promise<Campaign | null> {
   if (id === PREVIEW_ID) throw new ReadOnlyError();
-  if (!isValidId(id)) return null;
+  if (!isValidId(id) || isHidden(id)) return null;
   return backend().updateJson<Campaign>(campaignKey(id), async (c) => {
     const next = await mutate(c);
     if (next.id !== id) throw new Error("A campaign update cannot change its id");
@@ -360,7 +364,18 @@ export async function updateCampaign(id: string, mutate: (c: Campaign) => Campai
   });
 }
 
+/**
+ * The id for a new campaign: its name's slug when free, else the slug with a random suffix. Archived ids count as
+ * taken even though they read as not found, so a new campaign never overwrites a hidden one.
+ */
+export async function freeCampaignId(name: string): Promise<string> {
+  const slug = slugify(name);
+  if (!isArchived(slug) && !(await getCampaign(slug))) return slug;
+  return `${slugify(name, 40)}-${randomSuffix()}`;
+}
+
 export async function listVideos(campaignId: string): Promise<VideoEntry[]> {
+  if (isHidden(campaignId)) return [];
   if (campaignId === PREVIEW_ID) return previewVideos();
   if (!isValidId(campaignId)) return [];
   const keys = await backend().listKeys(`campaigns/${campaignId}/videos/`);
@@ -372,6 +387,7 @@ export async function listVideos(campaignId: string): Promise<VideoEntry[]> {
 }
 
 export async function getVideo(campaignId: string, videoId: string): Promise<VideoEntry | null> {
+  if (isHidden(campaignId)) return null;
   if (campaignId === PREVIEW_ID) return previewVideos().find((v) => v.id === videoId) ?? null;
   if (!isValidId(campaignId) || !isValidId(videoId)) return null;
   return (await backend().readJson(videoKey(campaignId, videoId))) as VideoEntry | null;
@@ -394,7 +410,7 @@ export async function updateVideo(
   mutate: (v: VideoEntry) => VideoEntry | Promise<VideoEntry>,
 ): Promise<VideoEntry | null> {
   if (campaignId === PREVIEW_ID) throw new ReadOnlyError();
-  if (!isValidId(campaignId) || !isValidId(videoId)) return null;
+  if (!isValidId(campaignId) || !isValidId(videoId) || isHidden(campaignId)) return null;
   return backend().updateJson<VideoEntry>(videoKey(campaignId, videoId), async (v) => {
     const next = await mutate(v);
     if (next.id !== videoId || next.campaignId !== campaignId) throw new Error("A video update cannot change its id");

@@ -5,14 +5,31 @@
 import { readFile } from "node:fs/promises";
 import { linkSecret } from "./requests";
 import { newVideoId } from "./add-video";
-import { isBlobUrl, MAX_VIDEO_BYTES } from "./schema";
-import { createDoc, getCampaign, getVideo, listVideos, localFileFromUrl, putCampaign, putVideo, readDoc, saveVideoFile, takeSlot } from "./store";
+import { isBlobUrl, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, sniffImageType } from "./schema";
+import {
+  CAMPAIGN_FILES,
+  createDoc,
+  getCampaign,
+  getVideo,
+  listVideos,
+  localFileFromUrl,
+  putCampaign,
+  putVideo,
+  readDoc,
+  saveImageFile,
+  saveVideoFile,
+  takeSlot,
+} from "./store";
 import { usdFromEnv } from "./runner";
 import type { Campaign, VideoEntry } from "./types";
 
-export const TRY_ID = "try-a-sample";
-/** The sample: a 12-second Reel with the Alani Nu can and a Stanley tumbler beside it (a look-alike to reject). */
-const SOURCE = { campaignId: "alani-nu-test-runs", videoId: "clip12" };
+// A new id and cache key for each new sample: an existing try campaign and its cached copy are reused as they are, so
+// reusing the old ones would keep running the old clip against the old brief. The old "try-a-sample" is archived.
+export const TRY_ID = "try-lacroix";
+/** The sample: Ash's 15-second LaCroix Reel (her re-cut), the same run as the pre-made pay report. */
+const SOURCE = { campaignId: "lacroix-strawberry-peach", videoId: "ash-recut" };
+/** The store document recording where the sample's copy lives inside the try campaign. */
+const SAMPLE_DOC = "try/lacroix-sample.json";
 /** A running sample untouched this long is treated as dead, and a new one may start. */
 const JOIN_MS = 2 * 60 * 1000;
 
@@ -39,11 +56,37 @@ async function visitorKey(ip: string): Promise<string> {
   return Buffer.from(digest).toString("hex").slice(0, 24);
 }
 
+/** Reads a file of the source campaign (local store, or its own Blob folder only), refusing anything over `max` bytes. */
+async function sourceBytes(url: string, what: string, max: number): Promise<Uint8Array> {
+  let bytes: Uint8Array;
+  const local = localFileFromUrl(url);
+  if (local) bytes = new Uint8Array(await readFile(local));
+  else if (isBlobUrl(url, SOURCE.campaignId)) {
+    const res = await fetch(url, { redirect: "error" });
+    if (!res.ok) throw new Error(`Could not read the ${what} (${res.status})`);
+    bytes = new Uint8Array(await res.arrayBuffer());
+  } else throw new Error(`The ${what} is not in this app's store`);
+  if (bytes.length > max) throw new Error(`The ${what} is too large`);
+  return bytes;
+}
+
+/**
+ * The try campaign, created once from the source campaign's brief, fee and product photo, so a sample run checks the
+ * same things the pre-made report did. Runs only read a photo from their own campaign's folder, so the photo's bytes
+ * are copied in; if that copy fails nothing is created, and the next visitor tries again.
+ */
 async function ensureCampaign(): Promise<Campaign | null> {
   const existing = await getCampaign(TRY_ID);
   if (existing) return existing;
   const src = await getCampaign(SOURCE.campaignId);
   if (!src) return null;
+  let productImageUrl: string | undefined;
+  if (src.productImageUrl) {
+    const bytes = await sourceBytes(src.productImageUrl, "sample's product photo", MAX_IMAGE_BYTES);
+    const type = sniffImageType(bytes);
+    if (!type) throw new Error("The sample's product photo is not a JPEG, PNG or WebP image");
+    productImageUrl = await saveImageFile(TRY_ID, CAMPAIGN_FILES, "product-photo", bytes, type);
+  }
   return putCampaign({
     id: TRY_ID,
     name: `${src.brand}: try it on a sample Reel`,
@@ -52,30 +95,23 @@ async function ensureCampaign(): Promise<Campaign | null> {
     productDescription: src.productDescription,
     brandTerms: src.brandTerms,
     contractTerms: src.contractTerms,
+    ...(src.fee !== undefined ? { fee: src.fee } : {}),
+    ...(productImageUrl ? { productImageUrl } : {}),
     createdAt: new Date().toISOString(),
   });
 }
 
 /** The sample's file inside the try campaign's own folder (runs only read files from their campaign), copied once. */
 async function sampleUrl(): Promise<string> {
-  const known = await readDoc<{ url: string }>("try/sample.json");
+  const known = await readDoc<{ url: string }>(SAMPLE_DOC);
   if (known?.url) return known.url;
   const src = await getVideo(SOURCE.campaignId, SOURCE.videoId);
   if (!src) throw new Error("The sample video is missing");
-  const from = src.videoUrl;
-  let bytes: Uint8Array;
-  const local = localFileFromUrl(from);
-  if (local) bytes = new Uint8Array(await readFile(local));
-  else if (isBlobUrl(from, SOURCE.campaignId)) {
-    const res = await fetch(from, { redirect: "error" });
-    if (!res.ok) throw new Error(`Could not read the sample video (${res.status})`);
-    bytes = new Uint8Array(await res.arrayBuffer());
-  } else throw new Error("The sample video is not in this app's store");
-  if (bytes.length > MAX_VIDEO_BYTES) throw new Error("The sample video is too large");
+  const bytes = await sourceBytes(src.videoUrl, "sample video", MAX_VIDEO_BYTES);
   const url = await saveVideoFile(TRY_ID, "sample", bytes, "video/mp4", "source");
   // Two first visitors may both copy it; the first record wins and both copies are the same file.
-  if (await createDoc("try/sample.json", { url })) return url;
-  return (await readDoc<{ url: string }>("try/sample.json"))?.url ?? url;
+  if (await createDoc(SAMPLE_DOC, { url })) return url;
+  return (await readDoc<{ url: string }>(SAMPLE_DOC))?.url ?? url;
 }
 
 const newest = (videos: VideoEntry[]) => [...videos].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -97,7 +133,7 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
     const done = newest(videos).find((v) => v.status === "done" && v.report);
     return done
       ? { mode: "replay", video: done, reason, limit }
-      : { mode: "unavailable", status: 429, error: `${reason} Try again tomorrow, or open the Alani Nu campaign to see finished runs.` };
+      : { mode: "unavailable", status: 429, error: `${reason} Try again tomorrow, or open the LaCroix campaign to see finished runs.` };
   };
   const day = now.toISOString().slice(0, 10);
   // Once the day is full, one read answers every later request: no slot writes to spam.
@@ -124,8 +160,9 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
   const video = await putVideo({
     id: newVideoId("sample"),
     campaignId: TRY_ID,
-    creator: "@sample.reel",
-    title: "Sample Reel",
+    // Credited to the creator who filmed it, like the pre-made report.
+    creator: "Ash",
+    title: "Ash's Reel (sample)",
     videoUrl: url,
     sourceUrl: url,
     status: "uploaded",
