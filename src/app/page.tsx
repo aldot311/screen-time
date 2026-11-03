@@ -58,12 +58,18 @@ const STEPS = [
 /** The demo video's script, step by step, each linked to the live page it shows (docs/DEMO.md has the full script). */
 const DEMO_SCRIPT: { title: string; text: string; href?: string }[] = [
   { title: "The problem", text: "Brands pay creators for screen time they cannot check." },
-  { title: "Run the sample", text: "The real pipeline, live: SAM 3.1 tracks, Muse Spark checks each find, Voice Transcribe listens." },
-  { title: "The pay case", text: "Ash’s re-cut: delivered, every term met. Play one proof second.", href: reportHref(CASES.pay) },
-  { title: "The hold case", text: "Aldo’s can is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },
-  { title: "The re-cut", text: "Ash’s first take never says LaCroix; her re-cut replaces it and pays.", href: reportHref(CASES.firstTake) },
-  { title: "Accuracy, in one line", text: "Precision with and without Muse Spark, measured frame by frame.", href: "/accuracy" },
+  { title: "A creator sends his Reel", text: "Michael K uploads through his request link, with no account and no password. The brand runs the check.", href: campaignHref },
+  {
+    title: "The live run",
+    text: "SAM 3.1 tracks the can, Muse Spark checks each find against the product photo, Voice Transcribe listens, and every term of the contract is checked. Tap a term to play the second that proves it.",
+    href: reportHref(CASES.live),
+  },
+  { title: "Look-alikes", text: "Aldo’s can is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },
   { title: "The follow-up agent", text: "Muse Spark drafts the note and a re-cut request; nothing is sent until you approve.", href: reportHref(CASES.agent) },
+  { title: "The re-cut", text: "Ash’s first take never says LaCroix; her re-cut replaces it and pays.", href: reportHref(CASES.firstTake) },
+  { title: "The campaign", text: "Pay or hold for every creator, with dollar totals and a CSV for finance. Screen-Time never moves money.", href: campaignHref },
+  { title: "Accuracy, in one line", text: "Precision with and without Muse Spark, measured frame by frame.", href: "/accuracy" },
+  { title: "Built during the hackathon", text: "The pipeline, the contract checker, the follow-up agent and the accuracy harness, all open source." },
 ];
 
 const btnPrimary =
@@ -202,40 +208,19 @@ export default async function Landing() {
         </section>
 
         <section id="demo" aria-labelledby="demo-h" className="scroll-mt-20 border-t border-(--hair)">
-          <div className="mx-auto grid w-full max-w-[1200px] gap-x-14 gap-y-8 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,600px)] lg:items-start lg:px-8 lg:py-20">
-            <div className="min-w-0">
+          {/* Phone: heading, the video, then its steps. Desktop: heading and steps on the left, the video beside them. */}
+          <div className="mx-auto grid w-full max-w-[1200px] gap-x-14 gap-y-8 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,600px)] lg:items-start lg:gap-y-0 lg:px-8 lg:py-20">
+            <div className="min-w-0 lg:col-start-1 lg:row-start-1">
               <h2 id="demo-h" className="ed-display max-w-[16ch] text-[34px] leading-[1.04] text-balance sm:text-[44px]">
                 Watch the <span className="whitespace-nowrap">3-minute</span> demo
               </h2>
               <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.6] text-(--ink-2)">
                 {demo
-                  ? "One LaCroix campaign, start to finish. Every step it shows is live on this site:"
-                  : "The recorded demo is not up yet. It follows these six steps, and each one is live on this site now:"}
+                  ? "One LaCroix campaign, start to finish. Every step below is live on this site."
+                  : "The recorded demo is not up yet. It follows the steps below, and each one is live on this site now."}
               </p>
-              <ol className="mt-5 divide-y divide-(--hair) border-y border-(--hair)">
-                {DEMO_SCRIPT.map((s, i) => (
-                  <li key={s.title} className="grid grid-cols-[28px_minmax(0,1fr)] gap-x-3 py-3">
-                    <span className="pt-px text-[14px] font-semibold text-(--ink-3) tabular">{i + 1}</span>
-                    <p className="text-[15px] leading-[1.5] text-(--ink-2)">
-                      {s.href ? (
-                        // Inline, with vertical padding that widens the tap target to 44px without moving the line.
-                        <PendingLink href={s.href} className="-mx-1 rounded-[8px] px-1 py-3 font-semibold text-(--ink) underline decoration-(--hair-2) decoration-2 underline-offset-4 hover:decoration-(--ink) active:opacity-70">
-                          {s.title}
-                        </PendingLink>
-                      ) : (
-                        <span className="font-semibold text-(--ink)">{s.title}</span>
-                      )}
-                      {/* Under the title on a phone; after it, as one sentence, from sm up. */}
-                      <span className="block sm:inline">
-                        <span className="hidden sm:inline">. </span>
-                        {s.text}
-                      </span>
-                    </p>
-                  </li>
-                ))}
-              </ol>
             </div>
-            <figure className="min-w-0">
+            <figure className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
               {demo ? (
                 <video
                   controls
@@ -257,6 +242,28 @@ export default async function Landing() {
                 </div>
               )}
             </figure>
+            <ol className="min-w-0 divide-y divide-(--hair) border-y border-(--hair) lg:col-start-1 lg:row-start-2 lg:mt-5">
+              {DEMO_SCRIPT.map((s, i) => (
+                <li key={s.title} className="grid grid-cols-[28px_minmax(0,1fr)] gap-x-3 py-3">
+                  <span className="pt-px text-[14px] font-semibold text-(--ink-3) tabular">{i + 1}</span>
+                  <p className="text-[15px] leading-[1.5] text-(--ink-2)">
+                    {s.href ? (
+                      // Inline, with vertical padding that widens the tap target to 44px without moving the line.
+                      <PendingLink href={s.href} className="-mx-1 rounded-[8px] px-1 py-3 font-semibold text-(--ink) underline decoration-(--hair-2) decoration-2 underline-offset-4 hover:decoration-(--ink) active:opacity-70">
+                        {s.title}
+                      </PendingLink>
+                    ) : (
+                      <span className="font-semibold text-(--ink)">{s.title}</span>
+                    )}
+                    {/* Under the title on a phone; after it, as one sentence, from sm up. */}
+                    <span className="block sm:inline">
+                      <span className="hidden sm:inline">. </span>
+                      {s.text}
+                    </span>
+                  </p>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 

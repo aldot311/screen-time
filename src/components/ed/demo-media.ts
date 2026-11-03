@@ -20,7 +20,7 @@ export function demoMediaFrom(found: { video: boolean; poster: boolean; captions
 }
 
 /** Which demo files are in public/. */
-export const DEMO_FILES = { video: false, poster: false, captions: false };
+export const DEMO_FILES = { video: true, poster: true, captions: false };
 
 export function demoMedia(fallbackPoster?: string): DemoMedia | null {
   return demoMediaFrom(DEMO_FILES, fallbackPoster);
