@@ -67,6 +67,7 @@ export async function executeAgent(campaign: Campaign, video: VideoEntry, opts: 
   const err = finished.error;
   const run: AgentRun = finished.run ?? { status: "failed", startedAt, steps: [], usd: 0, error: err instanceof Error ? err.message : String(err), ...(origin ? { origin } : {}) };
   await queue.catch(() => undefined);
-  await write(run).catch(() => null);
+  // Not swallowed silently: a final save that fails leaves the report reading "running" until it goes stale.
+  await write(run).catch((err: unknown) => console.error(`The agent's final state for ${video.id} could not be saved`, err));
   return run;
 }
