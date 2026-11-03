@@ -93,7 +93,9 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
   // Exact per-video values summed once, floored only for display (the campaign list does the same).
   const totalOnScreen = done.reduce((s, r) => s + (r.seconds ?? 0), 0);
   const totalDuration = done.reduce((s, r) => s + (r.durationSec ?? 0), 0);
-  const lookalikes = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict !== "match").length ?? 0), 0);
+  // Look-alikes only, as the CSV counts them; an object Muse Spark could not make out is counted apart as unclear.
+  const lookalikes = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict === "lookalike").length ?? 0), 0);
+  const unclear = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict === "unclear").length ?? 0), 0);
   const csv = `/api/campaigns/${campaign.id}/export.csv`;
   const canUpload = !campaign.synthetic;
   // Only the host's name reaches the page; the key stays on the server.
@@ -240,6 +242,14 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                       <span className="ed-num text-[18px] text-(--ink)">{lookalikes}</span> look-alike{lookalikes === 1 ? "" : "s"} rejected
                     </span>
                   </span>
+                  {unclear > 0 && (
+                    <span className="flex items-center gap-2">
+                      <Swatch kind="reject" />
+                      <span>
+                        <span className="ed-num text-[18px] text-(--ink)">{unclear}</span> unclear, not counted
+                      </span>
+                    </span>
+                  )}
                 </div>
               )}
 

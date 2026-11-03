@@ -1,15 +1,18 @@
 "use client";
 
 // The report's timeline: one full-width lane per signal, each named above its track with the model that produced it.
-// On screen (SAM 3.1: lime, counted seconds only, first-seen notch, longest run underlined), Look-alike (Muse Spark:
-// hatched red, never counted; only when there was one) and Said aloud (Voice Transcribe: violet mentions, or "Not
-// heard"). While playing, lime before the playhead is full and after it faded, so the count visibly fills. Tap or drag
-// to scrub; Arrow keys move half a second, Shift+Arrow one frame, PageUp/PageDown a second, Space plays or pauses,
-// Home/End jump to the ends. The stretch a proof plays is outlined while it plays (violet for a spoken mention).
+// On screen (SAM 3.1: lime, counted seconds only, first-seen notch, longest run underlined), Not counted (Muse Spark:
+// hatched red, named for what it holds, a look-alike or an object it could not make out; only when there was one) and
+// Said aloud (Voice Transcribe: violet mentions, or "Not heard"). While playing, lime before the playhead is full and
+// after it faded, so the count visibly fills. Tap or drag sideways to scrub; a vertical swipe on a phone scrolls the
+// page. Keys as in scrub.ts: Arrow keys half a second, Shift+Arrow one frame, PageUp/PageDown a second, Space plays or
+// pauses, Home/End the ends. The stretch a proof plays is outlined while it plays (violet for a spoken mention).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, ScanEye, ScanLine } from "lucide-react";
-import { FPS, type Mention, type Segment } from "@/lib/types";
+import type { Mention, Segment } from "@/lib/types";
 import { tenths, timecode } from "@/components/format";
+import { notCountedLane, type NotCountedKind } from "./report-words";
+import { scrubKey, useScrubPointer } from "./scrub";
 
 export interface Lit {
   segs: Segment[];
@@ -22,7 +25,8 @@ interface Props {
   durationSec: number;
   segments: Segment[];
   mentions: Mention[];
-  rejected: Segment[];
+  /** Objects Muse Spark did not count, each stretch with why. */
+  rejected: (Segment & { kind: NotCountedKind })[];
   playheadSec: number;
   /** Playing: fade the lime after the playhead. */
   playing: boolean;
@@ -60,7 +64,6 @@ export function ReportLanes({
 
   const track = useRef<HTMLDivElement>(null);
   const [widthPx, setWidthPx] = useState(300);
-  const [dragging, setDragging] = useState(false);
   useEffect(() => {
     const el = track.current;
     if (!el) return;
@@ -78,6 +81,7 @@ export function ReportLanes({
     },
     [d, onSeek],
   );
+  const { dragging, handlers } = useScrubPointer(seekFrom);
 
   const lanes = [
     {
@@ -90,7 +94,20 @@ export function ReportLanes({
       empty: segments.length ? null : "Never counted",
     },
     ...(rejected.length
-      ? [{ key: "reject", label: "Look-alike, not counted", by: "Muse Spark", Icon: ScanLine, h: 22, tone: "text-(--reject)", empty: null }]
+      ? [
+          {
+            key: "reject",
+            label: notCountedLane({
+              lookalikes: rejected.filter((s) => s.kind === "lookalike").length,
+              unclear: rejected.filter((s) => s.kind === "unclear").length,
+            }),
+            by: "Muse Spark",
+            Icon: ScanLine,
+            h: 22,
+            tone: "text-(--reject)",
+            empty: null,
+          },
+        ]
       : []),
     {
       key: "voice",
@@ -131,27 +148,16 @@ export function ReportLanes({
         aria-valuenow={Math.round(playheadSec * 10) / 10}
         aria-valuetext={timecode(playheadSec)}
         aria-keyshortcuts="Space ArrowLeft ArrowRight Home End"
-        onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId);
-          setDragging(true);
-          seekFrom(e.clientX);
-        }}
-        onPointerMove={(e) => {
-          if (e.currentTarget.hasPointerCapture(e.pointerId)) seekFrom(e.clientX);
-        }}
-        onPointerUp={() => setDragging(false)}
-        onPointerCancel={() => setDragging(false)}
+        {...handlers}
         onKeyDown={(e) => {
-          const step = e.key === "PageUp" || e.key === "PageDown" ? 1 : e.shiftKey ? 1 / FPS : 0.5;
-          if (e.key === "ArrowRight" || e.key === "PageUp") onSeek(Math.min(d, playheadSec + step));
-          else if (e.key === "ArrowLeft" || e.key === "PageDown") onSeek(Math.max(0, playheadSec - step));
-          else if (e.key === "Home") onSeek(0);
-          else if (e.key === "End") onSeek(d);
-          else if (e.key === " ") onToggle();
-          else return;
+          const to = scrubKey(e.key, e.shiftKey, playheadSec, d);
+          if (to === null) return;
+          if (to === "toggle") onToggle();
+          else onSeek(to);
           e.preventDefault();
         }}
-        className="relative cursor-ew-resize touch-none rounded-[8px] pb-1 select-none"
+        // pan-y: a vertical swipe that starts here still scrolls the page; sideways drags come to the handlers.
+        className="relative cursor-ew-resize touch-pan-y rounded-[8px] pb-1 select-none"
       >
         {/* Ruler, ending on the video's length. The playhead's knob rides here, above the lanes. */}
         <div className="ed-tc relative text-[11px] text-(--ink-3)" style={{ height: RULER }} aria-hidden>
@@ -204,8 +210,8 @@ export function ReportLanes({
                 {l.key === "reject" &&
                   rejected.map((s) => (
                     <div
-                      key={s.startSec}
-                      title={`Muse Spark: look-alike ${timecode(s.startSec)}–${timecode(s.endSec)}, not counted`}
+                      key={`${s.kind}-${s.startSec}`}
+                      title={`Muse Spark: ${s.kind === "lookalike" ? "look-alike" : "could not make it out"} ${timecode(s.startSec)}–${timecode(s.endSec)}, not counted`}
                       className="absolute inset-y-1 rounded-[4px] border-[1.5px] border-dashed border-(--reject) bg-[repeating-linear-gradient(135deg,rgb(194_57_43/0.2)_0_3px,transparent_3px_7px)]"
                       style={span(s, 4)}
                     />

@@ -3,9 +3,9 @@
 // the work behind the verdict. Server-safe.
 import { ChevronDown, ReceiptText } from "lucide-react";
 import type { RunReceipt } from "@/lib/types";
+import { costGloss, receiptUsd as money } from "./report-words";
 
 const secs = (ms: number) => (ms < 1000 ? `${(ms / 1000).toFixed(2)} s` : `${(ms / 1000).toFixed(1)} s`);
-const money = (usd: number) => `$${usd.toFixed(usd > 0 && usd < 0.01 ? 4 : 3)}`;
 
 export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
   const total = receipt.calls.reduce((n, c) => n + c.usd, 0);
@@ -18,8 +18,9 @@ export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
         <ReceiptText className="size-[18px] shrink-0 text-(--ink-2)" strokeWidth={2.25} aria-hidden />
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold">Run receipt</span>
+          {/* What the receipt is, in place: the list of paid calls behind this report. */}
           <span className="block text-[13px] text-(--ink-3) tabular">
-            {receipt.calls.length} model calls · {money(total)} · {secs(ms)} of model time
+            Every Meta API call behind this report: {receipt.calls.length} calls · {money(total)} · {secs(ms)} of model time
           </span>
         </span>
         <ChevronDown className="size-5 shrink-0 text-(--ink-3) transition-transform group-open:rotate-180" strokeWidth={2.25} aria-hidden />
@@ -59,7 +60,7 @@ export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
           {receipt.runId} · {started}
         </dd>
         <dt className="text-(--ink-3)">Cost</dt>
-        <dd>SAM 3.1 as billed per frame; Muse Spark and Voice Transcribe at the fixed amount the budget reserves per call.</dd>
+        <dd>{costGloss()}</dd>
       </dl>
     </details>
   );

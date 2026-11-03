@@ -6,8 +6,8 @@
 // plays exactly the moment that proves it: in the main player when at least half of it is on screen, otherwise in a
 // mini player docked at the bottom of a phone, without moving the page. The control that started it shows "Playing".
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Check, ChevronDown, CircleHelp, Clapperboard, Mic, Pause, Play, ScanLine, ScanText, X } from "lucide-react";
-import { FPS, type Disclosure, type Segment, type TermResult, type VideoReport } from "@/lib/types";
+import { Check, ChevronDown, CircleHelp, Clapperboard, Mic, Pause, Play, Redo2, ScanLine, ScanText, X } from "lucide-react";
+import { FPS, type Disclosure, type Segment, type TermResult, type VerifyVerdict, type VideoReport } from "@/lib/types";
 import { countedBefore, framesToSegments, percent, prominenceOf, ruleReading, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
@@ -17,6 +17,7 @@ import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decisi
 import { usd } from "@/lib/campaign/money";
 import { AnalysisReplay } from "./analysis-replay";
 import { RunReceiptCard } from "./run-receipt";
+import { costGloss, modelLine as modelSentence, notCounted, notCountedNote, notCountedPlay, phoneChip, prominenceGloss, receiptUsd, type NotCountedKind } from "./report-words";
 import { ACTION_TILE } from "./action-style";
 import { AgentPanel } from "./agent-panel";
 import type { AgentAccess } from "@/lib/agent/public";
@@ -119,8 +120,17 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
   const verdict = verdictOf(report);
   const counts = termCounts(report.terms);
   const boxes = useMemo(() => report.detections ?? [], [report.detections]);
-  const rejectedSegs = useMemo(() => framesToSegments(boxes.filter((b) => b.verdict !== "match").map((b) => b.frame)), [boxes]);
-  const rejectedTracks = report.tracks.filter((t) => t.verdict !== "match");
+  // Not counted, each stretch with why: a look-alike Muse Spark rejected, or an object it could not make out.
+  const rejectedSegs = useMemo(() => {
+    const of = (kind: NotCountedKind) => framesToSegments(boxes.filter((b) => b.verdict === kind).map((b) => b.frame)).map((s) => ({ ...s, kind }));
+    return [...of("lookalike"), ...of("unclear")].sort((a, b) => a.startSec - b.startSec);
+  }, [boxes]);
+  const tracksLeft = notCounted(report.tracks);
+  // What the chip counts: the objects, or (on an older report whose tracks lack a verdict) one per kind of stretch.
+  const uncounted =
+    tracksLeft.lookalikes + tracksLeft.unclear
+      ? tracksLeft
+      : { lookalikes: rejectedSegs.some((s) => s.kind === "lookalike") ? 1 : 0, unclear: rejectedSegs.some((s) => s.kind === "unclear") ? 1 : 0 };
   const longest = useMemo(
     () => m.segments.reduce<Segment | null>((b, s) => (!b || s.endSec - s.startSec > b.endSec - b.startSec ? s : b), null),
     [m.segments],
@@ -364,17 +374,18 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
       : verdict === "short"
         ? `${counts.failed} of ${plural(n, "contract term")} missed${counts.unchecked ? `, ${counts.unchecked} not checkable` : ""}.`
         : `${counts.unchecked} of ${plural(n, "term")} could not be checked automatically.`;
+  // First use of the model names in words (the player tags its boxes "SAM 3.1" just above): what each one did.
   const modelLine = synthetic
     ? "Preview: numbers from checked labels, not a live model run."
-    : found
-      ? `SAM 3.1 searched all ${report.info.frameCount} frames for “${report.prompt}”; ${
-          rejectedTracks.length
-            ? `Muse Spark rejected ${plural(rejectedTracks.length, "look-alike")}.`
-            : `Muse Spark confirmed it was the ${brand} product.`
-        }`
-      : `SAM 3.1 searched all ${report.info.frameCount} frames for “${report.prompt}” and never found the ${brand} product.${
-          rejectedTracks.length ? ` Muse Spark rejected ${plural(rejectedTracks.length, "look-alike")}.` : ""
-        }`;
+    : modelSentence({
+        frames: report.info.frameCount,
+        prompt: report.prompt,
+        brand,
+        found,
+        tracks: report.tracks.length,
+        notCounted: tracksLeft,
+        photo: Boolean(referencePhoto),
+      });
   const attempts = report.promptAttempts && report.promptAttempts.length > 1 ? report.promptAttempts : null;
   const recovery = attempts
     ? `${attempts
@@ -384,10 +395,14 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         attempts[attempts.length - 1].matched ? "found it" : "still found nothing"
       }.`
     : null;
-  // A rejected object is named as what it is not: Muse Spark's reason under it says what it is.
-  const objectName = (id: number, match: boolean) => names[id] ?? (match ? `${brand} ${report.prompt}` : `Not the ${brand} product`);
+  // An object not counted is named as what it is not (or could not be shown to be): Muse Spark's reason under it says
+  // what it is.
+  const objectName = (id: number, call: VerifyVerdict) =>
+    names[id] ?? (call === "match" ? `${brand} ${report.prompt}` : call === "unclear" ? `Not confirmed as the ${brand} product` : `Not the ${brand} product`);
   const hasMatchTrack = report.tracks.some((t) => t.verdict === "match");
   const isOn = (key: string) => active === key && playing;
+  // The phone's chip above the video: a take a re-cut replaced decides nothing, so it says so before any verdict.
+  const chip = phoneChip({ word: decisionWord(verdict), fee: fee === null ? "" : ` ${usd(fee)}`, reason: phoneReason, creator, override, replaced: Boolean(replacedBy) });
 
   return (
     <div className="grid gap-x-8 gap-y-4 sm:gap-y-8 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-x-12">
@@ -397,26 +412,24 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         // A link to the decision card: the next step is one tap away, however long the video is.
         <a
           href="#pay-h"
-          className={`ed-press flex min-h-12 items-center gap-2.5 rounded-(--r-card) px-3 py-2 text-[14.5px] leading-snug active:opacity-80 md:hidden ${tone.card}`}
+          className={`ed-press flex min-h-12 items-center gap-2.5 rounded-(--r-card) px-3 py-2 text-[14.5px] leading-snug active:opacity-80 md:hidden ${
+            chip.kind === "replaced" ? "bg-(--wash)" : tone.card
+          }`}
         >
-          {override ? (
-            <>
-              <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-(--ink) px-3 text-[14px] font-semibold text-white tabular">
-                {override.decision === "pay" ? "Pay" : "Hold"}
-                {fee !== null && ` ${usd(fee)}`}
-              </span>
-              <span className="min-w-0 text-(--ink-2)">Your call · Screen-Time said {decisionWord(verdict).toLowerCase()}</span>
-            </>
+          {chip.kind === "replaced" ? (
+            <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-(--card) px-3 text-[14px] font-semibold text-(--ink-2) ring-1 ring-(--hair-2)">
+              <Redo2 className="size-4" strokeWidth={2.5} aria-hidden />
+              {chip.badge}
+            </span>
+          ) : chip.kind === "override" ? (
+            <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-(--ink) px-3 text-[14px] font-semibold text-white tabular">{chip.badge}</span>
           ) : (
-            <>
-              <span className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold tabular ${tone.badge}`}>
-                <tone.Icon className="size-4" strokeWidth={3} aria-hidden />
-                {decisionWord(verdict)}
-                {fee !== null && ` ${usd(fee)}`}
-              </span>
-              <span className="min-w-0 text-(--ink-2)">{phoneReason}</span>
-            </>
+            <span className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold tabular ${tone.badge}`}>
+              <tone.Icon className="size-4" strokeWidth={3} aria-hidden />
+              {chip.badge}
+            </span>
           )}
+          <span className="min-w-0 text-(--ink-2)">{chip.text}</span>
           <ChevronDown className="ml-auto size-4 shrink-0 text-(--ink-3)" strokeWidth={2.5} aria-hidden />
         </a>
       )}
@@ -482,12 +495,30 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             {rejectedSegs.length > 0 && (
               <Chip
                 on={isOn("chip-reject")}
-                label="Play the rejected look-alike"
-                onClick={(e) => playRange(e, "chip-reject", rejectedSegs[0].startSec, rejectedSegs[0].endSec, "Look-alike, not counted")}
+                label={notCountedPlay(uncounted)}
+                onClick={(e) =>
+                  playRange(
+                    e,
+                    "chip-reject",
+                    rejectedSegs[0].startSec,
+                    rejectedSegs[0].endSec,
+                    rejectedSegs[0].kind === "lookalike" ? "Look-alike, not counted" : "Unclear, not counted",
+                  )
+                }
                 icon={<ScanLine className="size-4 text-(--reject)" strokeWidth={2.25} aria-hidden />}
               >
-                <span className="font-semibold text-(--ink)">{rejectedTracks.length || 1}</span> look-alike
-                {(rejectedTracks.length || 1) === 1 ? "" : "s"} rejected
+                {/* A look-alike is a different product; an unclear object is one Muse Spark could not make out. */}
+                {uncounted.lookalikes > 0 && (
+                  <>
+                    <span className="font-semibold text-(--ink)">{uncounted.lookalikes}</span> look-alike{uncounted.lookalikes === 1 ? "" : "s"}
+                    {uncounted.unclear ? ", " : " rejected"}
+                  </>
+                )}
+                {uncounted.unclear > 0 && (
+                  <>
+                    <span className="font-semibold text-(--ink)">{uncounted.unclear}</span> unclear, not counted
+                  </>
+                )}
               </Chip>
             )}
           </div>
@@ -505,7 +536,9 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             </ul>
           )}
           <p className="mt-4 max-w-[62ch] text-[14.5px] leading-[1.55] text-(--ink-2)">
-            {termsLine} {modelLine}
+            {/* A phone already has the terms in the chip above the video. */}
+            {termsLine && <span className="max-md:hidden">{termsLine} </span>}
+            {modelLine}
           </p>
           {recovery && (
             <p className="mt-2 max-w-[62ch] text-[14.5px] leading-[1.55] text-(--ink-2)">
@@ -664,8 +697,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                 </>
               ) : (
                 <>
-                  <span className="[@media(pointer:coarse)]:hidden">Drag or use the arrow keys to move through the video; Space plays.</span>
-                  <span className="hidden [@media(pointer:coarse)]:inline">Drag to scrub through the video, or tap a moment to jump there.</span>
+                  <span className="[@media(pointer:coarse)]:hidden">Drag to scrub. Select the timeline, then use the arrow keys or Space.</span>
+                  <span className="hidden [@media(pointer:coarse)]:inline">Drag sideways to scrub, or tap a moment to jump there.</span>
                 </>
               )}
             </div>
@@ -691,7 +724,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                 <>
                   Boxes on the video come from SAM 3.1 tracking &ldquo;{report.prompt}&rdquo;.
                   {hasMatchTrack && " Lime is counted."}
-                  {rejectedTracks.length > 0 && " Dashed red was rejected by Muse Spark as a look-alike."}
+                  {notCountedNote(tracksLeft) && ` ${notCountedNote(tracksLeft)}`}
                 </>
               )}
             </p>
@@ -795,12 +828,12 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             />
             <MetricRow
               label="Prominence"
-              hint="Above 50 means clearly featured; from time on screen, size, centering and how early it appears."
+              hint={prominenceGloss()}
               value={`${Math.round(prominenceOf(m))}`}
               suffix="/ 100"
               caption={largestMatch ? <Tc>{timecode(largestMatch.t)}</Tc> : undefined}
               on={isOn("num-prom")}
-              onClick={largestMatch ? (e) => playRange(e, "num-prom", largestMatch.t, largestMatch.t + 1.2, "Most prominent moment") : undefined}
+              onClick={largestMatch ? (e) => playRange(e, "num-prom", largestMatch.t, largestMatch.t + 1.2, "Largest in frame") : undefined}
             />
             <MetricRow
               label="Spoken mentions"
@@ -829,7 +862,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             Objects checked
           </h2>
           <p className="mt-1 max-w-[60ch] text-[14px] text-(--ink-3)">
-            SAM 3.1 tracked them; Muse Spark checked each against the brief. Rejected objects are shown for transparency and never count.
+            SAM 3.1 tracked them; Muse Spark checked each against the brief. Look-alikes it rejected and objects it could not make out
+            are shown for transparency and never count.
           </p>
           {referencePhoto && (
             <figure className="mt-4 grid grid-cols-[72px_1fr] items-center gap-4 rounded-(--r-card) bg-(--wash) p-3 ring-1 ring-(--hair)">
@@ -872,7 +906,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               const match = t.verdict === "match";
               const crop = cropUrls[t.objectId];
               const at = perObject.get(t.objectId);
-              const name = objectName(t.objectId, match);
+              const name = objectName(t.objectId, t.verdict);
               const key = `obj-${t.objectId}`;
               const live = isOn(key);
               const body = (
@@ -1048,11 +1082,11 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                 ? "Disclosure is not checked in the preview."
                 : disclosureTerm
                   ? "Analyzed before disclosure checks."
-                  : "Disclosure wasn’t part of this contract."}
+                  : "No disclosure term in this contract, so #ad wasn’t checked."}
             </p>
           ) : !disclosureTerm && disclosure.spoken.length + disclosure.onScreen.length === 0 ? (
             <p className="mt-4 rounded-(--r-inner) bg-(--card) p-4 text-[14.5px] text-(--ink-3) ring-1 ring-(--hair)">
-              Disclosure wasn&rsquo;t part of this contract.
+              No disclosure term in this contract, so #ad wasn&rsquo;t checked.
             </p>
           ) : disclosure.spoken.length + disclosure.onScreen.length === 0 ? (
             <p className="mt-4 rounded-(--r-inner) bg-(--card) p-4 ring-1 ring-(--hair)">
@@ -1135,17 +1169,17 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                         if (el instanceof HTMLDetailsElement) el.open = true;
                       }}
                       className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
-                      Every Meta API call, ${report.cost.usd.toFixed(3)}
+                      Every Meta API call, {receiptUsd(report.cost.usd)}
                     </a>
                   ) : (
-                    <>Meta API cost ${report.cost.usd.toFixed(2)}</>
+                    <>Meta API cost {receiptUsd(report.cost.usd)}</>
                   )}{" "}
                   ·{" "}
                   <a href="/accuracy" className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
                     How accurate is this?
                   </a>
                 </p>
-                <p>SAM tracking + Muse Spark + Voice Transcribe</p>
+                <p>{costGloss()}</p>
               </>
             )}
           </div>
@@ -1177,6 +1211,11 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                 evidenceTone={lit?.tone ?? "ink"}
                 flashKey={lit?.key ?? 0}
                 onSeek={seek}
+                onToggle={() => {
+                  // As the dock's own play button: pausing keeps the dock up.
+                  if (playing) setDockHold(true);
+                  player.current?.toggle();
+                }}
                 size="compact"
                 ruler={false}
                 progress={playing ? time : null}

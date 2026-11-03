@@ -1,11 +1,13 @@
 "use client";
 
 // The screen-time strip: lime for every second the product was on screen, violet ticks for spoken mentions, dashed red
-// for look-alikes that were seen but not counted. Tap or drag to seek. A focused contract term draws its window and
-// flashes its evidence so a "Jump to" visibly lands.
+// for objects seen but not counted (a look-alike, or one Muse Spark could not make out). Tap or drag sideways to seek;
+// keys move it as on the report's timeline (scrub.ts). A focused contract term draws its window and flashes its evidence
+// so a "Jump to" visibly lands.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Mention, Segment } from "@/lib/types";
 import { timecode } from "@/components/format";
+import { scrubKey, useScrubPointer } from "./scrub";
 
 interface Props {
   durationSec: number;
@@ -19,6 +21,8 @@ interface Props {
   flashKey?: number;
   longest?: Segment | null;
   onSeek?: (sec: number) => void;
+  /** Space plays or pauses, as on the report's timeline. */
+  onToggle?: () => void;
   size?: "full" | "compact" | "mini";
   /** Draw only what has played so far (the landing replay). */
   fillTo?: number;
@@ -40,6 +44,7 @@ export function Strip({
   flashKey = 0,
   longest = null,
   onSeek,
+  onToggle,
   size = "full",
   fillTo,
   ruler = size === "full",
@@ -72,6 +77,7 @@ export function Strip({
     },
     [d, onSeek],
   );
+  const { handlers } = useScrubPointer(seekFrom);
 
   let segs = segments;
   let ments = mentions;
@@ -97,26 +103,17 @@ export function Strip({
         aria-valuenow={interactive ? Math.round((playheadSec ?? 0) * 10) / 10 : undefined}
         aria-valuetext={interactive ? timecode(playheadSec ?? 0) : undefined}
         tabIndex={interactive ? 0 : undefined}
-        onPointerDown={(e) => {
-          if (!interactive) return;
-          e.currentTarget.setPointerCapture(e.pointerId);
-          seekFrom(e.clientX);
-        }}
-        onPointerMove={(e) => {
-          if (interactive && e.buttons === 1) seekFrom(e.clientX);
-        }}
+        aria-keyshortcuts={interactive ? `${onToggle ? "Space " : ""}ArrowLeft ArrowRight Home End` : undefined}
+        {...(interactive ? handlers : {})}
         onKeyDown={(e) => {
           if (!onSeek) return;
-          const step = e.shiftKey || e.key === "PageUp" || e.key === "PageDown" ? 1 : 1 / 15;
-          const at = playheadSec ?? 0;
-          if (e.key === "ArrowRight" || e.key === "PageUp") onSeek(Math.min(d, at + step));
-          else if (e.key === "ArrowLeft" || e.key === "PageDown") onSeek(Math.max(0, at - step));
-          else if (e.key === "Home") onSeek(0);
-          else if (e.key === "End") onSeek(d);
-          else return;
+          const to = scrubKey(e.key, e.shiftKey, playheadSec ?? 0, d);
+          if (to === null || (to === "toggle" && !onToggle)) return;
+          if (to === "toggle") onToggle?.();
+          else onSeek(to);
           e.preventDefault();
         }}
-        className={interactive ? `cursor-ew-resize touch-none rounded-[10px] ${size === "full" ? "" : "py-1"}` : undefined}
+        className={interactive ? `cursor-ew-resize touch-pan-y rounded-[10px] ${size === "full" ? "" : "py-1"}` : undefined}
       >
         <div
           ref={track}
@@ -132,10 +129,11 @@ export function Strip({
               style={span(win.startSec, win.endSec)}
             />
           )}
-          {rej.map((s) => (
+          {rej.map((s, i) => (
             <div
-              key={`r-${s.startSec}`}
-              title={`Look-alike on screen ${timecode(s.startSec)}–${timecode(s.endSec)}, not counted`}
+              // A look-alike and an unclear object can start on the same frame.
+              key={`r-${i}-${s.startSec}`}
+              title={`Seen ${timecode(s.startSec)}–${timecode(s.endSec)}, not counted: Muse Spark did not confirm it as the product`}
               className={[
                 "absolute",
                 // At row and dock scale a dashed outline reads as garbled text: draw a solid hatched red band instead.
