@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { PREVIEW_ID } from "@/lib/campaign/preview";
 import { TRY_ID } from "@/lib/campaign/try";
-import { getVideo, updateVideo } from "@/lib/campaign/store";
+import { rollup } from "@/lib/campaign/money";
+import { getCampaign, getVideo, listVideos, updateVideo } from "@/lib/campaign/store";
 
 type Ctx = { params: Promise<{ id: string; videoId: string }> };
 
@@ -21,6 +22,11 @@ export async function POST(req: Request, ctx: Ctx) {
   const { id, videoId } = await ctx.params;
   const refused = await finished(id, videoId);
   if (refused) return refused;
+  // A newer take from the same creator decides their pay or hold, so a call here would count for nothing. Undo (DELETE)
+  // stays open, so a call saved before the re-cut arrived can still be removed.
+  const [campaign, videos] = await Promise.all([getCampaign(id), listVideos(id)]);
+  if (campaign && rollup(campaign, videos).replacedBy.has(videoId))
+    return Response.json({ error: "A newer take from this creator decides pay or hold now. Make your call on that one." }, { status: 409 });
   const parsed = Body.safeParse(await req.json().catch(() => undefined));
   if (!parsed.success) return Response.json({ error: "Choose pay or hold and write a short reason" }, { status: 400 });
   const override = { ...parsed.data, at: new Date().toISOString() };

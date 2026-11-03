@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TermResult } from "@/lib/types";
-import { revisionRequest } from "./report-decision";
+import { overrideDraft, revisionRequest } from "./report-decision";
 
 const missed = (text: string, rule: TermResult["term"]["rule"], detail: string, evidence: TermResult["evidence"] = []): TermResult => ({
   term: { text, rule },
@@ -39,5 +39,29 @@ describe("revisionRequest", () => {
     expect(revisionRequest("@a", [missed("Say it", { kind: "mentioned", minTimes: 1 }, "Mentioned 0 times.")], "https://x/r")).toContain(
       "second by second: https://x/r\n",
     );
+  });
+});
+
+describe("overrideDraft", () => {
+  it("keeps Save off until a decision is picked and a reason written", () => {
+    expect(overrideDraft("pay", null, "the logo is covered", 300)).toEqual({ canSave: false, line: null });
+    expect(overrideDraft("pay", "hold", "ab ", 300).canSave).toBe(false);
+    expect(overrideDraft("pay", "hold", "   ", 300).canSave).toBe(false);
+    expect(overrideDraft("pay", "hold", "x".repeat(501), 300).canSave).toBe(false);
+    expect(overrideDraft("hold", "pay", "logo covered", 300).canSave).toBe(true);
+  });
+
+  it("shows what changes, before to after, once a decision is picked", () => {
+    expect(overrideDraft("hold", "pay", "", 300).line).toBe("Recommendation: Hold $300 → Your decision: Pay $300");
+    expect(overrideDraft("pay", "hold", "", 1250).line).toBe("Recommendation: Pay $1,250 → Your decision: Hold $1,250");
+    expect(overrideDraft("review", "pay", "", 300).line).toBe("Recommendation: Review → Your decision: Pay $300");
+    expect(overrideDraft("hold", "pay", "", null).line).toBe("Recommendation: Hold → Your decision: Pay");
+  });
+
+  it("allows picking the recommendation itself, worded as a sign-off", () => {
+    expect(overrideDraft("pay", "pay", "watched it, the can is clear", 300)).toEqual({
+      canSave: true,
+      line: "You sign off on the recommendation: Pay $300",
+    });
   });
 });

@@ -64,10 +64,25 @@ describe("campaignCsv", () => {
   it("leaves the recommendation off a video a later one from the same creator replaced", () => {
     const v = previewVideos()[0];
     const older = { ...v, id: "a", createdAt: "2026-10-01T00:00:00Z" };
-    const newer = { ...v, id: "b", createdAt: "2026-10-02T00:00:00Z" };
-    const rows = campaignCsv([older, newer], { fee: 300 }).trimEnd().split("\r\n");
+    const newer = { ...v, id: "b", creator: v.creator.toUpperCase(), createdAt: "2026-10-02T00:00:00Z" };
+    const rows = campaignCsv([older, newer], { fee: 300, creators: [{ handle: v.creator, addedAt: "" }] }).trimEnd().split("\r\n");
     expect(rows[1].endsWith(",superseded,,,")).toBe(true);
     expect(rows[2].endsWith(",pay,300,pay,")).toBe(true);
+  });
+
+  it("supersedes a take as soon as a newer one is sent, even before it is checked", () => {
+    const v = previewVideos()[0];
+    const older = { ...v, id: "a", createdAt: "2026-10-01T00:00:00Z" };
+    const running: VideoEntry = { ...v, id: "b", status: "running", report: undefined, createdAt: "2026-10-02T00:00:00Z" };
+    const rows = campaignCsv([older, running], { fee: 300, creators: [{ handle: v.creator, addedAt: "" }] }).trimEnd().split("\r\n");
+    expect(rows[1].endsWith(",superseded,,,")).toBe(true);
+  });
+
+  it("never supersedes a test set's clips (one handle, no roster): each pays or holds on its own", () => {
+    const v = previewVideos()[0];
+    const clips = ["01", "02", "03"].map((n) => ({ ...v, id: `clip${n}`, createdAt: `2026-10-${n}T00:00:00Z` }));
+    const rows = campaignCsv(clips, { fee: 300 }).trimEnd().split("\r\n");
+    expect(rows.slice(1).every((r) => r.endsWith(",pay,300,pay,"))).toBe(true);
   });
 
   it("writes a manager's override and its reason beside the recommendation", () => {

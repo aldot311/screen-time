@@ -1,13 +1,14 @@
 // The campaign's story rail (grafted from the Feed comp), on every size as a quick visual scan: one ring per video, in
 // the SAME order as the grid below, labelled by clip as everywhere, so "who fell short" reads in one swipe. Every
-// fell-short ring carries a solid red cross; needs review is a dashed amber ring.
-import { AlertTriangle, Check, CircleHelp, Inbox, X } from "lucide-react";
+// fell-short ring carries a solid red cross; needs review is a dashed amber ring; a take a re-cut replaced is a quiet
+// grey ring, since it pays or holds nothing.
+import { AlertTriangle, Check, CircleHelp, Inbox, Redo2, X } from "lucide-react";
 import { seconds } from "@/components/format";
 import { PendingLink, Spinner } from "./pending-link";
 import { CampaignThumb } from "./campaign-ui";
 import type { Row } from "./campaign-list";
 
-type Kind = "delivered" | "review" | "short" | "running" | "waiting" | "stopped";
+type Kind = "delivered" | "review" | "short" | "replaced" | "running" | "waiting" | "stopped";
 
 const RING: Record<Kind, { bg: string; badge: string; label: string }> = {
   delivered: { bg: "var(--pass)", badge: "bg-(--pass) text-white", label: "Delivered" },
@@ -17,6 +18,7 @@ const RING: Record<Kind, { bg: string; badge: string; label: string }> = {
     label: "Needs review",
   },
   short: { bg: "var(--short)", badge: "bg-(--short) text-white", label: "Fell short" },
+  replaced: { bg: "var(--hair-2)", badge: "bg-(--wash) text-(--ink-2) ring-1 ring-(--hair-2)", label: "Replaced by re-cut" },
   running: { bg: "var(--hair-2)", badge: "bg-(--card) text-(--ink) ring-1 ring-(--hair-2)", label: "Checking" },
   waiting: { bg: "var(--ink-3)", badge: "bg-(--ink) text-white", label: "Waiting for you" },
   stopped: { bg: "var(--hair-2)", badge: "bg-(--wash) text-(--ink-2) ring-1 ring-(--hair-2)", label: "Stopped" },
@@ -29,11 +31,13 @@ const kindOf = (r: Row): Kind =>
       ? "waiting"
       : r.status !== "done"
         ? "running"
-        : r.verdict === "delivered"
-          ? "delivered"
-          : r.verdict === "short"
-            ? "short"
-            : "review";
+        : r.replacedBy
+          ? "replaced"
+          : r.verdict === "delivered"
+            ? "delivered"
+            : r.verdict === "short"
+              ? "short"
+              : "review";
 
 export function CampaignRail({ rows }: { rows: Row[] }) {
   if (rows.length < 2) return null;
@@ -65,6 +69,7 @@ export function CampaignRail({ rows }: { rows: Row[] }) {
                   >
                     {k === "delivered" && <Check className="size-3.5" strokeWidth={3.25} />}
                     {k === "short" && <X className="size-3.5" strokeWidth={3.5} />}
+                    {k === "replaced" && <Redo2 className="size-3" strokeWidth={2.75} />}
                     {k === "review" && <CircleHelp className="size-3.5" strokeWidth={2.75} />}
                     {k === "running" && <Spinner className="size-3" />}
                     {k === "waiting" && <Inbox className="size-3" strokeWidth={2.75} />}
@@ -73,7 +78,7 @@ export function CampaignRail({ rows }: { rows: Row[] }) {
                 </span>
                 <span className="mt-1.5 w-full truncate text-center text-[12.5px] leading-tight font-semibold">{r.meta ?? r.title}</span>
                 <span className="w-full truncate text-center text-[11.5px] text-(--ink-3) tabular">
-                  {r.seconds !== null ? seconds(r.seconds) : t.label}
+                  {k === "replaced" ? "Replaced" : r.seconds !== null ? seconds(r.seconds) : t.label}
                 </span>
               </>
             );

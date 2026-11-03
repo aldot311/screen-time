@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { VideoReport } from "@/lib/types";
 import { creatorEntry } from "@/components/ed/campaign-ui";
 import { handleKey, sameHandle } from "./handle";
-import { feeFor, latestFinished } from "./money";
+import { feeFor, rollup } from "./money";
 import { addCreators, creatorsWithoutVideo, removeCreator, setCreatorFee } from "./roster";
 import { getCampaign, putCampaign } from "./store";
 import type { Campaign, VideoEntry } from "./types";
@@ -73,9 +73,10 @@ describe("roster and money match a live @upload to a plain roster name", () => {
   it("lets a re-cut uploaded as @ash replace Ash's first take", () => {
     const first = video("ash", "Ash", "2026-11-03T06:00:00.000Z");
     const recut = video("ash-recut", "@ash", "2026-11-03T07:00:00.000Z");
-    const latest = latestFinished([first, recut]);
-    expect(latest.size).toBe(1);
-    expect(latest.get(handleKey("Ash"))?.id).toBe("ash-recut");
+    const r = rollup({ creators: [{ handle: "Ash", addedAt: "2026-11-03T05:00:00.000Z" }] }, [first, recut]);
+    expect(r.total).toBe(1);
+    expect(r.deciding.map((v) => v.id)).toEqual(["ash-recut"]);
+    expect(r.replacedBy.get("ash")?.id).toBe("ash-recut");
   });
 
   it("never adds a second Michael K, and edits or removes the plain-name entry by its @handle", () => {

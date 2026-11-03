@@ -41,6 +41,8 @@ interface Props {
   /** A manager's own decision, and where to save one (absent on the preview). */
   override?: VideoEntry["override"];
   overrideEndpoint?: string;
+  /** Set when a newer take from this creator replaced this one: where that take's report is. */
+  replacedBy?: { href: string };
   /** The follow-up agent's latest run, and where to start one (absent on the preview). */
   agent?: VideoEntry["agent"];
   agentEndpoint?: string;
@@ -86,7 +88,7 @@ const Range = ({ a, b }: { a: number; b: number }) => (
   </Tc>
 );
 
-export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint, agent, agentEndpoint, proofHref }: Props) {
+export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint, replacedBy, agent, agentEndpoint, proofHref }: Props) {
   const extras = report as VideoReport & ReportExtras;
   // Only the photo this run used: a photo added to the campaign later was not part of this check.
   const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
@@ -525,6 +527,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             flags={synthetic ? [] : reviewFlags(report)}
             override={override}
             overrideEndpoint={overrideEndpoint}
+            replacedBy={replacedBy}
             agentCall={agent?.status === "done" ? agent.recommendation : undefined}
           />
           {agentEndpoint && <AgentPanel key={agent?.startedAt ?? "none"} endpoint={agentEndpoint} agent={agent} creator={creator} />}
