@@ -1,43 +1,46 @@
 import type { Metadata } from "next";
-import { ArrowUpRight, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import data from "@/lib/accuracy-data.json";
 import objects from "@/lib/open-weight-data.json";
 import { TopBar } from "@/components/ed/top-bar";
-import { PendingLink } from "@/components/ed/pending-link";
 import { DISPLAY } from "@/components/ed/campaign-ui";
 import { TrySample } from "@/components/ed/try-sample";
+import { clipName, missSeconds, pct, summarize, targetName, weakest, type AccuracyRow } from "@/components/ed/accuracy-summary";
+import { tenths } from "@/components/format";
 
 export const metadata: Metadata = {
   title: "Accuracy",
   description: "How often Screen-Time is right, measured frame by frame against checked labels, with and without Muse Spark.",
 };
 
-type Score = (typeof data.scores)[number];
-const pct = (x: number | null) => (x === null ? "n/a" : `${(x * 100).toFixed(1)}%`);
-const LABEL: Record<string, string> = { sam: "SAM 3.1 alone", verified: "SAM 3.1 + Muse Spark" };
-
-/** Two honest misses from the same runs, each linked to its report at the moment it happens. */
-const FAILURES = [
-  {
-    title: "Counted a sliver at the edge",
-    clip: "clip01 · Alani Nu can",
-    href: "/campaigns/alani-nu-test-runs/videos/clip01?t=5",
-    what: "Precision 79%: 0.9 s more than the labels.",
-    why: "As the can leaves the frame, SAM 3.1 keeps tracking a 13–32 px strip of it at the left edge for about a second after the labels mark it gone. The tracking is right; whether a sliver counts is a contract question, so the threshold was not tuned to this test set.",
-  },
-  {
-    title: "Missed it at his side",
-    clip: "clip15 · Stanley tumbler",
-    href: "/campaigns/stanley-test-runs/videos/clip15?t=0",
-    what: "Recall 75%: 0.9 s missed at the start (frames 0–12).",
-    why: "The tumbler starts low at his side, small and half behind his leg, and SAM 3.1 only picks it up as it swings toward the camera. The report under-counts, so the brand sees less screen time than it got, never more.",
-  },
-];
+/** The two misses that matter most, from the data itself: the clip that over-counted most and the one that
+ *  under-counted most. Worded from their own figures, so a re-measure rewrites them. */
+function failures(rows: AccuracyRow[]) {
+  const weak = weakest(rows);
+  const name = (r: AccuracyRow) => `${clipName(r.clip)} · ${targetName(r.target)}`;
+  return [
+    weak.precision && {
+      key: "precision",
+      title: "Counted more than was there",
+      clip: name(weak.precision),
+      what: `Precision ${pct(weak.precision.precision)}: ${tenths(missSeconds(weak.precision).extraSec)} s counted that the labels mark as not on screen.`,
+      why: "The lowest precision in the test set. Over-counting is the costly error: it would pay for screen time the brand did not get.",
+    },
+    weak.recall && {
+      key: "recall",
+      title: "Missed some of it",
+      clip: name(weak.recall),
+      what: `Recall ${pct(weak.recall.recall)}: ${tenths(missSeconds(weak.recall).missedSec)} s of real screen time not counted.`,
+      why: "The lowest recall in the test set. Here the report under-counts, so the brand sees less screen time than it got, not more.",
+    },
+  ].filter((f) => !!f);
+}
 
 export default function AccuracyPage() {
-  const [sam, verified] = data.scores as [Score, Score];
-  const targets = verified.rows.length;
-  const clips = new Set(verified.rows.map((r) => r.clip)).size;
+  const acc = summarize(data);
+  const { sam, verified, targets, clips } = acc;
+  const misses = failures(verified.rows);
+  const recallCost = sam.recall !== null && verified.recall !== null ? (sam.recall - verified.recall) * 100 : null;
   return (
     <>
       <TopBar back={{ href: "/", label: "Home" }} />
@@ -80,10 +83,21 @@ export default function AccuracyPage() {
             ))}
           </div>
           <p className="mt-3 max-w-[62ch] text-[14.5px] leading-[1.55] text-(--ink-2)">
-            Without the second model, a can of a different Alani flavor alone adds {sam.falseSecondsOnEmptyClips.toFixed(1)} s of &ldquo;screen time&rdquo; the brand
-            never got, and a Stanley cup held beside the can is counted as the can. Muse Spark rejects them and cuts the average error from {sam.meanAbsErrorSec.toFixed(2)} s to{" "}
-            {verified.meanAbsErrorSec.toFixed(2)} s, at the cost of {((Number(sam.recall) - Number(verified.recall)) * 100).toFixed(1)} points of recall
-            ({pct(sam.recall)} → {pct(verified.recall)}; F1 {pct(sam.f1)} → {pct(verified.f1)}).
+            Without the second model, every object SAM 3.1 tracks for the prompt counts as the product, look-alikes included
+            {acc.lookalikeClips + acc.emptyClips > 0 && (
+              <>
+                : on the clips without the product it adds <span className="tabular">{sam.falseSecondsOnEmptyClips.toFixed(1)}</span> s of &ldquo;screen
+                time&rdquo; the brand never got
+              </>
+            )}
+            . Muse Spark rejects what is not the product and moves the average error from <span className="tabular">{sam.meanAbsErrorSec.toFixed(2)}</span> s to{" "}
+            <span className="tabular">{verified.meanAbsErrorSec.toFixed(2)}</span> s
+            {recallCost !== null && recallCost > 0 ? (
+              <>
+                , at the cost of <span className="tabular">{recallCost.toFixed(1)}</span> points of recall
+              </>
+            ) : null}{" "}
+            (recall {pct(sam.recall)} → {pct(verified.recall)}; F1 {pct(sam.f1)} → {pct(verified.f1)}).
           </p>
         </section>
 
@@ -92,21 +106,21 @@ export default function AccuracyPage() {
             Object by object
           </h2>
           <p className="mt-2 max-w-[62ch] text-[15px] leading-[1.55] text-(--ink-2)">
-            Every object SAM 3.1 tracked was also labelled as the product or something else (a different flavor, a Stanley beside the can, a
-            leather shoe among sneakers). Muse Spark called{" "}
+            Every object SAM 3.1 tracked was also labelled from its crop as the product or something else. Muse Spark called{" "}
             <span className="font-semibold text-(--ink) tabular">
               {Math.round((objects.hosted.accuracy ?? 0) * objects.hosted.objects)} of {objects.hosted.objects}
             </span>{" "}
-            objects that could be judged correctly: no look-alike counted, no product missed. Four more were too blurred for a person to
-            judge either, so they are not scored (in the app, an object Muse Spark cannot make out is never counted).
+            objects that could be judged correctly, with {plural(objects.hosted.falseMatches, "look-alike")} counted and{" "}
+            {plural(objects.hosted.missedMatches, "product")} missed. Objects too blurred to judge from the crop are not scored (in the app, an
+            object Muse Spark cannot make out is never counted).
           </p>
           {objects.open && (
             <>
               <h3 className="mt-6 text-[17px] font-semibold">The same check on open-weight Muse Spark Open</h3>
               <p className="mt-1.5 max-w-[62ch] text-[15px] leading-[1.55] text-(--ink-2)">
                 The same crops and the same prompt, sent to Meta&rsquo;s open-weight Muse Spark Open (served by Fireworks through OpenRouter). It
-                also counted no look-alike; it called two real products &ldquo;unclear&rdquo; that the hosted model matched, which in the app means
-                they would not be counted and the report would ask for a look.
+                counted {plural(objects.open.falseMatches, "look-alike")} and missed {plural(objects.open.missedMatches, "real product")} the hosted
+                model matched; in the app, a product that is not matched is not counted.
               </p>
               <div className="mt-4 overflow-x-auto rounded-(--r-card) bg-(--card) shadow-(--sh-1) ring-1 ring-(--hair)">
                 <table className="w-full min-w-[440px] text-left text-[14px] tabular">
@@ -120,7 +134,7 @@ export default function AccuracyPage() {
                   </thead>
                   <tbody>
                     {[
-                      { name: "Muse Spark 1.3 (hosted)", r: objects.hosted },
+                      { name: `Muse Spark ${objects.hosted.model.replace(/^muse-spark-/, "")} (hosted)`, r: objects.hosted },
                       { name: "Muse Spark Open", r: objects.open },
                     ].map(({ name, r }) => (
                       <tr key={name} className="border-b border-(--hair) last:border-0">
@@ -147,22 +161,20 @@ export default function AccuracyPage() {
           <h2 id="miss-h" className="ed-display text-[26px] leading-tight">
             Where it is wrong
           </h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {FAILURES.map((f) => (
-              <li key={f.clip} className="flex flex-col rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair)">
-                <p className="text-[12.5px] font-semibold text-(--ink-3)">{f.clip}</p>
-                <h3 className="mt-1 text-[17px] font-semibold">{f.title}</h3>
-                <p className="mt-1 text-[14px] font-semibold text-(--ink-2) tabular">{f.what}</p>
-                <p className="mt-2 flex-1 text-[14px] leading-[1.5] text-(--ink-2)">{f.why}</p>
-                <PendingLink
-                  href={f.href}
-                  className="ed-press mt-3 inline-flex h-11 items-center gap-1.5 self-start rounded-full bg-(--wash) px-4 text-[14px] font-semibold active:bg-(--hair)"
-                >
-                  Watch that moment <ArrowUpRight className="size-4" aria-hidden />
-                </PendingLink>
-              </li>
-            ))}
-          </ul>
+          {misses.length ? (
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {misses.map((f) => (
+                <li key={f.key} className="flex flex-col rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair)">
+                  <p className="text-[12.5px] font-semibold text-(--ink-3)">{f.clip}</p>
+                  <h3 className="mt-1 text-[17px] font-semibold">{f.title}</h3>
+                  <p className="mt-1 text-[14px] font-semibold text-(--ink-2) tabular">{f.what}</p>
+                  <p className="mt-2 flex-1 text-[14px] leading-[1.5] text-(--ink-2)">{f.why}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 max-w-[62ch] text-[14.5px] text-(--ink-2)">Every labelled check scored 100% precision and recall.</p>
+          )}
         </section>
 
         <section aria-labelledby="how-h" className="mt-12">
@@ -175,17 +187,16 @@ export default function AccuracyPage() {
               SAM tracks every one of those frames: nothing between them is sampled out. Labels and scores use the same {data.fps} fps frames.
             </li>
             <li>
-              <span className="font-semibold text-(--ink)">Labels.</span> Drafted by two independent vision passes over frame-numbered grids, kept
-              where both agreed, and spot-checked by a person. The test set includes a different Alani flavor that must be rejected and a clip with
-              no product.
+              <span className="font-semibold text-(--ink)">Labels.</span> Drafted by two independent Claude vision passes over frame-numbered
+              grids, kept where both agreed.{testSetNote(acc)}
             </li>
             <li>
               <span className="font-semibold text-(--ink)">Scoring.</span> Per frame: a frame counts when the pipeline says the product is visible in
               it. Precision is the share of counted frames that were right; recall is the share of real frames that were counted.
             </li>
             <li>
-              <span className="font-semibold text-(--ink)">Not yet measured.</span> The gain from the product photo (the test set predates it) and a
-              held-out set filmed by other people, which is being recorded now.
+              <span className="font-semibold text-(--ink)">Not yet measured.</span> How much the product photo adds on its own: runs with and
+              without it have not been compared on the same clips.
             </li>
           </ul>
         </section>
@@ -210,8 +221,8 @@ export default function AccuracyPage() {
               <tbody className="divide-y divide-(--hair)">
                 {verified.rows.map((r) => (
                   <tr key={`${r.clip}-${r.target}`} className="text-(--ink-2)">
-                    <td className="px-4 py-2 text-(--ink)">{r.clip.replace(/^stock\//, "stock ")}</td>
-                    <td className="px-3 py-2">{r.target.replace(/-/g, " ")}</td>
+                    <td className="px-4 py-2 text-(--ink)">{clipName(r.clip)}</td>
+                    <td className="px-3 py-2">{targetName(r.target)}</td>
                     <td className="px-3 py-2">{r.truthSec.toFixed(1)} s</td>
                     <td className="px-3 py-2">{r.predictedSec.toFixed(1)} s</td>
                     <td className="px-3 py-2">{pct(r.precision)}</td>
@@ -233,4 +244,16 @@ export default function AccuracyPage() {
       </main>
     </>
   );
+}
+
+/** "1 look-alike", "0 products". */
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
+
+/** Which clips must count 0 s, from the data: a look-alike alone in shot, or no product at all. */
+function testSetNote(acc: ReturnType<typeof summarize>): string {
+  const parts = [
+    acc.lookalikeClips ? plural(acc.lookalikeClips, "clip") + " with only a look-alike in shot" : null,
+    acc.emptyClips ? plural(acc.emptyClips, "clip") + " with no product" : null,
+  ].filter(Boolean);
+  return parts.length ? ` The test set includes ${parts.join(" and ")}, which must count 0 seconds.` : "";
 }

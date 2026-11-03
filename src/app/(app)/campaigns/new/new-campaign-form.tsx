@@ -153,10 +153,10 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
         <Group title="The campaign">
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Campaign name" name="name" required error={invalid.name}>
-              <input id="f-name" name="name" placeholder="e.g. Alani Nu: Fall creators" autoComplete="off" enterKeyHint="next" aria-required onInput={() => clear("name")} aria-invalid={!!invalid.name} aria-describedby={invalid.name ? "f-name-err" : undefined} className={`${INPUT} h-12`} />
+              <input id="f-name" name="name" placeholder="e.g. LaCroix: Strawberry Peach creators" autoComplete="off" enterKeyHint="next" aria-required onInput={() => clear("name")} aria-invalid={!!invalid.name} aria-describedby={invalid.name ? "f-name-err" : undefined} className={`${INPUT} h-12`} />
             </Field>
             <Field label="Brand" name="brand" required error={invalid.brand}>
-              <input id="f-brand" name="brand" placeholder="e.g. Alani Nu" autoComplete="organization" enterKeyHint="next" aria-required onInput={() => clear("brand")} aria-invalid={!!invalid.brand} aria-describedby={invalid.brand ? "f-brand-err" : undefined} className={`${INPUT} h-12`} />
+              <input id="f-brand" name="brand" placeholder="e.g. LaCroix" autoComplete="organization" enterKeyHint="next" aria-required onInput={() => clear("brand")} aria-invalid={!!invalid.brand} aria-describedby={invalid.brand ? "f-brand-err" : undefined} className={`${INPUT} h-12`} />
             </Field>
           </div>
         </Group>
@@ -182,7 +182,7 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
               id="f-productDescription"
               name="productDescription"
               rows={2}
-              placeholder="e.g. a slim teal can with a peach graphic and a pink ‘Alani’ logo"
+              placeholder="e.g. a pink can with blue ‘LaCroix’ script over a peach, hearts and strawberries"
               aria-required
               onInput={() => clear("productDescription")}
               aria-invalid={!!invalid.productDescription}
@@ -209,7 +209,7 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
             name="brandTerms"
             hint="Comma-separated. Voice Transcribe listens for these in the audio. Left blank, it listens for the brand name when a term asks the creator to say it."
           >
-            <input id="f-brandTerms" name="brandTerms" placeholder="e.g. Alani, Alani Nu" autoComplete="off" enterKeyHint="next" aria-describedby="f-brandTerms-hint" className={`${INPUT} h-12`} />
+            <input id="f-brandTerms" name="brandTerms" placeholder="e.g. LaCroix, La Croix" autoComplete="off" enterKeyHint="next" aria-describedby="f-brandTerms-hint" className={`${INPUT} h-12`} />
           </Field>
           <Field
             label="Fee per video"
