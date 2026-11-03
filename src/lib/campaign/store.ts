@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { BlobNotFoundError, BlobPreconditionFailedError, del, get, head, list, put } from "@vercel/blob";
+import { BlobNotFoundError, BlobPreconditionFailedError, copy, del, get, head, list, put } from "@vercel/blob";
 import type { LedgerEntry } from "@/lib/meta/cost-guard";
 import { ownBlobHost } from "./schema";
 import { PREVIEW_ID, previewCampaign, previewVideos } from "./preview";
@@ -217,6 +217,8 @@ const ACCESS = "public" as const;
  * copy up to cacheControlMaxAge old, so a poll would miss a status just written and an ETag update would retry on the
  * old version until it gave up. A one-off query string is always a cache miss.
  */
+// The query string does not bypass the CDN on a public store: it ignores it and can serve a copy a minute or more old
+// (measured 2026-11-03: a HIT 103 s old after a newer write). Fine to show; an update needs consistentRead below.
 function getFresh(key: string) {
   const host = ownBlobHost();
   const target = host ? `https://${host}/${key}?fresh=${crypto.randomUUID()}` : key;
@@ -228,6 +230,31 @@ function getFresh(key: string) {
 export const strongEtag = (etag: string) => etag.replace(/^W\//, "");
 
 const UPDATE_ATTEMPTS = 5;
+
+/**
+ * The document as stored right now, with its ETag. The CDN cannot be told to skip its cache on a public store, so: the
+ * ETag from the store's own metadata (head), then the content from a copy at a one-off address the CDN has never
+ * cached. The ETag is read first, so a write landing in between makes the copy newer than the ETag and the ifMatch
+ * write fails (and retries) rather than overwriting it.
+ */
+async function consistentRead(key: string): Promise<{ text: string; etag: string } | null> {
+  let etag: string;
+  let url: string;
+  try {
+    ({ etag, url } = await head(key));
+  } catch (err) {
+    if (err instanceof BlobNotFoundError) return null;
+    throw err;
+  }
+  const tmp = await copy(url, `tmp/read-${crypto.randomUUID()}.json`, { access: ACCESS, addRandomSuffix: false, contentType: "application/json" });
+  try {
+    const res = await get(tmp.url, { access: ACCESS, headers: { "accept-encoding": "identity" } });
+    if (!res || res.statusCode !== 200) return null;
+    return { text: await new Response(res.stream).text(), etag };
+  } finally {
+    await del(tmp.url).catch(() => undefined);
+  }
+}
 
 export function blobBackend(): Backend {
   return {
@@ -249,14 +276,22 @@ export function blobBackend(): Backend {
     // Optimistic concurrency: write only if the document is still the version read (its ETag), else read and retry.
     async updateJson<T>(key: string, mutate: (current: T) => T | Promise<T>): Promise<T | null> {
       for (let attempt = 0; attempt < UPDATE_ATTEMPTS; attempt++) {
-        const res = await getFresh(key);
-        if (!res || res.statusCode !== 200) return null;
-        const next = await mutate(JSON.parse(await new Response(res.stream).text()) as T);
+        // The CDN's copy first (fast, and current unless the document changed in the last minute); after a mismatch,
+        // the stored one.
+        let current: { text: string; etag: string } | null = null;
+        if (attempt === 0) {
+          const res = await getFresh(key);
+          if (res && res.statusCode === 200) current = { text: await new Response(res.stream).text(), etag: res.blob.etag };
+        }
+        // A CDN "not found" can be stale too (a document created in the last minute).
+        current ??= await consistentRead(key);
+        if (!current) return null;
+        const next = await mutate(JSON.parse(current.text) as T);
         try {
           await put(key, JSON.stringify(next), {
             access: ACCESS,
             addRandomSuffix: false,
-            ifMatch: strongEtag(res.blob.etag),
+            ifMatch: strongEtag(current.etag),
             contentType: "application/json",
             cacheControlMaxAge: 60,
           });
