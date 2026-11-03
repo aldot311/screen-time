@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { VideoReport } from "@/lib/types";
-import { loadShowcase, SHOWCASE_CAMPAIGN, showcaseFirst } from "./showcase";
+import { featuredFirst, loadShowcase, SHOWCASE_CAMPAIGN, showcaseFirst } from "./showcase";
 import { putVideo } from "./store";
 import { isArchived } from "./visibility";
 
@@ -72,5 +72,19 @@ describe("showcaseFirst", () => {
 
   it("sorts by brand, then name, when the showcase campaign is not in the list", () => {
     expect(ids([c("b2", "B", "2"), c("a", "A"), c("b1", "B", "1")])).toEqual(["a", "b1", "b2"]);
+  });
+});
+
+describe("featuredFirst", () => {
+  const v = (id: string, creator: string, at: string) => ({ id, creator, createdAt: `2026-11-03T0${at}:00:00.000Z` });
+  const videos = [v("george", "George", "1"), v("ash", "Ash", "2"), v("peter", "Peter", "3"), v("ash-recut", "Ash", "4")];
+
+  it("puts Ash's videos first, re-cut before the take it replaced, on the showcase campaign", () => {
+    expect(featuredFirst(SHOWCASE_CAMPAIGN, videos).map((x) => x.id)).toEqual(["ash-recut", "ash", "george", "peter"]);
+  });
+
+  it("leaves any other campaign, or a store without the hero video, in its own order", () => {
+    expect(featuredFirst("other-campaign", videos).map((x) => x.id)).toEqual(["george", "ash", "peter", "ash-recut"]);
+    expect(featuredFirst(SHOWCASE_CAMPAIGN, videos.filter((x) => x.id !== "ash-recut")).map((x) => x.id)).toEqual(["george", "ash", "peter"]);
   });
 });

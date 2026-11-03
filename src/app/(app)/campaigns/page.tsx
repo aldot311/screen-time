@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ChevronRight, Plus } from "lucide-react";
 import { listCampaigns, listVideos } from "@/lib/campaign/store";
 import { TRY_ID } from "@/lib/campaign/try";
-import { showcaseFirst } from "@/lib/campaign/showcase";
+import { featuredFirst, showcaseFirst } from "@/lib/campaign/showcase";
 import { isArchived } from "@/lib/campaign/visibility";
 import { payoutLine, rollup } from "@/lib/campaign/money";
 import type { Campaign } from "@/lib/campaign/types";
@@ -25,7 +25,7 @@ async function summarize(c: Campaign) {
   return {
     c,
     // The product photo leads when the campaign has one, so a campaign reads as its product at a glance.
-    thumbs: [c.productImageUrl, ...videos.map((v) => v.thumbUrl)].filter((u): u is string => typeof u === "string"),
+    thumbs: [c.productImageUrl, ...featuredFirst(c.id, videos).map((v) => v.thumbUrl)].filter((u): u is string => typeof u === "string"),
     videos: videos.length,
     done: done.length,
     unit: r.unit,

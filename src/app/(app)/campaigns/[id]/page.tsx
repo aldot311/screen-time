@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Info } from "lucide-react";
 import { getCampaign, listVideos } from "@/lib/campaign/store";
+import { featuredFirst } from "@/lib/campaign/showcase";
 import { STEPS } from "@/lib/campaign/types";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { framesToSegments, friendlyError, tenths, verdictOf } from "@/components/format";
@@ -50,7 +51,8 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
   // handle counts each clip), so the headline, the money line, the filter and the cards add up the same way.
   const rolled = rollup(campaign, videos);
 
-  const rows: Row[] = videos.map((v) => {
+  // On the showcase campaign the face of the demo (Ash) leads the list and the rail; elsewhere upload order.
+  const rows: Row[] = featuredFirst(campaign.id, videos).map((v) => {
     const r = v.report;
     // "clip01.mp4 (synthetic preview)" -> "clip01": the extension is noise and the page already marks preview data.
     const clip = v.title.replace(/\s*\(synthetic preview\)\s*$/i, "").replace(/\.(mp4|mov)$/i, "");

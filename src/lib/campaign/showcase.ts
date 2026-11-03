@@ -59,6 +59,18 @@ export async function loadShowcase(): Promise<{ hero: Showcased | null; lookalik
   return { hero, lookalike: lookalikes[0] ?? null, lookalikes };
 }
 
+/**
+ * The showcase campaign's videos with the hero's creator first (Ash: her re-cut, then the take it replaced), every other
+ * video in its given order. Any other campaign's videos are returned as they are.
+ */
+export function featuredFirst<T extends { id: string; creator: string; createdAt: string }>(campaignId: string, videos: T[]): T[] {
+  if (campaignId !== HERO.campaignId) return videos;
+  const face = videos.find((v) => v.id === HERO.videoId)?.creator;
+  if (!face) return videos;
+  const theirs = videos.filter((v) => v.creator === face).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return [...theirs, ...videos.filter((v) => v.creator !== face)];
+}
+
 type Listed = { id: string; brand: string };
 
 /**
