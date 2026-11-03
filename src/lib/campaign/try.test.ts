@@ -85,12 +85,12 @@ describe("startTry", () => {
       createdAt: day.toISOString(),
     });
     const url = await saveVideoFile("lacroix-strawberry-peach", "ash-recut", new Uint8Array([0, 0, 0, 24]), "video/mp4", "normalized");
-    await putVideo({ id: "ash-recut", campaignId: "lacroix-strawberry-peach", creator: "Ash", title: "Ash's Reel", videoUrl: url, status: "done", step: null, createdAt: "", updatedAt: "" });
+    await putVideo({ id: "ash-recut", campaignId: "lacroix-strawberry-peach", creator: "Ash", title: "Ash's Reel", videoUrl: url, thumbUrl: "/cover.jpg", status: "done", step: null, createdAt: "", updatedAt: "" });
 
     const first = await startTry("1.1.1.1", day);
     expect(first.mode).toBe("started");
     if (first.mode !== "started") return;
-    expect(first.video).toMatchObject({ campaignId: TRY_ID, creator: "Ash", title: "Ash's Reel (sample)" });
+    expect(first.video).toMatchObject({ campaignId: TRY_ID, creator: "Ash", title: "Ash's Reel (sample)", thumbUrl: "/cover.jpg" });
     expect(first.video.sourceUrl).toContain(`campaigns%2F${TRY_ID}%2F`);
     expect(await readDoc("try/lacroix-sample.json")).toEqual({ url: first.video.sourceUrl });
 

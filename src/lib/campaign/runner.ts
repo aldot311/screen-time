@@ -116,8 +116,9 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
     current = await putVideo({ ...current, status: "done", report, error: undefined, live: undefined });
     try {
       const visuals = await saveVisuals(campaign.id, video.id, join(workDir, `${video.id}.mp4`), report, workDir);
-      // Merged into the stored entry, not written from `current`: a decision saved since the report landed stays.
-      current = (await updateVideo(campaign.id, video.id, (v) => ({ ...v, ...visuals }))) ?? current;
+      // Merged into the stored entry, not written from `current`: a decision saved since the report landed stays, and
+      // so does a cover chosen by hand (the sample's).
+      current = (await updateVideo(campaign.id, video.id, (v) => ({ ...v, ...visuals, thumbUrl: v.thumbUrl ?? visuals.thumbUrl }))) ?? current;
     } catch {
       // No thumbnail or crops; the report stands.
     }
