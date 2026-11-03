@@ -4,13 +4,13 @@
 // waiting re-cut, drafts the note to the creator and makes a pay/hold call. Its steps show as it works. Nothing leaves
 // without the brand: the note is an editable draft, and a re-cut request becomes a link only when approved here, with
 // the demo password. On the example reports a visitor runs it without the password: it then only reads stored results.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bot, Check, ChevronDown, Copy, Link2, LockKeyhole, RotateCcw } from "lucide-react";
 import type { AgentRun } from "@/lib/agent/campaign-agent";
 import type { AgentAccess } from "@/lib/agent/public";
-import { AGENT_MAX_USD, agentRunning } from "@/lib/agent/state";
+import { AGENT_MAX_USD, AGENT_STALE_MS, agentRunning } from "@/lib/agent/state";
 import { ApiError } from "@/components/api-error";
 import { Spinner } from "./pending-link";
 import { useFlash } from "./use-flash";
@@ -25,8 +25,23 @@ const TOOL_LABEL: Record<string, string> = {
   answer: "Summed up",
 };
 
-export function AgentPanel({ endpoint, agent, creator, access = "owner" }: { endpoint: string; agent?: AgentRun; creator: string; access?: AgentAccess }) {
+export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" }: { endpoint: string; agent?: AgentRun; creator: string; access?: AgentAccess }) {
   const router = useRouter();
+  // The run this click started, shown at once: the stored report can lag a few seconds behind the start, and until it
+  // catches up the page would still show no run (and so would not refresh itself).
+  const [launched, setLaunched] = useState<AgentRun | null>(null);
+  const waiting = launched !== null && (!stored || stored.startedAt < launched.startedAt);
+  const agent = waiting ? launched : stored;
+  useEffect(() => {
+    if (!waiting) return;
+    const t = setInterval(() => router.refresh(), 1500);
+    // A run that never shows up stops the polling after its time limit; the page then shows what is stored.
+    const stop = setTimeout(() => setLaunched(null), AGENT_STALE_MS);
+    return () => {
+      clearInterval(t);
+      clearTimeout(stop);
+    };
+  }, [waiting, router]);
   const path = usePathname();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -240,9 +255,12 @@ export function AgentPanel({ endpoint, agent, creator, access = "owner" }: { end
                 type="button"
                 disabled={busy}
                 onClick={async () => {
-                  const out = (await post(endpoint)) as { mode?: string; reason?: string } | null;
+                  const out = (await post(endpoint)) as (AgentRun & { mode?: string; reason?: string; agent?: AgentRun }) | null;
                   if (!out) return;
                   setNotice(out.mode === "replay" ? (out.reason ?? "Today's visitor runs of the agent are used up.") : null);
+                  // A visitor's start answers { mode, agent }; the owner's answers with the run itself.
+                  const run = out.mode ? out.agent : out;
+                  if (out.mode !== "replay" && run?.status === "running") setLaunched(run);
                   router.refresh();
                 }}
                 className={[
