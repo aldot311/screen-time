@@ -7,12 +7,17 @@ real production value. (Flow from the round-4 hackathon judge, 2026-10-29.)
 ## Before recording
 
 - Production: https://screen-time-inky.vercel.app, unlocked with the demo password in the browser you record.
-- Best: the friends' Reels campaign (real handles, fee $300, product photo, a disclosure term). Until it exists, use
-  "Alani Nu: launch, with product photo" (fee $300, photo, receipts) for the report and money beats.
-- Have one Reel ready to upload where a Stanley tumbler sits beside the Alani can (clip12 works) and, for the re-cut
-  beat, a second take of the same creator that says "Alani Nu" out loud.
+- Campaign: "LaCroix: Strawberry Peach creators" (`lacroix-strawberry-peach`), the friends' Reels: real handles, fee
+  $300, product photo, three terms (on screen at least 3 s in total, says LaCroix, discloses the ad). Use it for the
+  report and money beats.
+- Live upload: Michael K's Reel, with a Stanley-style tumbler beside the LaCroix can. He is on the roster with no
+  video yet; upload it under his handle, Michael K, so it fills his row.
+- Re-cut beat: Ash. Her first take (`ash`) is held because she never says LaCroix; her re-cut (`ash-recut`) says it
+  and pays. Both are already in the campaign.
 - Browser 1440×900 for desktop beats; record the phone beat in the device toolbar at 390×844.
-- A run takes 20–40 s; record it and cut the wait to a few seconds.
+- A short Reel usually takes under a minute and a half to check; record it and cut the wait to a few seconds.
+- Judges who skip the video follow /judge: the sample run, Ash's re-cut and first take, the Pamplemousse look-alike,
+  /accuracy, and the follow-up agent on Peter's Reel.
 
 ## Script
 

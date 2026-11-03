@@ -1,9 +1,10 @@
-// Builds the showcase campaign: the 12 Alani Nu test clips re-run through today's full pipeline with a product photo
-// and a fee, so receipts, feature checks, the photo comparison and money all show on real reports. The original
-// "Alani Nu: test runs" campaign is left as it is: the accuracy page and the landing table are measured on it.
+// Builds the old Alani Nu showcase campaign: the 12 Alani Nu test clips re-run through the full pipeline with a
+// product photo and a fee, so receipts, feature checks, the photo comparison and money all show on real reports. The
+// original "Alani Nu: test runs" campaign is left as it is. Both are archived now (src/lib/campaign/visibility.ts):
+// hidden from the site, and unreadable to this script unless SCREEN_TIME_SHOW_ARCHIVED=1 is set.
 //
 // Usage (writes to the store the env points at; needs META_MODEL_API_KEY):
-//   ~/ai/bin/with-secrets.sh sh -c 'set -a; . ./.env.vercel; set +a; pnpm tsx --tsconfig tsconfig.json scripts/build-showcase.mts'
+//   ~/ai/bin/with-secrets.sh sh -c 'set -a; . ./.env.vercel; set +a; SCREEN_TIME_SHOW_ARCHIVED=1 pnpm tsx --tsconfig tsconfig.json scripts/build-showcase.mts'
 // The product photo is a frame from clip12 (Aldo's own footage of the can), named so in the campaign.
 import { readFile } from "node:fs/promises";
 import { executeRun, startRun } from "@/lib/campaign/runner";

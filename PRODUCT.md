@@ -55,12 +55,16 @@ Product name "Screen-Time", by Aetrai (aetrai.com). No other binding brand asset
 
 ## Evidence on Hand
 
+- The friends' LaCroix Reels: 11 vertical Reels that 9 creators filmed for a LaCroix Strawberry Peach test campaign.
+  They are the live site's main content (campaign `lacroix-strawberry-peach`) and the accuracy set. They are not in
+  this repo, since they show people's faces.
 - Aldo's own 15 test clips (Alani Nu can, Stanley tumbler, New Balance sneaker, a coconut-water look-alike, a no-product
-  clip) and 6 Pexels stock clips; allowed in the demo and on the live site. Aldo will film more polished demo videos
-  once the product is built.
-- Answer-key labels for 23 clip/product targets in `data/labels/` (two independent vision passes, human spot-check).
-- No customers, testimonials, pricing or accuracy numbers yet: never invent them. The accuracy number comes only from
-  `pnpm accuracy` on real runs.
+  clip) and 6 Pexels stock clips: the earlier test set. Their campaigns are archived: kept in the store but hidden from
+  the live site (`src/lib/campaign/visibility.ts`). Their scores stay in `docs/ACCURACY.md`.
+- Answer-key labels: the LaCroix Reels in `data/labels/lacroix/` (two independent vision passes, kept where both
+  agree); the earlier 23 clip/product targets in `data/labels/` (two passes, human spot-check).
+- No customers, testimonials or pricing yet: never invent them. Accuracy numbers come only from `pnpm accuracy` on
+  real runs (`src/lib/accuracy-data.json`).
 
 ## Product Principles
 

@@ -1,13 +1,14 @@
 "use client";
 
 // The campaign's creators: who the brand expects a video from, and where each one stands. The status comes from the
-// roster (a request link made, and when it expires) plus the videos whose handle matches (case-insensitive), so it is
+// roster (a request link made, and when it expires) plus the videos whose handle matches (sameHandle), so it is
 // always derived, never typed in. "Request videos from all" makes one link per creator without a video and shows the
 // links once: the server never stores a link (it is the creator's upload credential), only its expiry.
 import { useEffect, useId, useRef, useState, useTransition, type Ref } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, ChevronRight, CircleDashed, Copy, Inbox, Link2, Plus, Send, Share, X } from "lucide-react";
 import { ApiError } from "@/components/api-error";
+import { sameHandle } from "@/lib/campaign/handle";
 import { VerdictPill } from "./bits";
 import { PendingLink, Spinner } from "./pending-link";
 import { CampaignRunButton } from "./campaign-run-button";
@@ -64,7 +65,7 @@ export function parseHandles(text: string): {
     const name = fromUrl.replace(/^@+/, "");
     if (/^[\w.-]{1,63}$/.test(name)) {
       const h = `@${name}`;
-      if (!handles.some((x) => x.toLowerCase() === h.toLowerCase())) handles.push(h);
+      if (!handles.some((x) => sameHandle(x, h))) handles.push(h);
     } else skipped.push(raw);
   }
   return { handles, skipped };
@@ -88,7 +89,7 @@ export function CampaignCreators({ campaignId, entries, editable }: { campaignId
 
   async function add() {
     const { handles, skipped } = parseHandles(text);
-    const fresh = handles.filter((h) => !entries.some((e) => e.handle.toLowerCase() === h.toLowerCase()));
+    const fresh = handles.filter((h) => !entries.some((e) => sameHandle(e.handle, h)));
     if (!handles.length) {
       setError(
         skipped.length
@@ -164,7 +165,7 @@ export function CampaignCreators({ campaignId, entries, editable }: { campaignId
       }));
       if (!links.length) throw new Error("Everyone on the list has already sent a video.");
       // A single new link joins the ones already showing (it replaces that creator's older one).
-      setMade((cur) => (creators && cur ? [...cur.filter((m) => !links.some((l) => l.creator.toLowerCase() === m.creator.toLowerCase())), ...links] : links));
+      setMade((cur) => (creators && cur ? [...cur.filter((m) => !links.some((l) => sameHandle(l.creator, m.creator))), ...links] : links));
       refresh();
       requestAnimationFrame(() =>
         linksRef.current?.scrollIntoView({
