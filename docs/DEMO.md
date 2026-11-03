@@ -1,4 +1,4 @@
-# Demo video (2:43; the submission allows three minutes)
+# Demo video (2:56; the submission allows three minutes)
 
 Judging: impact 30%, use of Meta tooling 25%, demo 25%, technical depth 20%. One continuous story with money in it,
 told to a brand manager; name the Meta model at the moment it does something on screen. Every number on screen is a
@@ -20,14 +20,15 @@ real production value. (Flow from the round-4 hackathon judge, 2026-10-29.)
 - Judges who skip the video follow /judge: the sample run, Ash's re-cut and first take, the Pamplemousse look-alike,
   /accuracy, and the follow-up agent on Peter's Reel.
 
-## Script (v3, recorded 2026-11-03, 2:43)
+## Script (v4, recorded 2026-11-03, 2:56)
 
 Voiceover: ElevenLabs Eleven v4 (voice Bill) via fal.ai; its word timings drive the captions. Music: Google Lyria 3.5,
-extended by 12 bars. Footage: scripted Chrome recordings of a local build of main against the live store, at 2880×1620,
-edited in Remotion (~/Movies/screen-time-work/remotion/src/v2). Michael K's Reel was really sent through his request link
-and run on 2026-11-03; every number is read from the live reports. Sped-up waits carry a speed badge.
+extended by 12 + 6 bars at phrase boundaries. Footage: scripted Chrome recordings of a local build of main against the live
+store, at 2880×1620, edited in Remotion (~/Movies/screen-time-work/remotion/src/v2). Michael K's Reel was really sent through
+his request link and run on 2026-11-03; every number is read from the live reports. Sped-up waits carry a speed badge. Ash's
+reports open on frames she chose (openAt).
 
-**0:00–0:12 · The hook.** Ash's Reel; SAM 3.1's real box locks onto the can; the counter runs to 13.3 s; both spoken checks tick; PAY $300 lands on the music's drop.
+**0:00–0:12 · The hook.** Ash's re-cut; SAM 3.1's real box locks onto the can; the counter runs to 13.3 s; both spoken checks tick; PAY $300 lands on the music's drop.
 > You paid a creator three hundred dollars to show your can. Did she?
 > Screen-Time checks. To the second.
 
@@ -43,20 +44,23 @@ and run on 2026-11-03; every number is read from the live reports. Sped-up waits
 **0:58–1:18 · The pay case.** His report: 14.5 s on screen, LaCroix said, "AN AD" on screen at 0:09.2; Pay $300, after a look (Muse Spark saw the can blurred); a tap plays the proof.
 > Fourteen and a half seconds on screen, LaCroix said out loud, and "an ad" on screen at nine seconds. Pay three hundred dollars, after a quick look: Muse Spark saw the can blurred. Tap any term, and it plays the exact second that proves it.
 
-**1:18–1:36 · The holds.** Ash's first take (held, replaced by her re-cut), the Pamplemousse can (0 s counted), the Poppi card (ignored).
-> Ash's first take never said the brand, so it was held until the re-cut. This creator grabbed the wrong flavor: Muse Spark read Pamplemousse off the can, so zero seconds count. And a Poppi on the table? Another brand. Ignored.
+**1:18–1:32 · Look-alikes.** The Pamplemousse can (0 s counted), the Poppi card (ignored).
+> This creator grabbed the wrong flavor: Muse Spark read Pamplemousse off the can, so zero seconds count. And a Poppi on the table? Another brand. Ignored.
 
-**1:36–1:52 · The follow-up agent.** Peter's report; the agent run at 5×; the note and the re-cut request waiting for approval.
+**1:32–1:47 · The follow-up agent.** Peter's report; the agent run at 5×; the note and the re-cut request waiting for approval.
 > Peter never disclosed the ad. The follow-up agent, Muse Spark with tools, reads his report, drafts the note, and queues a re-cut. Nothing is sent until you approve.
 
-**1:52–2:01 · The campaign.** Pay 7 creators $2,100 · hold 3 ($900); Export CSV.
+**1:47–2:05 · Ash's re-cut.** Her first take held (never said LaCroix); her phone gets the revision request Screen-Time writes for that report (its real text), she re-films and Voice Transcribe hears "LaCroix" at 0:03.4, she sends it; the first take's "re-cut delivered" banner, the re-cut's report, PAY $300. The phone is an illustration of the flow: her re-cut was uploaded by script.
+> Remember Ash? Her first take never said LaCroix, so the fee was held. Screen-Time wrote her the fix. She filmed it again, said LaCroix this time, and sent the re-cut. Checked again: all three terms met. Now she gets paid.
+
+**2:05–2:14 · The campaign.** Pay 7 creators $2,100 · hold 3 ($900); Export CSV.
 > Ten creators: pay seven, hold three. Export it for finance. Screen-Time never moves money.
 
-**2:01–2:17 · Accuracy.** 98.1% precision, 99.4% recall per frame against checked labels; SAM alone 4.3 s of the wrong flavor vs 0.0 s with Muse Spark; where it is still wrong.
+**2:14–2:30 · Accuracy.** 98.1% precision, 99.4% recall per frame against checked labels; SAM alone 4.3 s of the wrong flavor vs 0.0 s with Muse Spark; where it is still wrong.
 > Measured frame by frame against checked labels: ninety-eight percent precision, ninety-nine percent recall. SAM alone counted the wrong flavor. With Muse Spark checking: zero. And we show you where it's still wrong.
 
-**2:17–2:33 · Built during the hackathon.** The six parts lighting up, a verbatim excerpt of src/lib/pipeline/run.ts, the open-source repo (MIT, 96 commits, 479 tests).
+**2:30–2:48 · Built during the hackathon.** The six parts lighting up, a verbatim excerpt of src/lib/pipeline/run.ts, the open-source repo (MIT, 96 commits, 479 tests).
 > Everything you just saw was built during this hackathon: the pipeline on SAM three point one, Muse Spark and Voice Transcribe, the contract checker, the follow-up agent, and the accuracy harness. And it's all open source.
 
-**2:33–2:43 · Close.** The run receipt on Ash's re-cut, then the end card: the site, the repo, the three Meta models.
+**2:48–2:56 · Close.** The run receipt on Ash's re-cut, then the end card: the site, the repo, the three Meta models.
 > About eleven to twenty-three cents a Reel. Screen-Time. Proof your product was seen.
