@@ -2,7 +2,7 @@
 import { disclosureWhere } from "@/lib/metrics/rules";
 import type { VideoReport } from "@/lib/types";
 import { prominenceOf, verdictOf } from "@/components/format";
-import { decisionOf, feeFor, latestFinished } from "./money";
+import { decisionOf, feeFor, rollup } from "./money";
 import type { Campaign, VideoEntry } from "./types";
 
 type Fees = Pick<Campaign, "fee" | "creators">;
@@ -49,7 +49,7 @@ export function csvCell(value: Cell): string {
 
 const round = (n: number, digits: number) => Math.round(n * 10 ** digits) / 10 ** digits;
 
-/** `latest`: false when a later finished video from the same creator replaced this one, so it pays or holds nothing. */
+/** `latest`: false when a newer take from the same creator replaced this one, so it pays or holds nothing. */
 export function videoRow(v: VideoEntry, fees: Fees = {}, latest = true): Cell[] {
   const r = v.report;
   if (!r) return [v.creator, v.title, v.status, ...Array<Cell>(CSV_HEADER.length - 3).fill(null)];
@@ -90,8 +90,9 @@ function disclosureCells(r: VideoReport): [Cell, Cell] {
   return d.onScreenChecked === false ? ["not checked", null] : ["no", null];
 }
 
-/** One row per video; `fees` (the campaign) adds what each recommendation pays or holds. */
+/** One row per video; `fees` (the campaign) adds what each recommendation pays or holds. A take replaced by a newer one
+ *  from the same creator is "superseded", by the same rule as the campaign's money line (a test set's clips never are). */
 export function campaignCsv(videos: VideoEntry[], fees: Fees = {}): string {
-  const latest = latestFinished(videos);
-  return [CSV_HEADER, ...videos.map((v) => videoRow(v, fees, latest.get(v.creator.toLowerCase()) === v))].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  const { replacedBy } = rollup(fees, videos);
+  return [CSV_HEADER, ...videos.map((v) => videoRow(v, fees, !replacedBy.has(v.id)))].map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }

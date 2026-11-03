@@ -53,6 +53,9 @@ export interface Row {
   /** Muse Spark was unsure or a number landed near its threshold: worth a look before deciding, and why, in a word. */
   flagged?: boolean;
   flagReason?: string;
+  /** Set when a newer take from the same creator replaced this one (its id): that take decides pay or hold, so this
+   *  card pays or holds nothing and counts under All only. */
+  replacedBy?: string;
 }
 
 type Filter = "all" | "delivered" | "short" | "review";
@@ -69,12 +72,14 @@ export function CampaignList({ rows }: { rows: Row[] }) {
   const top = useRef<HTMLDivElement>(null);
   const group = useRef<HTMLDivElement>(null);
 
-  const count = (id: Filter) => (id === "all" ? rows.length : rows.filter((r) => r.status === "done" && r.verdict === id).length);
+  // A take a re-cut replaced keeps its own verdict on its card, but only the take that decides counts in a filter.
+  const inFilter = (r: Row, id: Filter) => id === "all" || (r.status === "done" && !r.replacedBy && r.verdict === id);
+  const count = (id: Filter) => rows.filter((r) => inFilter(r, id)).length;
   // Empty segments are noise ("Needs review 0"); All always stays.
   const segments = FILTERS.filter((f) => f.id === "all" || count(f.id) > 0);
   const asked = params.get("show");
   const active: Filter = isFilter(asked) && segments.some((s) => s.id === asked) ? asked : "all";
-  const shown = active === "all" ? rows : rows.filter((r) => r.status === "done" && r.verdict === active);
+  const shown = rows.filter((r) => inFilter(r, active));
 
   function choose(id: Filter, focus = false) {
     if (id !== active) {
@@ -192,14 +197,16 @@ function CreatorCard({ r, eager }: { r: Row; eager: boolean }) {
           <>
             <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
               <VerdictPill verdict={r.verdict} />
-              {(r.fee != null || r.override) && r.verdict !== "pending" && (
+              {r.replacedBy ? (
+                <span className="text-[12.5px] font-semibold whitespace-nowrap text-(--ink-3)">Replaced by re-cut</span>
+              ) : (r.fee != null || r.override) && r.verdict !== "pending" && (
                 <span className="text-[12.5px] font-semibold whitespace-nowrap text-(--ink) tabular">
                   {r.override ? (r.override === "pay" ? "Pay" : "Hold") : r.verdict === "delivered" ? "Pay" : r.verdict === "short" ? "Hold" : "Review"}
                   {r.fee != null && ` ${usd(r.fee)}`}
                   {r.override && <span className="font-medium text-(--ink-3)"> · your call</span>}
                 </span>
               )}
-              {r.flagged && !r.override && (
+              {r.flagged && !r.override && !r.replacedBy && (
                 <span className="inline-flex h-6 items-center rounded-full bg-(--review-soft) px-2 text-[12px] font-semibold whitespace-nowrap text-(--review)">
                   Worth a look{r.flagReason ? ` · ${r.flagReason}` : ""}
                 </span>

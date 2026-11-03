@@ -8,8 +8,7 @@ import { friendlyError, verdictOf } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
 import { agentRunning } from "@/lib/agent/campaign-agent";
-import { feeFor, latestFinished } from "@/lib/campaign/money";
-import { sameHandle } from "@/lib/campaign/roster";
+import { feeFor, rollup } from "@/lib/campaign/money";
 import { VerdictPill } from "@/components/ed/bits";
 import { PendingLink } from "@/components/ed/pending-link";
 
@@ -60,11 +59,11 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   const agentWorking = agentRunning(video.agent);
   const synthetic = Boolean(video.synthetic ?? campaign.synthetic);
   const title = humanTitle(video.title);
-  // A re-cut from a creator on the roster replaces this video for pay or hold. (A test set's clips from one handle
-  // are separate tests, not re-cuts, so they never say this.)
-  const onRoster = campaign.creators?.some((c) => sameHandle(c.handle, video.creator)) ?? false;
-  const newer = onRoster && video.status === "done" ? latestFinished(await listVideos(id)).get(video.creator.toLowerCase()) : undefined;
-  const replacedBy = newer && newer.id !== video.id && newer.createdAt > video.createdAt ? newer : undefined;
+  // A newer take from the same creator replaces this one for pay or hold, by the same rule as the campaign's money line,
+  // so this banner shows exactly when the money ignores this video. (A test set's clips from one handle are separate
+  // tests, not re-cuts, so they never say this.)
+  const replacedBy = video.status === "done" ? rollup(campaign, await listVideos(id)).replacedBy.get(video.id) : undefined;
+  const recutChecked = replacedBy?.status === "done" && Boolean(replacedBy.report);
 
   // Plain names for the tracked objects where the showcase has them; elsewhere the report names them from the brief.
   const names =
@@ -82,9 +81,10 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
         {replacedBy && (
           <p role="status" className="mt-3 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-(--r-inner) bg-(--wash) px-4 py-3 text-[14px] leading-snug text-(--ink-2) sm:mt-0">
             <span>
-              <span className="font-semibold text-(--ink)">{video.creator} sent a re-cut.</span> It decides pay or hold now:
+              <span className="font-semibold text-(--ink)">{video.creator} sent a re-cut.</span>{" "}
+              {recutChecked ? "It decides pay or hold now:" : "It decides pay or hold once it is checked."}
             </span>
-            <VerdictPill verdict={verdictOf(replacedBy.report)} />
+            {recutChecked && <VerdictPill verdict={verdictOf(replacedBy.report)} />}
             <PendingLink href={`/campaigns/${id}/videos/${replacedBy.id}`} className="inline-flex min-h-11 items-center font-semibold text-(--ink) underline decoration-(--hair-2) underline-offset-4">
               Open the re-cut
             </PendingLink>
@@ -109,6 +109,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
             fee={feeFor(campaign, video.creator)}
             startAt={Number.isFinite(t) && t >= 0 ? t : undefined}
             override={video.override}
+            replacedBy={replacedBy ? { href: `/campaigns/${campaign.id}/videos/${replacedBy.id}` } : undefined}
             overrideEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/override`}
             agent={video.agent}
             agentEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/agent`}

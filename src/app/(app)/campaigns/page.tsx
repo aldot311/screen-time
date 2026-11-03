@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { ChevronRight, Plus } from "lucide-react";
 import { listCampaigns, listVideos } from "@/lib/campaign/store";
 import { TRY_ID } from "@/lib/campaign/try";
-import { payout, payoutLine } from "@/lib/campaign/money";
+import { payoutLine, rollup } from "@/lib/campaign/money";
 import type { Campaign } from "@/lib/campaign/types";
-import { seconds, verdictOf } from "@/components/format";
+import { seconds } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { PendingLink } from "@/components/ed/pending-link";
 import { CampaignThumb, DISPLAY, plural, shortName } from "@/components/ed/campaign-ui";
@@ -17,26 +17,29 @@ type Card = Awaited<ReturnType<typeof summarize>>;
 async function summarize(c: Campaign) {
   const videos = await listVideos(c.id);
   const done = videos.filter((v) => v.status === "done");
-  const verdicts = done.map((v) => verdictOf(v.report));
+  // One count for the headline, the bar and the money: each creator once, from their newest video (each clip on its own
+  // for a test set from one handle), so delivered + fell short + review + pending is always the total.
+  const r = rollup(c, videos);
   return {
     c,
     // The product photo leads when the campaign has one, so a campaign reads as its product at a glance.
     thumbs: [c.productImageUrl, ...videos.map((v) => v.thumbUrl)].filter((u): u is string => typeof u === "string"),
-    total: videos.length,
+    videos: videos.length,
     done: done.length,
-    delivered: verdicts.filter((v) => v === "delivered").length,
-    short: verdicts.filter((v) => v === "short").length,
-    review: verdicts.filter((v) => v === "review").length,
+    unit: r.unit,
+    total: r.total,
+    delivered: r.delivered,
+    short: r.short,
+    review: r.review,
+    pending: r.pending.creators,
+    replaced: r.replacedBy.size,
     running: videos.filter((v) => v.status === "running" || (v.status === "uploaded" && !v.consent)).length,
     waiting: videos.filter((v) => v.status === "uploaded" && v.consent).length,
     stopped: videos.filter((v) => v.status === "failed").length,
     // Exact per-video values summed once and floored only for display, exactly as the roll-up does.
     seconds: done.reduce((s, v) => s + (v.report?.metrics.secondsOnScreen ?? 0), 0),
-    // The same money line as the campaign page (videos for a test set from one handle, creators otherwise).
-    money: (() => {
-      const oneHandle = videos.length > 1 && new Set(videos.map((v) => v.creator)).size === 1 && !c.creators?.length;
-      return oneHandle ? payoutLine(payout(c, videos, { perVideo: true }), "video") : payoutLine(payout(c, videos));
-    })(),
+    // The same money line as the campaign page.
+    money: payoutLine(r.payout, r.unit, r.pending),
   };
 }
 
@@ -134,22 +137,23 @@ function CampaignCard({ k, eager }: { k: Card; eager: boolean }) {
           </span>
         )}
         <span className="mt-auto pt-3 text-[14.5px] leading-snug">
-          {k.total === 0 ? (
+          {k.videos === 0 ? (
             <span className="text-(--ink-2)">No videos yet</span>
           ) : k.done === 0 ? (
-            <span className="text-(--ink-2)">{plural(k.total, "video")}, none checked yet</span>
+            <span className="text-(--ink-2)">{plural(k.videos, "video")}, none checked yet</span>
           ) : (
             <span className="font-semibold">
-              <span className="ed-num">{k.delivered}</span> of <span className="ed-num">{k.total}</span> delivered
+              <span className="ed-num">{k.delivered}</span> of <span className="ed-num">{k.total}</span> {k.unit === "creator" ? (k.total === 1 ? "creator " : "creators ") : ""}delivered
             </span>
           )}
         </span>
-        {k.total > 0 && <MixBar k={k} />}
+        {k.videos > 0 && <MixBar k={k} />}
         {k.money && <span className="mt-1.5 block text-[13.5px] font-semibold text-(--ink) tabular">{k.money}</span>}
         <span className="mt-1.5 flex flex-wrap gap-x-3 text-[12.5px] text-(--ink-2) tabular">
           {k.done > 0 && <span className="text-(--ink-3)">{seconds(k.seconds)} on screen</span>}
           {k.short > 0 && <span>{k.short} fell short</span>}
           {k.review > 0 && <span>{k.review} to review</span>}
+          {k.replaced > 0 && <span className="text-(--ink-3)">{k.replaced} replaced by a re-cut</span>}
           {k.running > 0 && <span className="text-(--ink-3)">{k.running} in progress</span>}
           {k.waiting > 0 && <span className="font-semibold text-(--ink)">{k.waiting} waiting for you</span>}
           {k.stopped > 0 && <span className="text-(--ink-2)">{k.stopped} stopped</span>}
@@ -159,20 +163,19 @@ function CampaignCard({ k, eager }: { k: Card; eager: boolean }) {
   );
 }
 
-/** Every video in proportion: delivered green, fell short red, needs review amber, anything not judged yet neutral. */
+/** Every creator (or test clip) in proportion: delivered green, fell short red, needs review amber, pending neutral. */
 function MixBar({ k }: { k: Card }) {
-  const other = k.total - k.delivered - k.short - k.review;
   const parts = [
     { n: k.delivered, c: "bg-(--pass)", key: "d" },
     { n: k.short, c: "bg-(--short)", key: "s" },
     { n: k.review, c: "bg-(--review)", key: "r" },
-    { n: other, c: "bg-(--hair-2)", key: "o" },
+    { n: k.pending, c: "bg-(--hair-2)", key: "o" },
   ].filter((p) => p.n > 0);
   return (
     <span
       className="mt-2 flex h-2 gap-[3px] overflow-hidden rounded-full"
       role="img"
-      aria-label={`${k.delivered} delivered, ${k.short} fell short, ${k.review} need review${other ? `, ${other} not judged yet` : ""}`}
+      aria-label={`${k.delivered} delivered, ${k.short} fell short, ${k.review} need review${k.pending ? `, ${k.pending} pending` : ""}`}
     >
       {parts.map((p) => (
         <span key={p.key} className={`h-full ${p.c}`} style={{ flex: p.n }} />

@@ -19,7 +19,7 @@ import { CampaignCreators } from "@/components/ed/campaign-creators";
 import { FeeEditor } from "@/components/ed/fee-editor";
 import { EngineSwitch } from "@/components/ed/engine-switch";
 import { openWeightConfig } from "@/lib/meta/open-weight";
-import { feeFor, payout, payoutLine } from "@/lib/campaign/money";
+import { feeFor, handleKey, payoutLine, rollup } from "@/lib/campaign/money";
 import { reviewFlags, reviewReason } from "@/lib/campaign/review";
 
 export const dynamic = "force-dynamic";
@@ -42,8 +42,11 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
 
   // One rule for card titles: the creator handle is the title and the clip is mono metadata. When every video shares
   // one handle, the header says it once and the cards are titled by clip.
-  const handles = new Set(videos.map((v) => v.creator));
+  const handles = new Set(videos.map((v) => handleKey(v.creator)));
   const oneHandle = videos.length > 0 && handles.size === 1 ? videos[0].creator : null;
+  // The one count every number on this page comes from: each creator once, from their newest video (a test set from one
+  // handle counts each clip), so the headline, the money line, the filter and the cards add up the same way.
+  const rolled = rollup(campaign, videos);
 
   const rows: Row[] = videos.map((v) => {
     const r = v.report;
@@ -76,13 +79,12 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
       override: v.override?.decision,
       flagged: r ? reviewFlags(r).length > 0 : false,
       flagReason: r ? (reviewReason(r) ?? undefined) : undefined,
+      replacedBy: rolled.replacedBy.get(v.id)?.id,
     };
   });
 
   const done = rows.filter((r) => r.status === "done");
-  const delivered = done.filter((r) => r.verdict === "delivered").length;
-  const short = done.filter((r) => r.verdict === "short").length;
-  const review = done.filter((r) => r.verdict === "review").length;
+  const { delivered, short, review } = rolled;
   const running = rows.filter((r) => r.status === "running" || r.status === "starting").length;
   const waiting = rows.filter((r) => r.status === "waiting" || r.status === "uploaded").length;
   const stopped = rows.filter((r) => r.status === "failed").length;
@@ -94,13 +96,15 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
   const canUpload = !campaign.synthetic;
   // Only the host's name reaches the page; the key stays on the server.
   const openHost = openWeightConfig();
-  const countLine = oneHandle
-    ? `${plural(videos.length, "test video")} from ${oneHandle}`
-    : `${plural(videos.length, "video")} from ${plural(handles.size, "creator")}`;
+  const countLine =
+    rolled.unit === "video"
+      ? `${plural(videos.length, "test video")} from ${oneHandle}`
+      : `${plural(rolled.total, "creator")} · ${plural(videos.length, "video")}${rolled.replacedBy.size ? `, ${rolled.replacedBy.size} replaced by a re-cut` : ""}`;
 
-  // Name the dominant failure when there is one: which kind of term the misses have in common.
+  // Name the dominant failure when there is one: which kind of term the misses have in common. Only the videos that
+  // decide count: a take a re-cut replaced is no longer a miss.
   const said = `“${campaign.brandTerms[0] ?? campaign.brand}”`;
-  const shortVideos = videos.filter((v) => v.status === "done" && verdictOf(v.report) === "short");
+  const shortVideos = rolled.deciding.filter((v) => verdictOf(v.report) === "short");
   const kinds = shortVideos.map((v) => {
     const failed = (v.report?.terms ?? []).filter((t) => t.pass === false);
     const voice = failed.filter((t) => t.term.rule?.kind === "mentioned");
@@ -129,10 +133,9 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
     fee: feeFor(campaign, c.handle),
     feeInherited: c.fee === undefined,
   }));
-  // Money is per creator (their latest finished video). A test set (several clips from one handle, no roster) counts
-  // each clip on its own, as videos: "Pay 5 videos $1,500 · hold 7 ($2,100)".
-  const testSet = oneHandle !== null && videos.length > 1 && !campaign.creators?.length;
-  const money = testSet ? payoutLine(payout(campaign, videos, { perVideo: true }), "video") : payoutLine(payout(campaign, videos));
+  // Money is per creator, from their newest video; a test set counts each clip, as videos: "Pay 5 videos $1,500 · hold 7
+  // ($2,100)". Pay + hold + review + pending is every creator (or clip).
+  const money = payoutLine(rolled.payout, rolled.unit, rolled.pending);
   const mode = process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct";
   const creatorsSection =
     canUpload || creators.length > 0 ? <CampaignCreators campaignId={campaign.id} entries={creators} editable={canUpload} /> : null;
@@ -185,11 +188,14 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
 
               {/* The decision in money leads; the sentence below says why. */}
               {money && (
-                <p className="mt-5 text-[19px] leading-snug font-semibold text-(--ink) tabular sm:text-[22px]" aria-label={`Money: ${money}`}>
-                  {money}
-                </p>
+                <>
+                  <p className="mt-5 text-[19px] leading-snug font-semibold text-(--ink) tabular sm:text-[22px]" aria-label={`Money: ${money}`}>
+                    {money}
+                  </p>
+                  <p className="mt-1 text-[13.5px] text-(--ink-3)">Nothing here moves money; you pay as you normally do.</p>
+                </>
               )}
-              <p className={`${DISPLAY} ${money ? "mt-2" : "mt-5"} max-w-[24ch] text-[24px] leading-[1.15] font-medium! sm:text-[30px]`}>
+              <p className={`${DISPLAY} ${money ? "mt-3" : "mt-5"} max-w-[24ch] text-[24px] leading-[1.15] font-medium! sm:text-[30px]`}>
                 {videos.length === 0 ? (
                   <>No videos yet. Add the first one to see if it delivered.</>
                 ) : done.length === 0 ? (
@@ -202,8 +208,8 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                   </>
                 ) : (
                   <>
-                    <span className="ed-num">{delivered}</span> of <span className="ed-num">{videos.length}</span> delivered what the
-                    contract asked.
+                    <span className="ed-num">{delivered}</span> of <span className="ed-num">{rolled.total}</span>{" "}
+                    {rolled.unit === "creator" ? (rolled.total === 1 ? "creator " : "creators ") : ""}delivered what the contract asked.
                     {missLine && <span className="text-(--short)"> {missLine}</span>}
                     {reviewLine && <span className="text-(--review)"> {reviewLine}</span>}
                   </>
