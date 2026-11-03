@@ -4,6 +4,7 @@ import { LockKeyhole } from "lucide-react";
 import { TopBar } from "@/components/ed/top-bar";
 import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
+import { PUBLIC_AGENT_DEMO } from "@/lib/agent/public";
 import { UnlockForm } from "./unlock-form";
 
 export const metadata: Metadata = { title: "Demo access" };
@@ -23,8 +24,8 @@ export default function UnlockPage() {
             Screen-Time checks that your product was seen in creator video, to the second.
           </p>
           <p className="mt-2 text-[16px] leading-[1.55] text-(--ink-2)">
-            Anyone can read reports and run the sample. Uploading and analyzing your own videos uses paid Meta API credits, so it needs the demo
-            password.
+            Anyone can read reports, run the sample, and run the follow-up agent on the example LaCroix reports. Uploading and analyzing your own
+            videos uses paid Meta API credits, and approving a re-cut link makes a real upload link for a creator, so both need the demo password.
           </p>
           <Suspense fallback={<FormSkeleton />}>
             <UnlockForm />
@@ -34,6 +35,15 @@ export default function UnlockPage() {
             <div className="mt-2">
               <TrySample className="ed-press inline-flex h-11 items-center gap-2 rounded-full bg-(--card) px-4 text-[14px] font-semibold text-(--ink) shadow-(--sh-1) ring-1 ring-(--hair-2) active:bg-(--wash)" />
             </div>
+            <p className="mt-3 text-[14px] text-(--ink-2)">
+              Or try the follow-up agent on an example report:{" "}
+              <PendingLink
+                href={`/campaigns/${PUBLIC_AGENT_DEMO.campaignId}/videos/${PUBLIC_AGENT_DEMO.videoId}`}
+                className="-mx-1 inline-flex min-h-11 items-center rounded-full px-1 font-semibold text-(--ink) underline decoration-(--hair-2) decoration-2 underline-offset-4 hover:decoration-(--ink) active:opacity-70"
+              >
+                Ash&rsquo;s first take
+              </PendingLink>
+            </p>
           </div>
           <p className="mt-4 text-[14px] text-(--ink-3)">
             Just looking?{" "}

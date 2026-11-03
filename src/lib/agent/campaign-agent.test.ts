@@ -26,7 +26,7 @@ const say = (text: string): Item => ({ type: "message", content: [{ type: "outpu
 
 /** A fake /responses that plays `turns` in order and records every request body. */
 function script(turns: Item[][]) {
-  const bodies: { input: Item[]; tool_choice: string; tools: { name: string }[] }[] = [];
+  const bodies: { input: Item[]; instructions: string; tool_choice: string; tools: { name: string }[] }[] = [];
   const fetch = async (_url: string, init?: RequestInit) => {
     bodies.push(JSON.parse(String(init?.body)));
     const output = turns[bodies.length - 1] ?? [say("done")];
@@ -166,5 +166,66 @@ describe("agent guards", () => {
     expect(out(1).error).toMatch(/could not run: ffmpeg crashed/);
     expect(run.recommendation?.decision).toBe("pay"); // the finished re-cut delivered
     expect(run.status).toBe("done");
+  });
+});
+
+describe("a visitor's run and a finished re-cut", () => {
+  const out = (bodies: { input: Item[] }[], i: number) =>
+    JSON.parse(String(bodies[i].input.filter((x) => x.type === "function_call_output").at(-1)?.output));
+
+  it("in a visitor's run, offers no re-check tool, refuses one if called, and never mentions it", async () => {
+    let analyzed = 0;
+    const waiting = video("recut2", { status: "uploaded", report: undefined, createdAt: "2026-10-29T00:00:00Z" });
+    const { fetch, bodies } = script([[call("analyze_video", { videoId: "recut2" })], [say("The re-cut is waiting for the brand to run it.")]]);
+    const run = await runAgent(
+      world({
+        history: async () => [video("v1"), waiting],
+        analyze: async (id) => {
+          analyzed++;
+          return video(id);
+        },
+      }),
+      { guard: await guard(), client: { apiKey: "k", fetch }, allowAnalyze: false, origin: "public", startedAt: "2026-11-03T10:00:00.000Z" },
+    );
+    expect(bodies.every((b) => !b.tools.some((t) => t.name === "analyze_video"))).toBe(true);
+    expect(bodies[0].instructions).not.toContain("analyze_video");
+    expect(bodies[0].instructions).toContain("waiting for the brand to run it");
+    expect(out(bodies, 1).error).toMatch(/needs the demo password/);
+    expect(analyzed).toBe(0);
+    // The route's id and the visitor label stay on the run, so the page never remounts mid-run.
+    expect(run).toMatchObject({ status: "done", startedAt: "2026-11-03T10:00:00.000Z", origin: "public" });
+  });
+
+  it("judges by a re-cut that already finished: names it, shows its report, pays from it and asks for no other", async () => {
+    const recut = video("v1-recut", { report: report(true), createdAt: "2026-10-29T00:00:00Z" });
+    const { fetch, bodies } = script([
+      [call("get_report", {}, "a")],
+      [call("request_recut", { reason: "Say LaCroix out loud." }, "b"), call("recommend_payout", { decision: "hold", reason: "Fell short." }, "c")],
+      [call("recommend_payout", { decision: "pay", reason: "The re-cut met every term." }, "d")],
+      [say("The re-cut met every term: pay.")],
+    ]);
+    const run = await runAgent(world({ history: async () => [video("v1"), recut] }), { guard: await guard(), client: { apiKey: "k", fetch } });
+    expect(bodies[0].instructions).toContain("id v1-recut");
+    expect(bodies[0].instructions).toMatch(/do not queue request_recut/);
+    expect(out(bodies, 1)).toMatchObject({ verdict: "short", replacedBy: { videoId: "v1-recut", verdict: "delivered" } });
+    const second = bodies[2].input.filter((x) => x.type === "function_call_output").slice(-2);
+    expect(JSON.parse(String(second[0].output)).error).toMatch(/no re-cut to ask for/);
+    expect(JSON.parse(String(second[1].output)).error).toMatch(/The call is pay/);
+    expect(run.recut).toBeUndefined();
+    expect(run.recommendation).toEqual({ decision: "pay", reason: "The re-cut met every term." });
+  });
+
+  it("ends as a failed run when the creator's videos cannot be read, never stuck running", async () => {
+    const { fetch, bodies } = script([[say("hi")]]);
+    const run = await runAgent(
+      world({
+        history: async () => {
+          throw new Error("Blob list failed");
+        },
+      }),
+      { guard: await guard(), client: { apiKey: "k", fetch } },
+    );
+    expect(run).toMatchObject({ status: "failed", error: "Blob list failed" });
+    expect(bodies).toHaveLength(0);
   });
 });

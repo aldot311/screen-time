@@ -1,7 +1,8 @@
 // The follow-up agent: Muse Spark, with tools, decides what to do about one creator's video. It reads the report and
-// the creator's other videos, can re-check a re-cut the creator sent, drafts the note to the creator and makes a
-// pay/hold call. It never sends anything: a re-cut request is queued for the brand to approve, and the note is a draft.
-// Every turn is a Muse Spark call through the cost guard; the loop is capped, and each step is logged for the UI.
+// the creator's other videos, can re-check a re-cut the creator sent (not in a visitor's run, which only reads stored
+// results), drafts the note to the creator and makes a pay/hold call. It never sends anything: a re-cut request is
+// queued for the brand to approve, and the note is a draft. Every turn is a Muse Spark call through the cost guard;
+// the loop is capped, and each step is logged for the UI.
 import { MODELS } from "@/lib/meta/client";
 import { metaRequest, type ClientOptions } from "@/lib/meta/http";
 import type { CostGuard } from "@/lib/meta/cost-guard";
@@ -9,11 +10,9 @@ import { verdictOf } from "@/components/format";
 import { reviewFlags } from "@/lib/campaign/review";
 import { feeFor } from "@/lib/campaign/money";
 import type { Campaign, VideoEntry } from "@/lib/campaign/types";
+import { AGENT_MAX_TURNS, AGENT_TURN_USD } from "./state";
 
-export const AGENT_MAX_TURNS = 8;
-export { AGENT_STALE_MS, agentRunning } from "./state";
-/** What one Muse Spark turn reserves (as each Spark call in the pipeline). */
-export const AGENT_TURN_USD = 0.02;
+export { AGENT_MAX_TURNS, AGENT_MAX_USD, AGENT_STALE_MS, AGENT_TURN_USD, agentRunning } from "./state";
 
 export interface AgentStep {
   /** A tool the agent called, or "answer" for its final message. */
@@ -37,6 +36,8 @@ export interface AgentRun {
   recut?: { reason: string; approvedAt?: string };
   error?: string;
   usd: number;
+  /** "public": started by a visitor without the demo password, on an example report. Absent on the owner's runs. */
+  origin?: "public";
 }
 
 /** What the tools act on, injected so the loop can be tested without a store or the pipeline. */
@@ -53,7 +54,8 @@ const TOOLS = [
   {
     type: "function",
     name: "get_report",
-    description: "The finished report of the video being followed up: verdict, each contract term with what was measured, objects found, disclosure, fee.",
+    description:
+      "The finished report of the video being followed up: verdict, each contract term with what was measured, objects found, disclosure, fee. When the creator already sent a newer video that finished, its report is included as replacedBy: that one decides pay or hold.",
     parameters: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -93,10 +95,21 @@ const TOOLS = [
   },
 ];
 
-function instructions(c: Campaign, v: VideoEntry): string {
+function instructions(c: Campaign, v: VideoEntry, o: { canAnalyze: boolean; newer?: VideoEntry }): string {
   return [
     `You are the follow-up assistant for ${c.brand}'s sponsorship campaign "${c.name}". Your job: decide what to do about ${v.creator}'s video.`,
-    `Start with get_report, then get_creator_history. If the creator already sent a newer re-cut that is waiting, analyze it with analyze_video and judge by the newest result.`,
+    o.canAnalyze
+      ? `Start with get_report, then get_creator_history. If the creator already sent a newer re-cut that is waiting, analyze it with analyze_video and judge by the newest result.`
+      : `Start with get_report, then get_creator_history. You cannot check new uploads here: if a newer re-cut is waiting (status uploaded), say it is waiting for the brand to run it, and judge by the newest finished video.`,
+    // A re-cut that already finished is a fact the code knows: said outright, so the agent never asks for it again.
+    ...(o.newer
+      ? [
+          `The creator already sent a newer video, id ${o.newer.id}, and it finished checking: it replaces this one for pay or hold, and get_report includes it as replacedBy. It is the latest video: judge by it.`,
+          verdictOf(o.newer.report) === "delivered"
+            ? `It met every term, so recommend pay because of it. Do not draft a note about fixes and do not queue request_recut: the re-cut already exists.`
+            : `Name what it still missed.`,
+        ]
+      : []),
     `If the latest video fell short, draft a short note to the creator with draft_creator_note: warm and plain, like a brand manager texting a creator they work with, no marketing phrases; call the video "your Reel", never by a file name; name each fix and what was measured, writing seconds as "8.9 s".`,
     `Then queue request_recut.`,
     `Always finish with recommend_payout: "pay" only if the latest video met every term, "hold" if a term was missed, "review" if a term could not be checked or the report says it is worth a look.`,
@@ -139,11 +152,22 @@ interface FunctionCall {
 /** Runs the agent to its answer (or the turn cap). `onStep` sees the run after every step, for live display. */
 export async function runAgent(
   world: AgentWorld,
-  opts: { guard: CostGuard; client?: ClientOptions; onStep?: (run: AgentRun) => void | Promise<void>; now?: () => Date },
+  opts: {
+    guard: CostGuard;
+    client?: ClientOptions;
+    onStep?: (run: AgentRun) => void | Promise<void>;
+    now?: () => Date;
+    /** The id the route stored the run under, kept so every write names the same run. */
+    startedAt?: string;
+    origin?: AgentRun["origin"];
+    /** False in a visitor's run: analyze_video is not offered, and refused if called anyway. */
+    allowAnalyze?: boolean;
+  },
 ): Promise<AgentRun> {
   const { campaign, video } = world;
   const now = opts.now ?? (() => new Date());
-  const run: AgentRun = { status: "running", startedAt: now().toISOString(), steps: [], usd: 0 };
+  const canAnalyze = opts.allowAnalyze ?? true;
+  const run: AgentRun = { status: "running", startedAt: opts.startedAt ?? now().toISOString(), steps: [], usd: 0, ...(opts.origin ? { origin: opts.origin } : {}) };
   const emit = async () => {
     try {
       await opts.onStep?.(structuredClone(run));
@@ -153,12 +177,13 @@ export async function runAgent(
   };
   let analyzed = false;
   // The deterministic verdict of the creator's newest finished video (this one, or a re-cut that already finished):
-  // "pay" is refused unless it is "delivered".
+  // "pay" is refused unless it is "delivered". Found inside the loop's try, so a failed read ends as a failed run.
   let latest = video;
-  for (const v of await world.history()) if (v.status === "done" && v.report && v.createdAt > latest.createdAt) latest = v;
+  const offered = canAnalyze ? TOOLS : TOOLS.filter((t) => t.name !== "analyze_video");
 
   const tools: Record<string, (args: Record<string, unknown>) => Promise<string>> = {
-    get_report: async () => JSON.stringify(reportFor(campaign, video)),
+    get_report: async () =>
+      JSON.stringify(latest.id === video.id ? reportFor(campaign, video) : { ...reportFor(campaign, video), replacedBy: reportFor(campaign, latest) }),
     get_creator_history: async () =>
       JSON.stringify(
         (await world.history())
@@ -166,6 +191,7 @@ export async function runAgent(
           .map((v) => ({ videoId: v.id, sent: v.createdAt.slice(0, 10), status: v.status, verdict: v.report ? verdictOf(v.report) : null, isThisVideo: v.id === video.id })),
       ),
     analyze_video: async ({ videoId }) => {
+      if (!canAnalyze) return JSON.stringify({ error: "Re-checking a new upload needs the demo password: say it is waiting for the brand to run it." });
       if (analyzed) return JSON.stringify({ error: "Only one video can be analyzed per follow-up." });
       const target = (await world.history()).find((v) => v.id === videoId);
       if (!target) return JSON.stringify({ error: "No such video from this creator in this campaign." });
@@ -191,10 +217,14 @@ export async function runAgent(
       const verdict = verdictOf(latest.report);
       if (decision === "pay" && verdict !== "delivered")
         return JSON.stringify({ error: `Refused: pay needs every term met in the latest video, and its report says "${verdict}".` });
+      if (decision === "hold" && verdict === "delivered")
+        return JSON.stringify({ error: `Refused: the latest video (${latest.id}) met every term. The call is pay, or review if its report says it is worth a look.` });
       run.recommendation = { decision, reason: clip(String(reason ?? ""), 300) };
       return JSON.stringify({ recorded: true, moneyMoved: false });
     },
     request_recut: async ({ reason }) => {
+      if (verdictOf(latest.report) === "delivered")
+        return JSON.stringify({ error: `Refused: the latest video (${latest.id}) met every term, so there is no re-cut to ask for.` });
       run.recut = { reason: clip(String(reason ?? ""), 300) };
       return JSON.stringify({ queued: true, sent: false, note: "The brand must approve before any request is sent." });
     },
@@ -208,6 +238,8 @@ export async function runAgent(
     },
   ];
   try {
+    for (const v of await world.history()) if (v.status === "done" && v.report && v.createdAt > latest.createdAt) latest = v;
+    const prompt = instructions(campaign, video, { canAnalyze, newer: latest.id === video.id ? undefined : latest });
     for (let turn = 0; turn < AGENT_MAX_TURNS; turn++) {
       await opts.guard.reserve(AGENT_TURN_USD, `agent ${video.id} turn ${turn + 1}`);
       run.usd = Math.round((run.usd + AGENT_TURN_USD) * 1e6) / 1e6;
@@ -217,7 +249,7 @@ export async function runAgent(
         {
           headers: { "Content-Type": "application/json" },
           makeBody: () =>
-            JSON.stringify({ model: MODELS.spark, instructions: instructions(campaign, video), input, tools: TOOLS, tool_choice: "auto", reasoning: { effort: "low" } }),
+            JSON.stringify({ model: MODELS.spark, instructions: prompt, input, tools: offered, tool_choice: "auto", reasoning: { effort: "low" } }),
           retryNetworkErrors: false,
         },
         opts.client,

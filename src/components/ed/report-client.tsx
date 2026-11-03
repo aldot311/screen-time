@@ -19,6 +19,7 @@ import { AnalysisReplay } from "./analysis-replay";
 import { RunReceiptCard } from "./run-receipt";
 import { ACTION_TILE } from "./action-style";
 import { AgentPanel } from "./agent-panel";
+import type { AgentAccess } from "@/lib/agent/public";
 import { reviewFlags } from "@/lib/campaign/review";
 import type { VideoEntry } from "@/lib/campaign/types";
 
@@ -44,6 +45,8 @@ interface Props {
   /** The follow-up agent's latest run, and where to start one (absent on the preview). */
   agent?: VideoEntry["agent"];
   agentEndpoint?: string;
+  /** Who may run the agent and approve its request here; the routes check again. */
+  agentAccess?: AgentAccess;
   /** The proof clip route (absent on the preview, which has no real video). */
   proofHref?: string;
 }
@@ -86,7 +89,7 @@ const Range = ({ a, b }: { a: number; b: number }) => (
   </Tc>
 );
 
-export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint, agent, agentEndpoint, proofHref }: Props) {
+export function ReportClient({ report, videoUrl, cropUrls, names, creator, title, brand, poster, synthetic = false, fee = null, startAt, override, overrideEndpoint, agent, agentEndpoint, agentAccess, proofHref }: Props) {
   const extras = report as VideoReport & ReportExtras;
   // Only the photo this run used: a photo added to the campaign later was not part of this check.
   const referencePhoto = report.usedProductPhoto ? extras.productImageUrl : undefined;
@@ -527,7 +530,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             overrideEndpoint={overrideEndpoint}
             agentCall={agent?.status === "done" ? agent.recommendation : undefined}
           />
-          {agentEndpoint && <AgentPanel key={agent?.startedAt ?? "none"} endpoint={agentEndpoint} agent={agent} creator={creator} />}
+          {agentEndpoint && <AgentPanel key={agent?.startedAt ?? "none"} endpoint={agentEndpoint} agent={agent} creator={creator} access={agentAccess} />}
           <div>
             <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               <ShareReport title={`${title} · ${creator}`} />
