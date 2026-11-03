@@ -22,7 +22,7 @@ real production value. (Flow from the round-4 hackathon judge, 2026-10-29.)
 
 ## Script
 
-The voiceover is generated (ElevenLabs Eleven v4); its word timings drive the captions. About 300 words (2 minutes of speech); the other minute is the screen: the live run and the agent steps play without narration.
+The voiceover is generated (ElevenLabs Eleven v4, voice Bill); its word timings drive the captions. The cut (2:49) is built in Remotion from scripted Playwright recordings; sped-up waits carry a speed badge. About 300 words (2 minutes of speech); the other minute is the screen: the live run and the agent steps play without narration.
 Every number is read from the live site or src/lib/accuracy-data.json on the day of recording.
 
 **0:00–0:14 · The problem** (impact). Landing page, Ash's Reel playing in the hero.
@@ -36,8 +36,8 @@ in; cut the wait.
 > brand name and for the disclosure. Then Muse Spark checks each contract term, written in plain English.
 
 **0:52–1:16 · The pay case** (impact). Ash's re-cut report; tap *Play the proof* on one term.
-> Ash's Reel: pay three hundred dollars. Thirteen seconds on screen, LaCroix said out loud, "this is an ad" at ten
-> seconds. Every term links to the exact second that proves it.
+> Ash's Reel: pay three hundred dollars. Thirteen seconds on screen, LaCroix said out loud, "this is an ad" at
+> eleven seconds. Every term links to the exact second that proves it.
 
 **1:16–1:44 · The holds** (impact, depth). Ash's first take (banner), then Aldo's Pamplemousse report, then the Poppi
 card on the landing page.
@@ -54,8 +54,8 @@ appear.
 > money adds up. Export it for finance. Screen-Time never moves money; you pay as you normally do.
 
 **2:34–2:52 · Why you can trust it** (technical depth). /accuracy.
-> We labelled every frame of these Reels. Ninety-eight percent precision, ninety-nine percent recall. Without Muse
-> Spark, SAM alone counts the wrong flavor; with it, zero seconds. And here is where it is still wrong.
+> We labelled every frame of these Reels. Ninety-eight percent precision, ninety-nine percent recall. SAM alone
+> counted four seconds of the wrong flavor; with Muse Spark checking, zero. And this page shows where it is still wrong.
 
 **2:52–3:00 · Close.** Run receipt on Ash's report, then the landing page.
-> Every Meta call is on the receipt: about ten to twenty-two cents a Reel. Screen-Time. Proof your product was seen.
+> Every Meta call is on the receipt: about eleven to twenty-three cents a Reel. Screen-Time. Proof your product was seen.
