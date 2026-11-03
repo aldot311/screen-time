@@ -114,3 +114,13 @@ describe("creator status", () => {
     expect(creatorEntry({ handle: "@maya" }, [video({ status: "uploaded", updatedAt: stale })], "c", now).status).toBe("uploaded");
   });
 });
+
+describe("lengthLimit", () => {
+  it("states the run's real length limit, rounded down", async () => {
+    const { lengthLimit } = await import("./upload-videos");
+    expect(lengthLimit(130)).toBe("2 minutes");
+    expect(lengthLimit(60)).toBe("1 minute");
+    expect(lengthLimit(45)).toBe("45 seconds");
+    expect(lengthLimit(0)).toBe("0 seconds");
+  });
+});

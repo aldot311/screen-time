@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ChevronRight, Plus } from "lucide-react";
 import { listCampaigns, listVideos } from "@/lib/campaign/store";
 import { TRY_ID } from "@/lib/campaign/try";
+import { showcaseFirst } from "@/lib/campaign/showcase";
+import { isArchived } from "@/lib/campaign/visibility";
 import { payout, payoutLine } from "@/lib/campaign/money";
 import type { Campaign } from "@/lib/campaign/types";
 import { seconds, verdictOf } from "@/components/format";
@@ -42,10 +44,13 @@ async function summarize(c: Campaign) {
 
 export default async function CampaignsPage() {
   // The public sample is a sandbox, opened from "Run it on a sample video"; it is not one of the brand's campaigns.
-  const cards = await Promise.all((await listCampaigns()).filter((c) => c.id !== TRY_ID).map(summarize));
+  // Archived campaigns never list (the store hides them too, except to scripts).
+  const cards = await Promise.all((await listCampaigns()).filter((c) => c.id !== TRY_ID && !isArchived(c.id)).map(summarize));
 
-  // Sorted by brand. Brands with one campaign share one grid; a brand with 2+ campaigns gets a quiet label over its own.
-  const sorted = [...cards].sort((a, b) => a.c.brand.localeCompare(b.c.brand) || shortName(a.c).localeCompare(shortName(b.c)));
+  // The showcase campaign leads, then the rest by brand. Brands with one campaign share one grid; a brand with 2+
+  // campaigns gets a quiet label over its own.
+  const order = showcaseFirst(cards.map((k) => k.c), shortName);
+  const sorted = [...cards].sort((a, b) => order(a.c, b.c));
   const count = new Map<string, number>();
   for (const k of sorted) count.set(k.c.brand, (count.get(k.c.brand) ?? 0) + 1);
   const runs: { brand: string | null; cards: Card[] }[] = [];

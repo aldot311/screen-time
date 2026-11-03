@@ -1,5 +1,6 @@
 // Small server-safe pieces for the campaign screens (list, roll-up, new). Kept here so the shared kit stays untouched.
 import type { VideoEntry } from "@/lib/campaign/types";
+import { sameHandle } from "@/lib/campaign/handle";
 import { verdictOf } from "@/components/format";
 import { Mark } from "./bits";
 import type { CreatorEntry } from "./campaign-creators";
@@ -76,8 +77,9 @@ export function videoPhase(v: { status: string; consent?: unknown; updatedAt: st
 }
 
 /**
- * Where one roster creator stands. The newest event wins: their latest video (matched by handle, any case), unless a
- * request link was made after it, in which case the link's state shows (a new link can be made at any time).
+ * Where one roster creator stands. The newest event wins: their latest video (matched by handle, any case, with or
+ * without "@"), unless a request link was made after it, in which case the link's state shows (a new link can be made
+ * at any time).
  */
 export function creatorEntry(
   c: { handle: string; request?: { sentAt: string; expiresAt: string } },
@@ -86,7 +88,7 @@ export function creatorEntry(
   now: number,
 ): CreatorEntry {
   const mine = videos
-    .filter((v) => v.creator.toLowerCase() === c.handle.toLowerCase())
+    .filter((v) => sameHandle(v.creator, c.handle))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const v = mine[0];
   const base = { handle: c.handle, expiresAt: c.request?.expiresAt, videos: mine.length };

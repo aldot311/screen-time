@@ -1,10 +1,11 @@
 // "Try a sample video" limits, against a temp local store. No model is called: startTry only creates the entry.
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { listVideos, putCampaign, putVideo, readDoc, saveVideoFile } from "./store";
+import { CAMPAIGN_FILES, getCampaign, listVideos, localFileFromUrl, putCampaign, putVideo, readDoc, saveImageFile, saveVideoFile } from "./store";
 import { startTry, TRY_ID } from "./try";
+import { isArchived } from "./visibility";
 
 let dir = "";
 const savedEnv = { ...process.env };
@@ -32,25 +33,52 @@ describe("startTry", () => {
     expect(await startTry("1.1.1.1", day)).toMatchObject({ mode: "unavailable", status: 503 });
   });
 
-  it("copies the sample into its own campaign, starts once, and lets a second visitor join the live run", async () => {
+  it("creates nothing while the product photo cannot be copied, so the next visitor tries again", async () => {
+    const brief = { name: "LaCroix", brand: "LaCroix", prompt: "drink can", productDescription: "a pink can", brandTerms: [], contractTerms: [], createdAt: day.toISOString() };
+    await putCampaign({ id: "lacroix-strawberry-peach", ...brief, productImageUrl: "https://elsewhere.example/photo.jpg" });
+    await expect(startTry("9.9.9.9", day)).rejects.toThrow(/not in this app's store/);
+    expect(await getCampaign(TRY_ID)).toBeNull();
+  });
+
+  it("is a new sample, never the archived Alani one", () => {
+    expect(TRY_ID).toBe("try-lacroix");
+    expect(isArchived(TRY_ID)).toBe(false);
+    expect(isArchived("try-a-sample")).toBe(true);
+  });
+
+  it("copies Ash's re-cut, the brief, fee and product photo into its own campaign, starts once, and lets a second visitor join", async () => {
+    const photo = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+    const photoUrl = await saveImageFile("lacroix-strawberry-peach", CAMPAIGN_FILES, "product-photo", photo);
     await putCampaign({
-      id: "alani-nu-test-runs",
-      name: "Alani Nu: test runs",
-      brand: "Alani Nu",
+      id: "lacroix-strawberry-peach",
+      name: "LaCroix: Strawberry Peach creators",
+      brand: "LaCroix",
       prompt: "drink can",
-      productDescription: "a teal can",
-      brandTerms: ["Alani"],
-      contractTerms: ["Say the brand name at least once"],
+      productDescription: "a pink LaCroix Strawberry Peach can",
+      brandTerms: ["LaCroix", "La Croix"],
+      contractTerms: ["On screen at least 3 seconds in total", "Says LaCroix out loud"],
+      fee: 300,
+      productImageUrl: photoUrl,
+      creators: [{ handle: "Ash", addedAt: day.toISOString() }],
       createdAt: day.toISOString(),
     });
-    const url = await saveVideoFile("alani-nu-test-runs", "clip12", new Uint8Array([0, 0, 0, 24]), "video/mp4", "normalized");
-    await putVideo({ id: "clip12", campaignId: "alani-nu-test-runs", creator: "@a", title: "clip12.mp4", videoUrl: url, status: "done", step: null, createdAt: "", updatedAt: "" });
+    const url = await saveVideoFile("lacroix-strawberry-peach", "ash-recut", new Uint8Array([0, 0, 0, 24]), "video/mp4", "normalized");
+    await putVideo({ id: "ash-recut", campaignId: "lacroix-strawberry-peach", creator: "Ash", title: "Ash's Reel", videoUrl: url, status: "done", step: null, createdAt: "", updatedAt: "" });
 
     const first = await startTry("1.1.1.1", day);
     expect(first.mode).toBe("started");
     if (first.mode !== "started") return;
-    expect(first.video.campaignId).toBe(TRY_ID);
+    expect(first.video).toMatchObject({ campaignId: TRY_ID, creator: "Ash", title: "Ash's Reel (sample)" });
     expect(first.video.sourceUrl).toContain(`campaigns%2F${TRY_ID}%2F`);
+    expect(await readDoc("try/lacroix-sample.json")).toEqual({ url: first.video.sourceUrl });
+
+    // The try campaign checks exactly what the pre-made report did: same brief and fee, and its own copy of the photo
+    // (a run reads a photo only from its own campaign's folder). No roster: the sample is nobody's re-cut.
+    const tryCampaign = await getCampaign(TRY_ID);
+    expect(tryCampaign).toMatchObject({ brand: "LaCroix", prompt: "drink can", brandTerms: ["LaCroix", "La Croix"], fee: 300 });
+    expect(tryCampaign?.creators).toBeUndefined();
+    expect(tryCampaign?.productImageUrl).toContain(`campaigns%2F${TRY_ID}%2Ffiles%2Fcampaign%2F`);
+    expect(new Uint8Array(await readFile(localFileFromUrl(tryCampaign!.productImageUrl!)!))).toEqual(photo);
 
     // Joining uses the entry's last update, which is the real clock: a run updated just now is live.
     const second = await startTry("2.2.2.2", new Date());

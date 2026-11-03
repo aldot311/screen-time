@@ -1,5 +1,5 @@
-// Which real runs the landing page shows. They come from the test set (pnpm import-runs); when a store does not
-// have them, the landing page leaves those parts out rather than inventing anything.
+// Which real runs the landing page shows. They come from the LaCroix campaign (scripts/build-lacroix.mts); when a store
+// does not have them, the landing page leaves those parts out rather than inventing anything.
 import { getVideo } from "./store";
 import type { VideoEntry } from "./types";
 
@@ -10,20 +10,31 @@ interface Pick {
   names: Record<string, string>;
 }
 
-/** The campaign the landing page sends people to: the test clips re-run with a fee and the product photo. */
-export const SHOWCASE_CAMPAIGN = "alani-nu-launch";
+/** The campaign the landing page sends people to: ten creators' Reels with a $300 fee and the product photo. */
+export const SHOWCASE_CAMPAIGN = "lacroix-strawberry-peach";
 
+/** Ash's re-cut: the pay case. All three terms met, one counted can. */
 const HERO: Pick = {
-  campaignId: "alani-nu-test-runs",
-  videoId: "clip12",
-  names: { "0": "Alani Nu Peach can", "1": "Stanley tumbler" },
+  campaignId: SHOWCASE_CAMPAIGN,
+  videoId: "ash-recut",
+  names: { "0": "LaCroix Strawberry Peach can" },
 };
 
-const LOOKALIKE: Pick = {
-  campaignId: "alani-nu-test-runs",
-  videoId: "clip05",
-  names: { "0": "Different Alani flavor (not Peach)" },
-};
+// The look-alike examples, best first. Object ids are the ones stored in each report (checked against the live run).
+const LOOKALIKES: Pick[] = [
+  // Another brand's can rejected beside the counted LaCroix.
+  {
+    campaignId: SHOWCASE_CAMPAIGN,
+    videoId: "aldo-2",
+    names: { "0": "Poppi Raspberry Rose (another brand)", "1": "LaCroix Strawberry Peach can" },
+  },
+  // The right brand, the wrong flavor: rejected, so 0 s counted.
+  {
+    campaignId: SHOWCASE_CAMPAIGN,
+    videoId: "aldo",
+    names: { "1": "LaCroix Pamplemousse (a different flavor)" },
+  },
+];
 
 export interface Showcased {
   video: VideoEntry & { report: NonNullable<VideoEntry["report"]> };
@@ -37,7 +48,26 @@ async function load(p: Pick): Promise<Showcased | null> {
   return { video: { ...video, report: video.report }, names: p.names, href: `/campaigns/${p.campaignId}/videos/${p.videoId}` };
 }
 
-export async function loadShowcase() {
-  const [hero, lookalike] = await Promise.all([load(HERO), load(LOOKALIKE)]);
-  return { hero, lookalike };
+/**
+ * The hero run and the look-alike examples, each null or left out when this store does not have it finished.
+ * `lookalikes` lists every look-alike example found, best first; `lookalike` is the first of them (the shape older
+ * callers read).
+ */
+export async function loadShowcase(): Promise<{ hero: Showcased | null; lookalike: Showcased | null; lookalikes: Showcased[] }> {
+  const [hero, ...found] = await Promise.all([load(HERO), ...LOOKALIKES.map(load)]);
+  const lookalikes = found.filter((s): s is Showcased => s !== null);
+  return { hero, lookalike: lookalikes[0] ?? null, lookalikes };
+}
+
+type Listed = { id: string; brand: string };
+
+/**
+ * A sort for a list of campaigns: the showcase campaign first, its brand's other campaigns right after it (so a brand
+ * stays together), then every other brand A-Z, each brand's campaigns by `name`.
+ */
+export function showcaseFirst<T extends Listed>(campaigns: T[], name: (c: T) => string): (a: T, b: T) => number {
+  const leadBrand = campaigns.find((c) => c.id === SHOWCASE_CAMPAIGN)?.brand;
+  const rank = (c: T) => (c.brand === leadBrand ? 0 : 1);
+  const isShowcase = (c: T) => (c.id === SHOWCASE_CAMPAIGN ? 0 : 1);
+  return (a, b) => rank(a) - rank(b) || a.brand.localeCompare(b.brand) || isShowcase(a) - isShowcase(b) || name(a).localeCompare(name(b));
 }

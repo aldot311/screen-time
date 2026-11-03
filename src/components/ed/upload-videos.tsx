@@ -19,6 +19,8 @@ interface Props {
   campaignId: string;
   /** "blob" in production: big files go straight to Vercel Blob instead of through a function. */
   mode: "blob" | "direct";
+  /** The longest video a run can finish under the per-video budget (maxVideoSeconds), in seconds. */
+  maxSeconds: number;
 }
 
 type State = "uploading" | "starting" | "running" | "failed";
@@ -38,9 +40,16 @@ type Item = {
 const MAX_BYTES = 200 * 1024 * 1024; // matches MAX_VIDEO_BYTES in lib/campaign/schema
 const TYPES = ["video/mp4", "video/quicktime"];
 
+/** 130 -> "2 minutes", 45 -> "45 seconds": rounded down, so the copy never promises more than a run can finish. */
+export function lengthLimit(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 1) return `${Math.max(0, Math.floor(seconds))} seconds`;
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+}
+
 let nextKey = 1;
 
-export function UploadVideos({ campaignId, mode }: Props) {
+export function UploadVideos({ campaignId, mode, maxSeconds }: Props) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [creator, setCreator] = useState("");
@@ -187,8 +196,8 @@ export function UploadVideos({ campaignId, mode }: Props) {
           {busy ? `Uploading ${busy}… add more` : "Choose videos"}
         </button>
         <p className="mt-2.5 text-center text-[12.5px] text-(--ink-3)">
-          <span className="hidden md:inline">Or drop them here. </span>MP4 or MOV, up to 200 MB and 10 minutes. Only use videos
-          you have the rights to.
+          <span className="hidden md:inline">Or drop them here. </span>MP4 or MOV, up to 200 MB and {lengthLimit(maxSeconds)}.
+          Only use videos you have the rights to.
         </p>
       </div>
       <input

@@ -2,12 +2,11 @@
 // creator's own fee on the roster, else the campaign's fee per video. The app never moves money; these figures only say
 // how much a recommendation covers ("Hold $300").
 import { verdictOf, type Verdict } from "@/components/format";
+// Safe in the browser: no store or roster imports (those pull in Node modules).
+import { handleKey, sameHandle } from "./handle";
 import type { Campaign, VideoEntry } from "./types";
 
 export const MAX_FEE = 1_000_000;
-
-// Safe in the browser: no store or roster imports (those pull in Node modules).
-const sameHandle = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 /** The agreed fee for one video from this creator, or null when none was set. */
 export function feeFor(campaign: Pick<Campaign, "fee" | "creators">, handle: string): number | null {
@@ -48,12 +47,13 @@ export interface Payout {
  * One decision per creator, from that creator's latest finished video: a re-cut that passes replaces the miss it fixes.
  * Creators with no finished video yet are not counted.
  */
-/** Each creator's latest finished video, keyed by lower-cased handle: the one that decides their money. */
+/** Each creator's latest finished video, keyed by handleKey ("Ash" and "@ash" are one creator): the one that decides
+ *  their money. */
 export function latestFinished(videos: VideoEntry[]): Map<string, VideoEntry> {
   const latest = new Map<string, VideoEntry>();
   for (const v of videos) {
     if (v.status !== "done" || !v.report) continue;
-    const key = v.creator.toLowerCase();
+    const key = handleKey(v.creator);
     const seen = latest.get(key);
     if (!seen || v.createdAt > seen.createdAt) latest.set(key, v);
   }

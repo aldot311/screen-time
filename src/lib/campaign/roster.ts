@@ -1,10 +1,11 @@
 // The creators a campaign expects videos from, and the request links sent to them. Only a link's one-time id and
 // dates are recorded: the campaign JSON sits in a public store, and the link itself is the creator's upload credential.
+import { sameHandle } from "./handle";
 import { createRequestToken, newNonce, REQUEST_TTL_DAYS } from "./requests";
 import type { Campaign, CampaignCreator, VideoEntry } from "./types";
 
-/** Handles compare case-insensitively: "@Maya" and "@maya" are one creator. */
-export const sameHandle = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+/** Handles compare ignoring case and a leading "@": "@Maya", "maya" and "MAYA" are one creator. */
+export { sameHandle };
 
 /** Appends the handles not already on the roster (nor repeated in `handles`), keeping the first spelling seen. */
 export function addCreators(campaign: Campaign, handles: string[], now = new Date()): Campaign {

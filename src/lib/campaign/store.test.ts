@@ -1,8 +1,9 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  freeCampaignId,
   getCampaign,
   getVideo,
   InvalidIdError,
@@ -18,7 +19,10 @@ import {
   saveImageFile,
   saveVideoFile,
   slugify,
+  updateCampaign,
+  updateVideo,
 } from "./store";
+import { ARCHIVED, isHidden } from "./visibility";
 import type { Campaign, VideoEntry } from "./types";
 
 let dir = "";
@@ -31,6 +35,9 @@ beforeAll(async () => {
 afterAll(async () => {
   process.env = saved;
   await rm(dir, { recursive: true, force: true });
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 const campaign = (id: string): Campaign => ({
@@ -56,8 +63,12 @@ const video = (campaignId: string, id: string): VideoEntry => ({
 });
 
 describe("local store", () => {
-  it("round-trips campaigns and videos, and lists the preview only while the store is empty", async () => {
+  it("round-trips campaigns and videos; an empty store lists nothing now the preview is archived", async () => {
+    expect(await listCampaigns()).toEqual([]);
+    // Scripts that read archived campaigns still get the labelled preview on an empty store.
+    vi.stubEnv("SCREEN_TIME_SHOW_ARCHIVED", "1");
     expect((await listCampaigns()).map((c) => c.id)).toEqual(["preview"]);
+    vi.unstubAllEnvs();
     await putCampaign(campaign("fall"));
     expect(await getCampaign("fall")).toEqual(campaign("fall"));
     expect(await getCampaign("missing")).toBeNull();
@@ -102,11 +113,63 @@ describe("local store", () => {
     expect(localFileFromUrl("https://evil.example/x.mp4", dir)).toBeNull();
   });
 
-  it("keeps the preview campaign read-only", async () => {
+  it("keeps the preview campaign read-only, and hidden unless archived campaigns are shown", async () => {
     await expect(putCampaign({ ...campaign("preview") })).rejects.toBeInstanceOf(ReadOnlyError);
     await expect(putVideo(video("preview", "clip01"))).rejects.toBeInstanceOf(ReadOnlyError);
+    expect(await getCampaign("preview")).toBeNull();
+    expect(await getVideo("preview", "clip01")).toBeNull();
+    expect(await listVideos("preview")).toEqual([]);
+    vi.stubEnv("SCREEN_TIME_SHOW_ARCHIVED", "1");
     expect((await getCampaign("preview"))?.synthetic).toBe(true);
     expect((await getVideo("preview", "clip01"))?.status).toBe("done");
+  });
+});
+
+describe("archived campaigns", () => {
+  it("read as not found and are never listed, while their files stay in the store", async () => {
+    await putCampaign(campaign("alani-nu-test-runs"));
+    await putVideo(video("alani-nu-test-runs", "clip12"));
+    await putCampaign(campaign("lacroix"));
+    expect(await getCampaign("alani-nu-test-runs")).toBeNull();
+    expect(await getVideo("alani-nu-test-runs", "clip12")).toBeNull();
+    expect(await listVideos("alani-nu-test-runs")).toEqual([]);
+    const listed = (await listCampaigns()).map((c) => c.id);
+    expect(listed).toContain("lacroix");
+    expect(listed).not.toContain("alani-nu-test-runs");
+    // No API write reaches a hidden campaign either.
+    expect(await updateCampaign("alani-nu-test-runs", (c) => ({ ...c, fee: 1 }))).toBeNull();
+    expect(await updateVideo("alani-nu-test-runs", "clip12", (v) => ({ ...v, title: "changed" }))).toBeNull();
+    // Negative control: an id that is not archived reads normally.
+    expect((await getCampaign("lacroix"))?.id).toBe("lacroix");
+  });
+
+  it("are readable again with SCREEN_TIME_SHOW_ARCHIVED=1 (scripts only), and nothing else turns it on", async () => {
+    vi.stubEnv("SCREEN_TIME_SHOW_ARCHIVED", "true");
+    expect(await getCampaign("alani-nu-test-runs")).toBeNull();
+    vi.stubEnv("SCREEN_TIME_SHOW_ARCHIVED", "1");
+    expect((await getCampaign("alani-nu-test-runs"))?.id).toBe("alani-nu-test-runs");
+    expect((await getVideo("alani-nu-test-runs", "clip12"))?.title).toBe("a.mp4");
+    expect((await listVideos("alani-nu-test-runs")).map((v) => v.id)).toEqual(["clip12"]);
+    expect((await listCampaigns()).map((c) => c.id)).toContain("alani-nu-test-runs");
+  });
+
+  it("covers every old campaign and the preview, never the LaCroix showcase", () => {
+    for (const id of ["alani-nu-launch", "try-a-sample", "stanley-live-demo", "water-bottle-test-runs", "preview"]) expect(isHidden(id, {})).toBe(true);
+    expect(isHidden("lacroix-strawberry-peach", {})).toBe(false);
+    expect(ARCHIVED.size).toBe(12);
+  });
+
+  it("count as taken when a new campaign picks its id, so a new one never overwrites a hidden one", async () => {
+    expect(await freeCampaignId("Stanley: test runs")).toMatch(/^stanley-test-runs-[a-z0-9]{6}$/);
+    expect(await freeCampaignId("Stanley: live demo")).toMatch(/^stanley-live-demo-[a-z0-9]{6}$/);
+    expect(await freeCampaignId("Preview")).toMatch(/^preview-[a-z0-9]{6}$/);
+    // Taken even when this process may read archived campaigns.
+    vi.stubEnv("SCREEN_TIME_SHOW_ARCHIVED", "1");
+    expect(await freeCampaignId("Alani Nu: test runs")).toMatch(/^alani-nu-test-runs-[a-z0-9]{6}$/);
+    vi.unstubAllEnvs();
+    // Negative controls: a free name keeps its slug; a stored one gets a suffix.
+    expect(await freeCampaignId("Summer creators")).toBe("summer-creators");
+    expect(await freeCampaignId("Lacroix")).toMatch(/^lacroix-[a-z0-9]{6}$/);
   });
 });
 

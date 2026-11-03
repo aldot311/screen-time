@@ -2,7 +2,7 @@
 // (Voice Transcribe) → measure → check contract terms. Every billed call reserves its cost in the CostGuard first.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CostGuard, CostLimitError, MetaApiError, MODELS, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
+import { CostGuard, CostLimitError, MetaApiError, MODELS, SAM_USD_PER_FRAME, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
 import { checkTerms, computeMetrics, findDisclosures, findMentions, frameSamples } from "@/lib/metrics";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
@@ -85,6 +85,18 @@ const tenthsOf = (s: number) => (Math.floor(s * 10 + 1e-6) / 10).toFixed(1);
 
 // In micro-dollars, like the guard's ledger, so the report total does not pick up float noise.
 const micros = (usd: number) => Math.round(usd * 1e6);
+
+/**
+ * The longest video (whole seconds) a run can finish in full under a per-video budget. Length is capped by cost, not
+ * time: SAM's whole cost is reserved before tracking (every frame at FPS), and the rest of a full report must still
+ * fit after it: a Muse Spark check for each of up to RETRY_VERIFY_TRACKS objects, the transcript, the contract terms
+ * and the on-screen #ad read. A longer video stops at "Track product" with a budget error.
+ */
+export function maxVideoSeconds(maxUsdPerRun: number): number {
+  const rest = (RETRY_VERIFY_TRACKS + 2) * SPARK_RESERVE_USD + TRANSCRIBE_RESERVE_USD;
+  const frames = Math.floor(Math.max(0, micros(maxUsdPerRun) - micros(rest)) / micros(SAM_USD_PER_FRAME));
+  return Math.floor(frames / FPS);
+}
 
 /** Reserves and settles spend through the guard, and keeps this video's own total for the report. */
 class VideoSpend {

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
 import { CostGuard, CostLimitError, type FetchLike } from "@/lib/meta";
-import { disclosureFrames, pickFrames, runVideo } from "./run";
+import { disclosureFrames, maxVideoSeconds, pickFrames, runVideo } from "./run";
 import type { LiveProgress } from "@/lib/types";
 import { toChecks, disclosurePrompt, parseTermsPrompt, TERMS_SCHEMA, toContractTerms, toOnScreen, toSuggestion, verifyPrompt } from "./prompts";
 import type { Detection } from "@/lib/types";
@@ -298,6 +298,23 @@ describe("runVideo prompt recovery", () => {
     expect(paths.filter((p) => p === "/v1/responses")).toHaveLength(3);
     expect(report.promptAttempts).toBeUndefined();
   }, 30_000);
+});
+
+describe("maxVideoSeconds", () => {
+  it("is what the per-video budget pays SAM for at 15 fps, after the rest of a full report", () => {
+    // $0.50 default cap - $0.11 for 3 object checks, terms, #ad read and transcript = $0.39 = 1,950 SAM frames = 130 s.
+    expect(maxVideoSeconds(0.5)).toBe(130);
+    expect(maxVideoSeconds(1)).toBe(296);
+    // A cap that cannot even cover the rest of a report allows nothing.
+    expect(maxVideoSeconds(0.05)).toBe(0);
+  });
+
+  it("matches the guard: SAM's reserve for the longest allowed video plus the rest fits the cap, one second more does not", () => {
+    const rest = 0.11;
+    const fits = (sec: number) => CostGuard.estimateSamUsd(sec * 15) + rest <= 0.5 + 1e-9;
+    expect(fits(maxVideoSeconds(0.5))).toBe(true);
+    expect(fits(maxVideoSeconds(0.5) + 1)).toBe(false);
+  });
 });
 
 describe("toSuggestion", () => {
