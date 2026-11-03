@@ -177,6 +177,34 @@
   animation: ed-dock-in 280ms var(--ease-out) both;
 }
 
+/* Entrance: a short rise, staggered by --d. Only on first paint of the hero and the report's verdict; never on updates. */
+@keyframes ed-rise {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.ed .ed-rise {
+  animation: ed-rise 560ms var(--ease-out) var(--d, 0ms) both;
+}
+/* The lime mark behind "seen." is drawn on like a highlighter once the headline has landed. */
+@keyframes ed-mark {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+.ed .ed-mark {
+  transform-origin: left center;
+  animation: ed-mark 520ms var(--ease-out) var(--d, 0ms) both;
+}
+
 @keyframes ed-shimmer {
   from {
     background-position: 150% 0;

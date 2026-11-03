@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { ArrowRight, ArrowUpRight, AudioLines, ChevronRight, FileCheck2, ScanSearch, ShieldCheck } from "lucide-react";
 import data from "@/lib/accuracy-data.json";
 import { loadShowcase, type Showcased } from "@/lib/campaign/showcase";
@@ -125,22 +126,29 @@ export default async function Landing() {
             Desktop: copy and actions on the left, the replay beside them. */}
         <section className="mx-auto grid w-full max-w-[1200px] gap-x-14 gap-y-5 px-4 pt-5 pb-14 sm:gap-y-9 sm:px-6 sm:pt-8 lg:grid-cols-[minmax(0,1fr)_600px] lg:grid-rows-[auto_auto] lg:gap-y-0 lg:px-8 lg:pt-14 lg:pb-24">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:self-end">
-            <h1 className="ed-display max-w-[11ch] text-[42px] leading-[0.96] sm:text-[72px] lg:text-[84px]">
+            <h1 className="ed-display ed-rise max-w-[11ch] text-[42px] leading-[0.96] sm:text-[72px] lg:text-[84px]">
               Proof your product was{" "}
               <span className="relative inline-block">
                 {/* The one brand use of lime: the word that means "on screen", marked the way the strip marks it. */}
-                <span className="absolute inset-x-[-0.05em] top-[0.18em] bottom-[0.02em] rounded-[0.12em] bg-(--signal)" aria-hidden />
+                <span
+                  className="ed-mark absolute inset-x-[-0.05em] top-[0.18em] bottom-[0.02em] rounded-[0.12em] bg-(--signal)"
+                  style={{ "--d": "420ms" } as CSSProperties}
+                  aria-hidden
+                />
                 <span className="relative">seen.</span>
               </span>
             </h1>
-            <p className="mt-4 max-w-[48ch] text-[16px] leading-[1.55] text-(--ink-2) sm:mt-6 sm:text-[19px] sm:leading-[1.6]">
+            <p
+              className="ed-rise mt-4 max-w-[48ch] text-[16px] leading-[1.55] text-(--ink-2) sm:mt-6 sm:text-[19px] sm:leading-[1.6]"
+              style={{ "--d": "90ms" } as CSSProperties}
+            >
               <span className="hidden sm:inline">Brands pay creators for screen time they cannot check. </span>
               Screen-Time watches every frame of a sponsored video with Meta SAM 3.1, rejects look-alikes with Muse Spark,
               hears your brand with Muse Voice Transcribe, and checks the contract to the second.
             </p>
           </div>
 
-          <div className="min-w-0 lg:col-start-1 lg:row-start-2 lg:self-start lg:pt-8">
+          <div className="ed-rise min-w-0 lg:col-start-1 lg:row-start-2 lg:self-start lg:pt-8" style={{ "--d": "180ms" } as CSSProperties}>
             <div className="flex flex-col items-stretch gap-1 sm:flex-row sm:flex-wrap sm:gap-3">
               <TrySample className={btnPrimary} label="Run it on a sample video" />
               {/* Phone: two text links side by side. From sm up the wrapper drops out, "Try your own video" joins the row as
@@ -180,7 +188,7 @@ export default async function Landing() {
           </div>
 
           {hero && (
-            <figure className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
+            <figure className="ed-rise min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center" style={{ "--d": "140ms" } as CSSProperties}>
               <LiveReplay
                 report={hero.video.report}
                 videoUrl={hero.video.videoUrl}

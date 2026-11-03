@@ -12,6 +12,7 @@ import { countedBefore, framesToSegments, percent, prominenceOf, ruleReading, sh
 import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
 import { Figure, Swatch } from "./bits";
+import { CountFigure } from "./count-figure";
 import { ReportLanes, type Lit } from "./report-lanes";
 import { decisionWord, missWords, PayOrHold, ShareReport } from "./report-decision";
 import { usd } from "@/lib/campaign/money";
@@ -462,7 +463,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
 
       <div className="min-w-0 space-y-10">
         {/* Verdict as a sentence, with its proof chips and, when it fell short, each missed term. */}
-        <header className={`rounded-(--r-card) p-4 sm:p-6 ${tone.card}`}>
+        <header className={`ed-rise rounded-(--r-card) p-4 sm:p-6 ${tone.card}`}>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 text-[14px] text-(--ink-2)">
             <span className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-semibold ${tone.badge}`}>
               <tone.Icon className="size-4" strokeWidth={3} aria-hidden />
@@ -755,7 +756,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               <span className="min-w-0">
                 <span className="flex items-baseline gap-2">
                   <span className="ed-num text-[72px] leading-none sm:text-[88px]">
-                    <Figure value={m.secondsOnScreen} />
+                    <CountFigure value={m.secondsOnScreen} />
                   </span>
                   <span className="ed-display text-[26px] text-(--ink-2)">s</span>
                 </span>
