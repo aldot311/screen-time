@@ -1,7 +1,8 @@
 // Campaigns kept in the store but hidden from the site: the builder's own test footage (his face is in it), the stock
 // clips, the old Alani Nu sample and the synthetic preview. The store answers "not found" for these ids, so no page,
-// share image, proof clip or API read shows them. Hidden is not deleted: their files stay in the store, and the
-// accuracy numbers (measured from data/out and data/labels) do not depend on them.
+// share image, proof clip or API read shows them. Their files were deleted from the live store on 2026-11-03; the list
+// stays so a copy restored from an old backup is still hidden. The accuracy numbers (measured from data/out and
+// data/labels) do not depend on them.
 //
 // Scripts that rebuild or back up the old campaigns set SCREEN_TIME_SHOW_ARCHIVED=1 to read them again.
 
