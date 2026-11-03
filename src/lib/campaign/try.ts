@@ -163,8 +163,9 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
     return done ? { mode: "replay", video: done } : { mode: "unavailable", status: 429, error: "The sample is starting for someone else. Try again in a minute." };
   }
   const at = now.toISOString();
-  // The pre-made report's chosen cover, so the sample looks the same before it plays (the run keeps a set cover).
-  const cover = (await getVideo(SOURCE.campaignId, SOURCE.videoId))?.thumbUrl;
+  // The pre-made report's chosen cover and opening frame, so the sample looks the same (the run keeps a set cover).
+  const source = await getVideo(SOURCE.campaignId, SOURCE.videoId);
+  const cover = source?.thumbUrl;
   const video = await putVideo({
     id: newVideoId("sample"),
     campaignId: TRY_ID,
@@ -174,6 +175,7 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
     videoUrl: url,
     sourceUrl: url,
     thumbUrl: cover,
+    openAt: source?.openAt,
     status: "uploaded",
     step: null,
     createdAt: at,

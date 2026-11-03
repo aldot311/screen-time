@@ -63,8 +63,12 @@ export interface VideoEntry {
   sourceUrl?: string;
   /** True for preview videos whose report is built from hand labels, not a real run. */
   synthetic?: boolean;
-  /** A still of the moment the product was largest on screen (or the middle frame when it never appeared). */
+  /** A still of the moment the product was largest on screen (or the middle frame when it never appeared), or a cover
+   *  chosen by hand. */
   thumbUrl?: string;
+  /** The second the report opens paused on, chosen by hand (a frame the creator is happy to have shown). Without it the
+   *  report opens on the moment the product was largest. */
+  openAt?: number;
   /** A crop of each tracked object at its largest, keyed by objectId. */
   cropUrls?: Record<string, string>;
   /** Set when the creator sent the video through a request link: what they agreed to, and the link's one-time id. */

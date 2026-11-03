@@ -110,7 +110,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
             poster={video.thumbUrl}
             synthetic={synthetic}
             fee={feeFor(campaign, video.creator)}
-            startAt={Number.isFinite(t) && t >= 0 ? t : undefined}
+            startAt={Number.isFinite(t) && t >= 0 ? t : video.openAt}
             override={video.override}
             replacedBy={replacedBy ? { href: `/campaigns/${campaign.id}/videos/${replacedBy.id}` } : undefined}
             overrideEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/override`}
