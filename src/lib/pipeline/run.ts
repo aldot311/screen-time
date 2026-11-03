@@ -285,9 +285,10 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     await spend.reserve(TRANSCRIBE_RESERVE_USD, `transcribe ${input.videoId}`);
     turns = (
       await spend.timed(
-        { model: MODELS.transcribe, purpose: "Listen for the brand", input: `${tenthsOf(info.durationSec)} s of 16 kHz audio` },
+        { model: MODELS.transcribe, purpose: "Listen for the brand", input: `${tenthsOf(info.durationSec)} s of 16 kHz audio${input.brandTerms.length ? `, keywords: ${input.brandTerms.join(", ")}` : ""}` },
         TRANSCRIBE_RESERVE_USD,
-        async () => transcribe(await readFile(wavPath), client),
+        // The brand names as keywords: without them "LaCroix" came back as "my recorder" and was missed.
+        async () => transcribe(await readFile(wavPath), client, input.brandTerms),
         (r) => `${r.turns.length} speech turn${r.turns.length === 1 ? "" : "s"}, ${r.turns.reduce((n, t) => n + t.transcript.split(/\s+/).filter(Boolean).length, 0)} words`,
       )
     ).turns;

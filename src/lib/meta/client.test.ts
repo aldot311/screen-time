@@ -277,6 +277,18 @@ describe("transcribe", () => {
       ],
     });
   });
+
+  it("adds the brand names as keywords when given", async () => {
+    const { fetch, calls } = mockFetch([json({ transcript: "it's LaCroix", turns: [] })]);
+    await transcribe(Buffer.from("RIFF"), opts(fetch), ["LaCroix", "La Croix"]);
+    const request = (calls[0].init.body as FormData).get("request") as File;
+    expect(JSON.parse(await request.text())).toEqual({
+      model: "muse-voice-transcribe-1.0",
+      audioEncoding: "WAV",
+      mode: "ENDPOINTING",
+      keywords: ["LaCroix", "La Croix"],
+    });
+  });
 });
 
 describe("retries and errors", () => {

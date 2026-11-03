@@ -264,10 +264,14 @@ export const TRANSCRIBE_REQUEST = {
   mode: "ENDPOINTING",
 } as const;
 
-/** Transcribes mono 16-bit PCM WAV (16 or 24 kHz, at most 10 minutes) into turn-level text. */
-export async function transcribe(wav: Uint8Array, opts: ClientOptions = {}): Promise<TranscribeResult> {
+/**
+ * Transcribes mono 16-bit PCM WAV (16 or 24 kHz, at most 10 minutes) into turn-level text. `keywords` biases
+ * recognition toward words it would otherwise mishear, such as a brand name ("LaCroix" heard as "my recorder").
+ */
+export async function transcribe(wav: Uint8Array, opts: ClientOptions = {}, keywords: string[] = []): Promise<TranscribeResult> {
   const audio = toBlob(wav, "audio/wav");
-  const request = new Blob([JSON.stringify(TRANSCRIBE_REQUEST)], { type: "application/json" });
+  const body = keywords.length ? { ...TRANSCRIBE_REQUEST, keywords } : TRANSCRIBE_REQUEST;
+  const request = new Blob([JSON.stringify(body)], { type: "application/json" });
   const res = await metaRequest(
     "/asr/transcribe",
     {
