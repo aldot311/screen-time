@@ -70,6 +70,16 @@ describe("campaign routes", () => {
     expect(list).toHaveLength(4);
   });
 
+  it("listens for the brand name when no spoken names are given, and keeps names that are", async () => {
+    const create = async (brandTerms: string[]) =>
+      (await (
+        await campaigns.POST(json({ name: "Spoken names", brand: "Alani Nu", prompt: "drink can", productDescription: "a teal can", brandTerms, contractTerms: ["Say the brand name at least once"] }))
+      ).json()) as { brandTerms: string[] };
+    expect((await create([])).brandTerms).toEqual(["Alani Nu"]);
+    expect((await create(["  ", ""])).brandTerms).toEqual(["Alani Nu"]); // blank lines are dropped first
+    expect((await create(["Alani", "Alani Nu"])).brandTerms).toEqual(["Alani", "Alani Nu"]);
+  });
+
   it("switches the object check to Muse Spark Open only where a host is set up", async () => {
     const { id } = await newCampaign("Open weights");
     const patch = (body: unknown) =>
