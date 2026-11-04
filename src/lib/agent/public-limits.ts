@@ -7,7 +7,7 @@
 // every run shares.
 import { linkSecret } from "@/lib/campaign/requests";
 import { openRunFits, usdFromEnv } from "@/lib/campaign/runner";
-import { createDoc, readDoc, takeSlot, updateVideo } from "@/lib/campaign/store";
+import { createDoc, ledgerSpentUsd, readDoc, takeSlot, updateVideo } from "@/lib/campaign/store";
 import type { VideoEntry } from "@/lib/campaign/types";
 import { clientKey } from "@/lib/client-ip";
 import { AGENT_MAX_USD, agentRunning } from "./state";
@@ -52,7 +52,7 @@ export async function startPublicAgent(ip: string, video: VideoEntry, now = new 
   // Once the day is full, one read answers every later request: no slot writes to spam.
   if (await readDoc(`agent-public/${day}/full.json`)) return replay("day");
   // The budget the demo password needs is never spent here: checked before any slot is taken.
-  if (!(await openRunFits(AGENT_MAX_USD))) return replay("budget");
+  if (!openRunFits(AGENT_MAX_USD, await ledgerSpentUsd())) return replay("budget");
   if (!(await takeSlot(`agent-public/${day}/visitor-${await visitorKey(ip)}`, limits.perVisitor))) return replay("visitor");
   if (!(await takeSlot(`agent-public/${day}/run`, limits.perDay))) {
     await createDoc(`agent-public/${day}/full.json`, { at: now.toISOString() });

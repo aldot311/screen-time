@@ -3,8 +3,9 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { CAMPAIGN_FILES, listVideos, putCampaign, putVideo, readDoc, saveImageFile, saveVideoFile } from "./store";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { openRunFits, ownerReserveUsd } from "./runner";
+import { CAMPAIGN_FILES, ledgerSpentUsd, listVideos, putCampaign, putVideo, readDoc, saveImageFile, saveVideoFile } from "./store";
 import { startTry, TRY_ID } from "./try";
 
 let dir = "";
@@ -48,5 +49,28 @@ describe("startTry and the owner's reserve", () => {
     const res = await startTry("2.2.2.2", new Date(at.getTime() + 10 * 60_000));
     expect(res).toMatchObject({ mode: "replay", limit: "budget", reason: "The free sample runs for this demo are used up." });
     expect(await readDoc("try/2026-11-04/run-2.json")).toBeNull();
+  });
+});
+
+describe("openRunFits and the ledger total", () => {
+  it("fits a run while the ledger plus the run's maximum stays within the total cap less the reserve", () => {
+    expect(openRunFits(0.5, 14.5)).toBe(true); // 15 of 20 - 5
+    expect(openRunFits(0.5, 14.500001)).toBe(false);
+    expect(openRunFits(0.16, 14.84)).toBe(true); // a visitor's agent run
+    expect(openRunFits(0.16, Number.NaN)).toBe(false);
+  });
+  it("keeps $5 by default, or what SCREEN_TIME_OWNER_RESERVE_USD says", () => {
+    vi.stubEnv("SCREEN_TIME_OWNER_RESERVE_USD", "");
+    expect(ownerReserveUsd()).toBe(5);
+    vi.stubEnv("SCREEN_TIME_OWNER_RESERVE_USD", "10");
+    expect(openRunFits(0.5, 9.5)).toBe(true);
+    expect(openRunFits(0.5, 9.6)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+  it("sums the stored ledger in micro-dollars; an entry without an amount fits no run", async () => {
+    await writeFile(join(dir, "ledger.json"), JSON.stringify([{ at: "2026-11-03T00:00:00Z", usd: 0.1 }, { at: "2026-11-03T00:00:01Z", usd: 0.2 }]));
+    expect(await ledgerSpentUsd()).toBe(0.3);
+    await writeFile(join(dir, "ledger.json"), JSON.stringify([{ at: "2026-11-03T00:00:00Z" }]));
+    expect(openRunFits(0.5, await ledgerSpentUsd())).toBe(false);
   });
 });

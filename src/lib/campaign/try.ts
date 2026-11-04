@@ -12,6 +12,7 @@ import {
   createDoc,
   getCampaign,
   getVideo,
+  ledgerSpentUsd,
   listVideos,
   localFileFromUrl,
   putCampaign,
@@ -149,7 +150,7 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
   // Once the day is full, one read answers every later request: no slot writes to spam.
   if (await readDoc(`try/${day}/full.json`)) return replay("day");
   // The budget the demo password needs is never spent here: checked before any slot is taken.
-  if (!(await openRunFits(budget().maxUsdPerRun))) return replay("budget");
+  if (!openRunFits(budget().maxUsdPerRun, await ledgerSpentUsd())) return replay("budget");
   if (!(await takeSlot(`try/${day}/visitor-${await visitorKey(ip)}`, limits.perVisitor))) return replay("visitor");
   if (!(await takeSlot(`try/${day}/run`, limits.perDay))) {
     await createDoc(`try/${day}/full.json`, { at: now.toISOString() });
