@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import data from "@/lib/accuracy-data.json";
 import { TopBar } from "@/components/ed/top-bar";
+import { DemoNote } from "@/components/ed/demo-note";
 import { DISPLAY } from "@/components/ed/campaign-ui";
 import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
@@ -15,7 +16,7 @@ import type { Campaign, VideoEntry } from "@/lib/campaign/types";
 
 export const metadata: Metadata = {
   title: "How to judge this in 5 minutes",
-  description: "Five steps through Screen-Time on real LaCroix creator Reels: a live run, a pay case, a hold case, the accuracy and the follow-up agent.",
+  description: "Five steps through Screen-Time on real Reels from a LaCroix test campaign: a live run, a pay case, a hold case, the accuracy and the follow-up agent.",
 };
 
 // The example reports are read from the store on each visit, so every claim below is the stored run's own result.
@@ -48,9 +49,10 @@ export default async function JudgePage() {
       <main className="mx-auto w-full max-w-[760px] px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+64px)] sm:px-6 lg:pt-12">
         <h1 className={`${DISPLAY} text-[38px] leading-[1.02] sm:text-[52px]`}>How to judge this in 5 minutes</h1>
         <p className="mt-3 max-w-[60ch] text-[16px] leading-[1.55] text-(--ink-2)">
-          Five steps on real {brand} Reels that friends filmed for a test campaign. Every step opens a live page; nothing here is a
-          mock-up.
+          Five steps on real {brand} Reels from a test campaign. Friends filmed them, except two look-alike clips that are the
+          builder&rsquo;s own. Every step opens a live page; nothing here is a mock-up.
         </p>
+        <DemoNote className="mt-3" />
 
         <ol className="mt-8 divide-y divide-(--hair) border-y border-(--hair)">
           <Step n={1} title="Run the sample">
@@ -70,8 +72,7 @@ export default async function JudgePage() {
           <Step n={2} title={pay ? `The pay case: ${pay.creator}’s re-cut` : "The pay case"} verdict={pay && verdictOf(pay.report)}>
             <p>
               {pay ? `${termsLine(pay)}${fee && verdictOf(pay.report) === "delivered" ? `, so the recommendation is to pay ${fee}` : ""}. ` : ""}
-              Tap <span className="font-semibold text-(--ink)">Play the proof</span> on any term: the player jumps to the second that
-              proves it.
+              Tap the play button on any term: the player jumps to the moment that proves it.
             </p>
             <Go href={open(pay)}>{pay ? `Open ${pay.creator}’s re-cut` : "Open the campaign"}</Go>
           </Step>
@@ -85,7 +86,7 @@ export default async function JudgePage() {
             <p className="mt-4">
               <span className="font-semibold text-(--ink)">And a re-cut.</span>{" "}
               {firstTake
-                ? `${firstTake.creator}’s first take: ${missLine(firstTake)}, so it was held. The banner at the top points to the re-cut, which replaced it and now decides pay.`
+                ? `${firstTake.creator}’s first take: ${missLine(firstTake)}, so it was held. The banner at the top points to the re-cut, which replaced it and now decides pay. Both takes were filmed the same day; the one sent second counts as the re-cut.`
                 : "A creator’s re-cut replaces the take it fixes, and the money follows the re-cut."}
             </p>
             <Go href={open(firstTake)}>{firstTake ? `Open ${firstTake.creator}’s first take` : "Open the campaign"}</Go>
@@ -94,7 +95,7 @@ export default async function JudgePage() {
           <Step n={4} title="Check the accuracy">
             <p>
               <span className="tabular">{pct(acc.verified.precision)}</span> precision and <span className="tabular">{pct(acc.verified.recall)}</span>{" "}
-              recall per frame against checked labels, with and without Muse Spark, and where it is wrong.
+              recall per frame on {acc.clips} test Reels, with and without Muse Spark, and where it is wrong.
             </p>
             <Go href="/accuracy">Open the accuracy page</Go>
           </Step>
@@ -102,7 +103,8 @@ export default async function JudgePage() {
           <Step n={5} title={agent ? `The follow-up agent on ${agent.creator}’s Reel` : "The follow-up agent"} verdict={agent && verdictOf(agent.report)}>
             <p>
               {agent ? `${missLine(agent)}. ` : ""}
-              Tap <span className="font-semibold text-(--ink)">Run the follow-up agent</span>: Muse Spark with tools reads the report and
+              Tap <span className="font-semibold text-(--ink)">Run the follow-up agent</span> (or{" "}
+              <span className="font-semibold text-(--ink)">Run it again</span> if a run is shown): Muse Spark with tools reads the report and
               the creator&rsquo;s other videos, drafts the note to the creator and makes the pay/hold call. No password on these example
               reports; approving the re-cut link it queues needs the demo password.
             </p>

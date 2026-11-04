@@ -4,13 +4,16 @@ import { LockKeyhole } from "lucide-react";
 import { TopBar } from "@/components/ed/top-bar";
 import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
-import { PUBLIC_AGENT_DEMO } from "@/lib/agent/public";
+import { CASES } from "@/components/ed/judge-path";
+import { isPublicAgentTarget, PUBLIC_AGENT_DEMO } from "@/lib/agent/public";
 import { UnlockForm } from "./unlock-form";
 
 export const metadata: Metadata = { title: "Demo access" };
 
 // Full-bleed on a phone (the page is the surface); a raised card from sm up.
 export default function UnlockPage() {
+  // Named only while the agent is really open there (the same list the routes check).
+  const liveOpen = isPublicAgentTarget(PUBLIC_AGENT_DEMO.campaignId, CASES.live);
   return (
     <>
       <TopBar back={{ href: "/campaigns", label: "Campaigns" }} />
@@ -21,11 +24,12 @@ export default function UnlockPage() {
           </span>
           <h1 className="ed-display mt-6 text-[36px] leading-[1.02] sm:text-[40px]">Demo access</h1>
           <p className="mt-3 text-[17px] leading-[1.45] font-medium text-(--ink)">
-            Screen-Time checks that your product was seen in creator video, to the second.
+            Screen-Time measures how long your product is on screen in creator video, and checks it against the contract.
           </p>
           <p className="mt-2 text-[16px] leading-[1.55] text-(--ink-2)">
-            Anyone can read reports, run the sample, and run the follow-up agent on the example LaCroix reports. Uploading and analyzing your own
-            videos uses paid Meta API credits, and approving a re-cut link makes a real upload link for a creator, so both need the demo password.
+            Anyone can read reports, run the sample, and run the follow-up agent on the example reports in the LaCroix test campaign
+            {liveOpen ? ", Michael K’s live run included" : ""}. Uploading and analyzing your own videos uses paid Meta API credits, and
+            approving a re-cut link makes a real upload link for a creator, so both need the demo password.
           </p>
           <Suspense fallback={<FormSkeleton />}>
             <UnlockForm />
