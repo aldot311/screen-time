@@ -38,8 +38,8 @@ export interface AgentRun {
   usd: number;
   /** "public": started by a visitor without the demo password, on an example report. Absent on the owner's runs. */
   origin?: "public";
-  /** While a visitor's run is going: the last finished run it would replace. It comes back if the visitor's run fails
-   *  or dies, so an example report never loses its finished run (or an approval on it) to a failed visit. */
+  /** Legacy, from before VideoEntry.visitorAgent, when a visitor's run went in `agent`: the finished run it would
+   *  replace, kept here while it worked. public-limits.ts still gives it back if such a run died. */
   prior?: AgentRun;
 }
 

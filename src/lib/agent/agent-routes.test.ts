@@ -115,7 +115,9 @@ const startAgent = (videoId: string, opts: { ip?: string; site?: string; cookie?
 const approve = (videoId: string, cookie?: string) => approveRoute.POST(visitor(`/api/campaigns/${ID}/videos/${videoId}/agent/approve`, { cookie }), params(videoId));
 /** Runs the agent the last start handed to after(). */
 const runQueued = async () => (afterSpy.mock.calls.at(-1)![0] as () => Promise<AgentRun>)();
-const finish = (videoId: string) => updateVideo(ID, videoId, (v) => ({ ...v, agent: { ...v.agent!, status: "done" } }));
+const finish = (videoId: string) => updateVideo(ID, videoId, (v) => ({ ...v, visitorAgent: { ...v.visitorAgent!, status: "done" } }));
+/** The brand's own finished run on a report: what every visitor sees by default. */
+const brandRun: AgentRun = { status: "done", startedAt: "2026-11-02T09:00:00.000Z", steps: [], usd: 0.1, summary: "The brand's run." };
 
 describe("POST agent without the demo password", () => {
   it("runs on a listed example report without the re-check tool, and pays from Ash's finished re-cut", async () => {
@@ -134,7 +136,8 @@ describe("POST agent without the demo password", () => {
     expect(bodies).toHaveLength(3);
     for (const b of bodies) expect(b.tools.map((t) => t.name)).not.toContain("analyze_video");
     expect(bodies[0].instructions).toContain("id ash-recut");
-    const stored = (await getVideo(ID, "ash"))!.agent!;
+    expect((await getVideo(ID, "ash"))!.agent).toBeUndefined();
+    const stored = (await getVideo(ID, "ash"))!.visitorAgent!;
     // The run kept the route's id (no remount mid-run), is labelled as a visitor's, and stayed within its own cap.
     expect(stored).toMatchObject({ status: "done", startedAt: body.agent.startedAt, origin: "public", recommendation: { decision: "pay" } });
     expect(stored.recut).toBeUndefined();
@@ -166,21 +169,33 @@ describe("POST agent without the demo password", () => {
     expect(afterSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("leaves the brand's run as what the report shows; the visitor's run goes beside it", async () => {
+    await updateVideo(ID, "peter", (v) => ({ ...v, agent: brandRun }));
+    turns = [[call("get_report", {})], [say("Peter missed the disclosure.")]];
+    expect((await startAgent("peter")).status).toBe(202);
+    await runQueued();
+    const v = (await getVideo(ID, "peter"))!;
+    expect(v.agent).toEqual(brandRun);
+    expect(v.visitorAgent).toMatchObject({ status: "done", origin: "public", summary: "Peter missed the disclosure." });
+  });
+
   it("joins a run already in progress instead of starting a second one", async () => {
+    await updateVideo(ID, "george", (v) => ({ ...v, agent: brandRun }));
     const [a, b] = await Promise.all([startAgent("george"), startAgent("george")]);
     expect([a.status, b.status].sort()).toEqual([200, 202]);
     const modes = [((await a.json()) as { mode: string }).mode, ((await b.json()) as { mode: string }).mode].sort();
     expect(modes).toEqual(["joined", "started"]);
     expect(afterSpy).toHaveBeenCalledTimes(1);
-    // A later visitor joins too, while it runs.
+    // A later visitor joins too, while it runs: it gets the visitor's run to watch, not the brand's.
     const later = await startAgent("george");
     expect(later.status).toBe(200);
-    expect(await later.json()).toMatchObject({ mode: "joined", agent: { status: "running" } });
+    expect(await later.json()).toMatchObject({ mode: "joined", agent: { status: "running", origin: "public" } });
   });
 
-  it("caps runs per visitor and per day, then shows the newest finished run or says why not", async () => {
+  it("caps runs per visitor and per day, then shows the brand's run or says why not", async () => {
     vi.stubEnv("SCREEN_TIME_AGENT_PER_VISITOR", "2");
     vi.stubEnv("SCREEN_TIME_AGENT_PER_DAY", "3");
+    for (const id of ["george", "peter"]) await updateVideo(ID, id, (v) => ({ ...v, agent: brandRun }));
     const me = "203.0.113.7";
     expect((await startAgent("george", { ip: me })).status).toBe(202);
     await finish("george");
@@ -189,7 +204,7 @@ describe("POST agent without the demo password", () => {
     await finish("george");
     const capped = await startAgent("george", { ip: me });
     expect(capped.status).toBe(200);
-    expect(await capped.json()).toMatchObject({ mode: "replay", limit: "visitor", reason: "You have run the agent 2 times today.", agent: { status: "done" } });
+    expect(await capped.json()).toMatchObject({ mode: "replay", limit: "visitor", reason: "You have run the agent 2 times today.", agent: { status: "done", summary: "The brand's run." } });
 
     expect((await startAgent("peter")).status).toBe(202); // run 3 of 3 today
     await finish("peter");

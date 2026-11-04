@@ -15,7 +15,8 @@ export const maxDuration = 300;
 
 /** Starts the follow-up agent on a finished video (behind the demo password). The video page shows its steps.
  *  On the example reports in lib/agent/public.ts anyone may run it, without the re-check tool and under the limits in
- *  lib/agent/public-limits.ts: { mode: "started" | "joined" | "replay", agent, limit?, reason? }. */
+ *  lib/agent/public-limits.ts: { mode: "started" | "joined" | "replay", agent, limit?, reason? }, where agent is the
+ *  visitor's run (VideoEntry.visitorAgent) when started or joined, and the brand's run on a replay. */
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string; videoId: string }> }) {
   const { id, videoId } = await ctx.params;
   // Checked here as well as in the proxy, so a change there can never open more than the listed reports.
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const started = result.video;
     if (result.mode === "started") after(() => executeAgent(campaign, started, { public: true }));
     return Response.json(
-      { mode: result.mode, agent: started.agent, ...(result.mode === "replay" ? { limit: result.limit, reason: result.reason } : {}) },
+      { mode: result.mode, agent: result.mode === "replay" ? started.agent : started.visitorAgent, ...(result.mode === "replay" ? { limit: result.limit, reason: result.reason } : {}) },
       { status: result.mode === "started" ? 202 : 200 },
     );
   }

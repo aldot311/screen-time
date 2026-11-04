@@ -1,8 +1,9 @@
 // Fences for a visitor's run of the follow-up agent (no demo password, on the example reports in ./public.ts), in the
 // pattern of the sample run (lib/campaign/try.ts): a visitor (hashed address) gets a few runs a day, everyone together
-// gets a daily cap, and while a run is in progress on a video a new visitor joins it. Past a limit, the video's newest
-// finished run is shown instead. Each run's own budget is capped at the turn cap (run-agent.ts), so a day costs at
-// most perDay x AGENT_MAX_USD, inside the total budget cap every run shares.
+// gets a daily cap, and while a run is in progress on a video a new visitor joins it. Past a limit, the brand's run
+// (VideoEntry.agent) is shown instead. A visitor's run is stored beside it (VideoEntry.visitorAgent), never over it.
+// Each run's own budget is capped at the turn cap (run-agent.ts), so a day costs at most perDay x AGENT_MAX_USD,
+// inside the total budget cap every run shares.
 import { linkSecret } from "@/lib/campaign/requests";
 import { usdFromEnv } from "@/lib/campaign/runner";
 import { createDoc, readDoc, takeSlot, updateVideo } from "@/lib/campaign/store";
@@ -32,9 +33,10 @@ async function visitorKey(ip: string): Promise<string> {
  * when the mode is "started"; the entry is stored "running" here, inside one atomic update.
  */
 export async function startPublicAgent(ip: string, video: VideoEntry, now = new Date()): Promise<PublicAgentResult> {
-  if (agentRunning(video.agent, now.getTime())) return { mode: "joined", video };
+  if (agentRunning(video.visitorAgent, now.getTime())) return { mode: "joined", video };
   const limits = publicAgentLimits();
-  // A visitor's run that died (stale "running") gives the finished run it set aside back before anything else.
+  // A visitor's run from before visitorAgent (stored in agent, with the finished run it set aside in prior) that died
+  // (stale "running") gives that run back before anything else.
   if (video.agent?.status === "running" && video.agent.prior) {
     const prior = video.agent.prior;
     video = (await updateVideo(video.campaignId, video.id, (v) => (v.agent?.status === "running" && !agentRunning(v.agent, now.getTime()) && v.agent.prior ? { ...v, agent: prior } : v))) ?? video;
@@ -53,13 +55,12 @@ export async function startPublicAgent(ip: string, video: VideoEntry, now = new 
     await createDoc(`agent-public/${day}/full.json`, { at: now.toISOString() });
     return replay("day");
   }
-  // Checked inside the atomic update, so two visitors arriving together start one run and the other joins it.
+  // Checked inside the atomic update, so two visitors arriving together start one run and the other joins it. A
+  // visitor's run goes in its own field: the brand's run (agent) stays what everyone else sees.
   let busy = false;
   const started = await updateVideo(video.campaignId, video.id, (v) => {
-    busy = agentRunning(v.agent);
-    // The last finished run is kept aside (see AgentRun.prior) until this one finishes.
-    const prior = v.agent?.status === "done" ? v.agent : v.agent?.prior;
-    return busy ? v : { ...v, agent: { status: "running", startedAt: now.toISOString(), steps: [], usd: 0, origin: "public", ...(prior ? { prior } : {}) } };
+    busy = agentRunning(v.visitorAgent);
+    return busy ? v : { ...v, visitorAgent: { status: "running", startedAt: now.toISOString(), steps: [], usd: 0, origin: "public" } };
   });
   if (!started) return { mode: "unavailable", status: 404, error: "Video not found" };
   return { mode: busy ? "joined" : "started", video: started };

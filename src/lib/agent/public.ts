@@ -13,6 +13,12 @@ export const PUBLIC_AGENT_DEMO = { campaignId: "lacroix-strawberry-peach", video
 /** "owner": unlocked with the demo password. "public": a visitor on a listed example report. "locked": anyone else. */
 export type AgentAccess = "owner" | "public" | "locked";
 
+/** The run a report shows: the brand's own run, except to the visitor whose run the address names (?run=). */
+export function shownAgent<R extends { startedAt: string }>(video: { agent?: R; visitorAgent?: R }, access: AgentAccess, run: unknown): R | undefined {
+  const mine = access !== "owner" && typeof run === "string" && video.visitorAgent?.startedAt === run ? video.visitorAgent : undefined;
+  return mine ?? video.agent;
+}
+
 export function isPublicAgentTarget(campaignId: string, videoId: string): boolean {
   return PUBLIC_AGENT.get(campaignId)?.has(videoId) ?? false;
 }
@@ -27,7 +33,8 @@ export function isPublicAgentPath(pathname: string): boolean {
   return m !== null && isPublicAgentTarget(m[1], m[2]);
 }
 
-/** Which limit sent a visitor to the newest finished run. Responses carry this code and text built from it. */
+/** Which limit sent a visitor to the brand's run instead of a run of their own. Responses carry this code and text
+ *  built from it. */
 export type PublicAgentLimit = "visitor" | "day";
 
 export const PUBLIC_AGENT_LIMIT_TEXT: Record<PublicAgentLimit, (n: number) => string> = {

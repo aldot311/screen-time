@@ -50,7 +50,7 @@ beforeEach(async () => {
   ledger.mode = "ok";
   ledger.between = null;
   await putCampaign(campaign);
-  await putVideo({ id: "v1", campaignId: "c1", creator: "@maya", title: "v1", videoUrl: "", status: "done", step: null, report, createdAt: STARTED, updatedAt: STARTED, agent: running });
+  await putVideo({ id: "v1", campaignId: "c1", creator: "@maya", title: "v1", videoUrl: "", status: "done", step: null, report, createdAt: STARTED, updatedAt: STARTED, agent: running, visitorAgent: running });
 });
 afterAll(async () => {
   vi.unstubAllGlobals();
@@ -65,7 +65,7 @@ describe("executeAgent", () => {
     ledger.mode = "setup-fails";
     const run = await executeAgent(campaign, await stored(), { public: true });
     expect(run).toMatchObject({ status: "failed", startedAt: STARTED, error: "Could not read the ledger", origin: "public" });
-    expect((await stored()).agent).toMatchObject({ status: "failed", startedAt: STARTED });
+    expect((await stored()).visitorAgent).toMatchObject({ status: "failed", startedAt: STARTED });
     expect(calls).toBe(0);
   });
 
@@ -74,7 +74,7 @@ describe("executeAgent", () => {
     const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const run = await executeAgent(campaign, await stored(), { public: true });
     expect(run.status).toBe("done");
-    expect((await stored()).agent).toMatchObject({ status: "done", startedAt: STARTED, recut: { reason: "Say it." } });
+    expect((await stored()).visitorAgent).toMatchObject({ status: "done", startedAt: STARTED, recut: { reason: "Say it." } });
     expect(quiet).toHaveBeenCalledTimes(1);
     quiet.mockRestore();
   });
@@ -94,22 +94,33 @@ describe("executeAgent", () => {
   });
 });
 
-describe("a visitor's run never costs an example report its finished run", () => {
+describe("a visitor's run never replaces the brand's run on an example report", () => {
   const curated: AgentRun = { status: "done", startedAt: "2026-11-02T09:00:00.000Z", steps: [], usd: 0.04, summary: "Owner's run.", recut: { reason: "Say it.", approvedAt: "2026-11-02T10:00:00.000Z" } };
 
-  it("puts the finished run back when the visitor's run fails", async () => {
-    await updateVideo("c1", "v1", (v) => ({ ...v, agent: { ...running, prior: curated } }));
+  it("keeps the brand's run when the visitor's run fails, and keeps the failure for the visitor to see", async () => {
+    await updateVideo("c1", "v1", (v) => ({ ...v, agent: curated, visitorAgent: running }));
     ledger.mode = "setup-fails";
     await executeAgent(campaign, (await getVideo("c1", "v1"))!, { public: true });
-    expect((await getVideo("c1", "v1"))?.agent).toEqual(curated);
+    const v = (await getVideo("c1", "v1"))!;
+    expect(v.agent).toEqual(curated);
+    expect(v.visitorAgent).toMatchObject({ status: "failed", startedAt: STARTED, error: "Could not read the ledger" });
   });
 
-  it("replaces the finished run once the visitor's run finishes", async () => {
-    await updateVideo("c1", "v1", (v) => ({ ...v, agent: { ...running, prior: curated } }));
+  it("keeps the brand's run when the visitor's run finishes; the visitor's run is kept beside it", async () => {
+    await updateVideo("c1", "v1", (v) => ({ ...v, agent: curated, visitorAgent: running }));
     const run = await executeAgent(campaign, (await getVideo("c1", "v1"))!, { public: true });
-    const stored = (await getVideo("c1", "v1"))?.agent;
-    expect(stored).toMatchObject({ status: "done", origin: "public", startedAt: STARTED });
-    expect(stored?.prior).toBeUndefined();
+    const v = (await getVideo("c1", "v1"))!;
+    expect(v.agent).toEqual(curated);
+    expect(v.visitorAgent).toMatchObject({ status: "done", origin: "public", startedAt: STARTED });
     expect(run.status).toBe("done");
+  });
+
+  it("the brand's own run, started with the password, leaves a visitor's run where it is", async () => {
+    const theirs: AgentRun = { status: "done", startedAt: "2026-11-02T09:00:00.000Z", steps: [], usd: 0.04, summary: "A visitor's run.", origin: "public" };
+    await updateVideo("c1", "v1", (v) => ({ ...v, visitorAgent: theirs }));
+    await executeAgent(campaign, (await getVideo("c1", "v1"))!);
+    const v = (await getVideo("c1", "v1"))!;
+    expect(v.agent).toMatchObject({ status: "done", startedAt: STARTED, recut: { reason: "Say it." } });
+    expect(v.visitorAgent).toEqual(theirs);
   });
 });

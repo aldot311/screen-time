@@ -9,7 +9,7 @@ import { friendlyError, verdictOf } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { ReportClient } from "@/components/ed/report-client";
 import { agentRunning } from "@/lib/agent/campaign-agent";
-import { isPublicAgentTarget, type AgentAccess } from "@/lib/agent/public";
+import { isPublicAgentTarget, shownAgent, type AgentAccess } from "@/lib/agent/public";
 import { ACCESS_COOKIE, decideAccess } from "@/lib/access";
 import { feeFor, rollup } from "@/lib/campaign/money";
 import { VerdictPill } from "@/components/ed/bits";
@@ -59,11 +59,13 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   const waiting = phase === "waiting";
   const stalled = phase === "uploaded";
   const running = phase === "running" || phase === "starting";
-  // The follow-up agent writes its steps to the video as it works: refresh while it does.
-  const agentWorking = agentRunning(video.agent);
   // Who may run it here: the owner anywhere; a visitor on the example reports only (the routes check this again).
   const unlocked = (await decideAccess((await cookies()).get(ACCESS_COOKIE)?.value)) === "allow";
   const agentAccess: AgentAccess = unlocked ? "owner" : isPublicAgentTarget(campaign.id, video.id) ? "public" : "locked";
+  // The brand's run; to a visitor, their own run while the address names it (?run=, which the panel sets).
+  const agent = shownAgent(video, agentAccess, query.run);
+  // The follow-up agent writes its steps to the video as it works: refresh while it does.
+  const agentWorking = agentRunning(agent);
   const synthetic = Boolean(video.synthetic ?? campaign.synthetic);
   const title = humanTitle(video.title);
   // A newer take from the same creator replaces this one for pay or hold, by the same rule as the campaign's money line,
@@ -114,7 +116,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
             override={video.override}
             replacedBy={replacedBy ? { href: `/campaigns/${campaign.id}/videos/${replacedBy.id}` } : undefined}
             overrideEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/override`}
-            agent={video.agent}
+            agent={agent}
             agentEndpoint={synthetic || campaign.id === TRY_ID ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/agent`}
             agentAccess={agentAccess}
             proofHref={synthetic ? undefined : `/api/campaigns/${campaign.id}/videos/${video.id}/proof`}

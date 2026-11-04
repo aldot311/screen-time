@@ -3,7 +3,8 @@
 // The follow-up agent on a report: Muse Spark with tools reads the report and the creator's other videos, re-checks a
 // waiting re-cut, drafts the note to the creator and makes a pay/hold call. Its steps show as it works. Nothing leaves
 // without the brand: the note is an editable draft, and a re-cut request becomes a link only when approved here, with
-// the demo password. On the example reports a visitor runs it without the password: it then only reads stored results.
+// the demo password. On the example reports a visitor runs it without the password: it then only reads stored results,
+// and the run shows at an address of its own (?run=), never in place of the brand's.
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -45,7 +46,7 @@ export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" 
   const path = usePathname();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // A visitor past a limit sees the newest finished run, with the limit's fixed text from the server.
+  // A visitor past a limit gets the limit's fixed text from the server.
   const [notice, setNotice] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [link, setLink] = useState<{ url: string; expires: string } | null>(null);
@@ -261,7 +262,9 @@ export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" 
                   // A visitor's start answers { mode, agent }; the owner's answers with the run itself.
                   const run = out.mode ? out.agent : out;
                   if (out.mode !== "replay" && run?.status === "running") setLaunched(run);
-                  router.refresh();
+                  // A visitor's run is shown only where its address names it; everyone else keeps the brand's run.
+                  if (access === "public" && out.mode !== "replay" && run?.startedAt) router.replace(`${path}?run=${encodeURIComponent(run.startedAt)}`, { scroll: false });
+                  else router.refresh();
                 }}
                 className={[
                   "ed-press inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-[14px] font-semibold disabled:cursor-wait",
@@ -277,7 +280,7 @@ export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" 
           )}
           {notice && (
             <p role="status" className="mt-3 max-w-[60ch] rounded-(--r-inner) bg-(--wash) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--ink-2)">
-              <span className="font-semibold text-(--ink)">{notice}</span> This is the newest finished run. To run it again today,{" "}
+              <span className="font-semibold text-(--ink)">{notice}</span> To run it again today,{" "}
               <Link href={unlock} className="font-medium text-(--ink) underline">
                 enter the demo password
               </Link>

@@ -81,6 +81,10 @@ export interface VideoEntry {
   override?: { decision: "pay" | "hold"; reason: string; at: string };
   /** The latest follow-up agent run on this video: its step log, draft note, call and any re-cut awaiting approval. */
   agent?: AgentRun;
+  /** The newest run a visitor started without the password (example reports only). Shown only at an address that
+   *  names it (?run=<its startedAt>), which the panel opens for whoever started or joined it; everyone else keeps
+   *  seeing `agent`, the brand's own run. */
+  visitorAgent?: AgentRun;
   /** The rendered proof clip (9:16 MP4 with the evidence burned in), made on first request. Cleared on a re-run. */
   proofUrl?: string;
 }
