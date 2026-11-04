@@ -2,7 +2,7 @@ import { readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import data from "@/lib/accuracy-data.json";
 import { clipVideoId, scoresOf, type AccuracyData } from "./accuracy-summary";
-import { checkReel, firstDisagreement, markSegments, packBoxes, soFar } from "./check-player-data";
+import { checkReel, firstDisagreement, markSegments, packBoxes, reelView, soFar } from "./check-player-data";
 import { CHECK_REELS } from "./check-player-sources";
 
 const reel = (clip: string) => {
@@ -131,5 +131,31 @@ describe("packBoxes", () => {
         { frame: 4, objectId: 1, verdict: "lookalike" },
       ]),
     ).toEqual([[3, 0, 1, 1, 2, 31, 40, 91]]);
+  });
+});
+
+describe("reelView", () => {
+  const r = checkReel(
+    { id: "x", targets: [{ name: "can", ranges: [[0, 1]] }] },
+    { videoId: "x", info: { frameCount: 3 }, metrics: { visibleFrames: [0, 1] }, receipt: { runId: "run-1" } },
+  );
+  const box = { frame: 0, objectId: 1, verdict: "match", confidence: 0.9, box: { x1: 1, y1: 2, x2: 3, y2: 4 } };
+
+  it("plays the stored video and draws SAM's boxes only when the stored report is the scored run", () => {
+    const v = reelView(r, {
+      status: "done",
+      videoUrl: "/v.mp4",
+      thumbUrl: "/t.jpg",
+      report: { info: { width: 720, height: 1280 }, receipt: { runId: "run-1" }, detections: [box] },
+    });
+    expect(v).toMatchObject({ clip: "x", marks: "==.", videoUrl: "/v.mp4", poster: "/t.jpg", width: 720, height: 1280 });
+    expect(v.boxes).toEqual([[0, 1, 1, 1, 2, 3, 4, 90]]);
+    const other = reelView(r, { status: "done", videoUrl: "/v.mp4", report: { info: {}, receipt: { runId: "run-2" }, detections: [box] } });
+    expect(other.boxes).toEqual([]);
+  });
+
+  it("keeps the strips and the still when the video is missing or not done", () => {
+    expect(reelView(r, null)).toMatchObject({ videoUrl: undefined, poster: undefined, boxes: [], width: 540, height: 960 });
+    expect(reelView(r, { status: "running", videoUrl: "/v.mp4", thumbUrl: "/t.jpg" })).toMatchObject({ videoUrl: undefined, poster: "/t.jpg" });
   });
 });
