@@ -41,7 +41,7 @@ export default function NewCampaignPage() {
           <dl className="mt-2 divide-y divide-(--hair) text-[14.5px] leading-[1.55] text-(--ink-2)">
             <Row term="Demo password">
               Saving a campaign and checking your own video need the demo password, because every check spends real Meta API
-              credits. Judges: it is in the submission notes.{" "}
+              credits. To try your own video, email aldo@aetrai.com for the password.{" "}
               <PendingLink href="/unlock?next=/campaigns/new" className={link}>
                 Enter the demo password
               </PendingLink>

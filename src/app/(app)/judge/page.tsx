@@ -115,7 +115,8 @@ export default async function JudgePage() {
         <div className="mt-8 max-w-[60ch] text-[15px] leading-[1.6] text-(--ink-2)">
           <p>
             <span className="font-semibold text-(--ink)">Your own video.</span> Saving a campaign and checking your own video need the
-            demo password, which is in the submission notes.
+            demo password, because every check spends real Meta API credits. The sample run in step 1 is the same pipeline. To
+            try your own video, email aldo@aetrai.com for the password.
           </p>
           <p className="mt-1 flex flex-wrap gap-x-6">
             <PendingLink href={OWN_VIDEO_HREF} className={action}>

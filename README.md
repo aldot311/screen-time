@@ -23,7 +23,7 @@ the accuracy page and the follow-up agent.
 
 - No password: the sample run, the example reports, and the follow-up agent on those reports. The sample run and the
   agent are capped per visitor and per day. Past a cap, you see the newest finished run instead.
-- Demo password (in the submission notes): saving a campaign, checking your own video, and approving the re-cut link
+- Demo password (email aldo@aetrai.com for it): saving a campaign, checking your own video, and approving the re-cut link
   the agent queues. That link is a real upload link for the creator.
 
 ## What it measures
