@@ -15,6 +15,11 @@ export interface ClientOptions {
   maxDelayMs?: number;
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
+  /** Per attempt, response body included: past it the request fails with a TimeoutError instead of waiting on. */
+  timeoutMs?: number;
+  /** Epoch ms every request must be done by (a run's deadline): each attempt's limit is cut to the time left, a request
+   *  that would start after it fails at once with a TimeoutError, and no retry waits past it. */
+  deadlineAt?: number;
 }
 
 export class MetaApiError extends Error {
@@ -95,6 +100,21 @@ export async function errorFromResponse(res: Response): Promise<MetaApiError> {
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
+ * How long one request may take, in whole ms (AbortSignal.timeout takes integers only): its own limit (none when unset or
+ * 0), cut to the time left before `deadlineAt`; undefined when neither applies. Throws a TimeoutError when the deadline
+ * has passed, so no request starts that could not finish.
+ */
+export function requestTimeoutMs(timeoutMs: number | undefined, deadlineAt: number | undefined, now = Date.now()): number | undefined {
+  const own = timeoutMs && timeoutMs > 0 ? timeoutMs : undefined;
+  const left = deadlineAt === undefined ? undefined : deadlineAt - now;
+  if (left !== undefined && left <= 0) {
+    throw new DOMException("Timed out: the run reached its time limit before this request", "TimeoutError");
+  }
+  const ms = left === undefined ? own : Math.min(own ?? left, left);
+  return ms === undefined ? undefined : Math.max(1, Math.ceil(ms));
+}
+
+/**
  * Sends one API request, retrying 429/5xx and network failures. `makeBody` is called per attempt
  * because multipart and stream bodies cannot be reused once sent.
  */
@@ -106,7 +126,7 @@ export async function metaRequest(
     makeBody?: () => BodyInit;
     // Off for billed calls: a connection can drop after the server accepted (and charged) the request.
     retryNetworkErrors?: boolean;
-    /** Per attempt, response body included: past it the request fails with a TimeoutError instead of waiting on. */
+    /** Overrides opts.timeoutMs for this request. */
     timeoutMs?: number;
   },
   opts: ClientOptions = {},
@@ -121,22 +141,28 @@ export async function metaRequest(
   };
   const url = `${opts.baseUrl ?? META_BASE_URL}${path}`;
   const headers = { Authorization: `Bearer ${getApiKey(opts)}`, ...init.headers };
+  // A retry that would only start once the deadline has passed is not worth the wait: the last error stands.
+  const pastDeadline = (waitMs: number) => opts.deadlineAt !== undefined && Date.now() + waitMs >= opts.deadlineAt;
 
   for (let attempt = 0; ; attempt++) {
+    const timeoutMs = requestTimeoutMs(init.timeoutMs ?? opts.timeoutMs, opts.deadlineAt);
     let res: Response;
     try {
-      const signal = init.timeoutMs ? AbortSignal.timeout(init.timeoutMs) : undefined;
+      const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
       res = await doFetch(url, { method: init.method ?? "POST", headers, body: init.makeBody?.(), ...(signal ? { signal } : {}) });
     } catch (err) {
-      if (init.retryNetworkErrors === false || attempt >= maxRetries) throw err;
-      await sleep(backoffDelayMs(attempt, null, delayOpts));
+      const delay = backoffDelayMs(attempt, null, delayOpts);
+      if (init.retryNetworkErrors === false || attempt >= maxRetries || pastDeadline(delay)) throw err;
+      await sleep(delay);
       continue;
     }
     if (res.ok) return res;
     if (!isRetryableStatus(res.status) || attempt >= maxRetries) throw await errorFromResponse(res);
     const retryAfter = parseRetryAfter(res.headers.get("retry-after"));
     if (retryAfter !== null && retryAfter > retryCeilingMs(delayOpts.maxDelayMs)) throw await errorFromResponse(res);
+    const delay = backoffDelayMs(attempt, retryAfter, delayOpts);
+    if (pastDeadline(delay)) throw await errorFromResponse(res);
     await res.body?.cancel().catch(() => undefined);
-    await sleep(backoffDelayMs(attempt, retryAfter, delayOpts));
+    await sleep(delay);
   }
 }

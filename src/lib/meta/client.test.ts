@@ -405,6 +405,62 @@ describe("retries and errors", () => {
   });
 });
 
+describe("timeouts", () => {
+  // A request that never answers until its signal aborts it, as fetch does on a timeout; then, if given, an answer.
+  function hangs(then?: () => Response): { fetch: FetchLike; calls: () => number } {
+    let calls = 0;
+    const fetch: FetchLike = async (_url, init) => {
+      if (calls++ === 0 || !then)
+        return new Promise<Response>((_, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
+      return then();
+    };
+    return { fetch, calls: () => calls };
+  }
+  const limited = (fetch: FetchLike): ClientOptions => ({ ...opts(fetch), timeoutMs: 20 });
+
+  it("gives up on a billed call that never answers, after exactly one request", async () => {
+    for (const call of [
+      (o: ClientOptions) => samVideo({ fileId: "f", prompt: "can" }, o),
+      (o: ClientOptions) => sparkJson({ input: [], schema: {}, name: "n" }, o),
+      (o: ClientOptions) => transcribe(Buffer.from("RIFF"), o),
+    ]) {
+      const { fetch, calls } = hangs(json({}));
+      await expect(call(limited(fetch))).rejects.toMatchObject({ name: "TimeoutError" });
+      expect(calls()).toBe(1);
+    }
+  });
+
+  it("gives up on a SAM stream that starts but never completes (heartbeats only), after one request", async () => {
+    let calls = 0;
+    const fetch: FetchLike = async (_url, init) => {
+      calls++;
+      const body = new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new TextEncoder().encode(sse([{ type: "response.created", response: { id: "r1" } }])));
+          // fetch errors the body with the signal's reason when it aborts mid-stream.
+          init?.signal?.addEventListener("abort", () => c.error(init.signal?.reason));
+        },
+      });
+      return new Response(body, { headers: { "content-type": "text/event-stream" } });
+    };
+    await expect(samVideo({ fileId: "f", prompt: "can" }, limited(fetch))).rejects.toMatchObject({ name: "TimeoutError" });
+    expect(calls).toBe(1);
+  });
+
+  it("tries an upload again after a timeout, since a failed upload is not billed", async () => {
+    const { fetch, calls } = hangs(json({ id: "file-ok" }));
+    expect(await uploadFile(Buffer.from("x"), "a.mp4", limited(fetch))).toBe("file-ok");
+    expect(calls()).toBe(2);
+  });
+
+  it("waits as before when no limit is set (control)", async () => {
+    const { fetch } = hangs();
+    const pending = sparkJson({ input: [], schema: {}, name: "n" }, opts(fetch));
+    const settled = await Promise.race([pending.then(() => "settled", () => "settled"), new Promise((r) => setTimeout(() => r("pending"), 100))]);
+    expect(settled).toBe("pending");
+  });
+});
+
 describe("review regressions", () => {
   it("raises a SAM refusal even when response.completed follows it", async () => {
     const body = sse([
