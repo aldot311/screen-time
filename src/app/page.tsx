@@ -466,7 +466,7 @@ export default async function Landing() {
             <span className="text-(--ink)">
               <Wordmark />
             </span>
-            <span>Screen-Time by Aetrai · built Oct 28 – Nov 4, 2026 for the Meta Global AI Developer Hackathon</span>
+            <span>Screen-Time by Aldo Tile · built Oct 28 – Nov 4, 2026 for the Meta Global AI Developer Hackathon</span>
           </span>
           <span className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
             <PendingLink href={JUDGE_HREF} className={footLink}>

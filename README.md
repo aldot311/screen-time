@@ -231,7 +231,7 @@ them. The demo video (`public/demo.mp4`) and its poster do show some of the frie
 
 ## Rights
 
-- The LaCroix Strawberry Peach campaign is a test run by Aetrai. LaCroix and Poppi are not involved, and Screen-Time
+- The LaCroix Strawberry Peach campaign is a test run by Screen-Time. LaCroix and Poppi are not involved, and Screen-Time
   is not affiliated with, sponsored or endorsed by them. LaCroix, Poppi and the other product names and packaging
   shown belong to their owners.
 - 8 friends filmed 9 of the 11 Reels; the builder filmed the 2 look-alike clips. Every friend shown agreed to be shown
