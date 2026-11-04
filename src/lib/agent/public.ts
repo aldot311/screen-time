@@ -1,10 +1,12 @@
 // The follow-up agent without the demo password, on the pre-made example reports only. Shared by the proxy, the
 // routes, the video page and the panel, so it imports nothing from the server. A code list of exact (campaign, video)
-// pairs rather than a campaign flag: a video uploaded into the LaCroix campaign later (the live demo's) never becomes
-// public by accident. The approve route is never open: approving mints a real upload link for the creator.
+// pairs rather than a campaign flag: a video uploaded into the LaCroix campaign later never becomes public by accident,
+// only when its id is added here by hand. The approve route is never open: approving mints a real upload link for the
+// creator.
 
 export const PUBLIC_AGENT: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  ["lacroix-strawberry-peach", new Set(["ash", "ash-recut", "george", "peter", "aldo", "aldo-2", "michael", "jamal", "lana", "jon"])],
+  // 6-michael-captioned-gk3bzd, Michael K's Reel from the demo video's live run, is added by hand on purpose.
+  ["lacroix-strawberry-peach", new Set(["ash", "ash-recut", "george", "peter", "aldo", "aldo-2", "michael", "jamal", "lana", "jon", "6-michael-captioned-gk3bzd"])],
 ]);
 
 /** The report pointed at for trying the agent: Peter's Reel, held for no disclosure, where it drafts a note and a re-cut. */

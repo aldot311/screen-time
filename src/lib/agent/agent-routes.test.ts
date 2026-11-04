@@ -86,7 +86,7 @@ beforeEach(async () => {
   await putVideo(entry("george", "George", false, "2026-11-01T01:00:00Z"));
   await putVideo(entry("peter", "Peter", false, "2026-11-01T01:00:00Z"));
   await putVideo(entry("jamal", "Jamal", true, "2026-11-01T01:00:00Z"));
-  // Uploaded into the same campaign later (the live demo's): never on the open list.
+  // Uploaded into the same campaign later and never added to the open list by hand.
   await putVideo(entry("michael-k-1a2b3c", "Michael K", false, "2026-11-03T01:00:00Z"));
 });
 afterEach(() => {
@@ -190,6 +190,13 @@ describe("POST agent without the demo password", () => {
     const later = await startAgent("george");
     expect(later.status).toBe(200);
     expect(await later.json()).toMatchObject({ mode: "joined", agent: { status: "running", origin: "public" } });
+  });
+
+  it("opens Michael K's Reel from the demo video's live run, added to the list by hand", async () => {
+    await putVideo(entry("6-michael-captioned-gk3bzd", "Michael K", true, "2026-11-03T02:00:00Z"));
+    const res = await startAgent("6-michael-captioned-gk3bzd");
+    expect(res.status).toBe(202);
+    expect(await res.json()).toMatchObject({ mode: "started", agent: { status: "running", origin: "public" } });
   });
 
   it("caps runs per visitor and per day, then shows the brand's run or says why not", async () => {
