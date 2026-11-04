@@ -23,9 +23,7 @@ needs (frames, verdicts, counted frames, terms, receipt date and cost; no URLs, 
   the next 2 frames, so a range boundary can be off by up to 2 frames (0.13 s) from the sampling alone, and a whole
   sample can be wrong. The passes disagreed on 1 of 936 sampled frames. Both called the Pamplemousse can the product
   from the small grids; at full resolution its label reads PAMPLEMOUSSE, so Claude corrected that clip to "no
-  product" after the run (noted in its file). **No person has checked the labels yet: 0 of 11 clips.** A check is
-  recorded in each file's `checkedBy` as "<name>, <date>, frame by frame in /label" (`pnpm dev`, then /label), and
-  the script counts only those.
+  product" after the run (noted in its file). **Checked by a person: 11 of 11 clips** (Aldo, frame by frame in /label, Nov 3; he changed no range).
 
 **With Muse Spark (what the app reports): precision 98.4%, recall 91.1%, F1 94.6%.**
 95% intervals from a clip-clustered bootstrap (whole Reels resampled, 100,000 draws, seed 20261103, percentile):

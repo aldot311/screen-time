@@ -143,7 +143,7 @@ describe("accuracyGloss", () => {
   it("gives the measured figures, on the Reels as delivered, and whose labels they were scored against", async () => {
     const { accuracyGloss } = await import("./report-words");
     const text = accuracyGloss();
-    expect(text).toMatch(/^Measured frame by frame on 11 test Reels as delivered, against labels drafted by two Claude vision passes \(a person has checked \d+ of the 11\): precision \d+\.\d%, recall \d+\.\d%\./);
+    expect(text).toMatch(/^Measured frame by frame on 11 test Reels as delivered, against labels a person checked: precision \d+\.\d%, recall \d+\.\d%\./);
     expect(text).toMatch(/Precision is the share of the seconds Screen-Time counted that really showed the product/);
     expect(text).not.toMatch(/This Reel is one of/);
     expect(text).not.toMatch(/checked labels/);

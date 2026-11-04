@@ -1,7 +1,7 @@
 {
   "id": "lacroix/lc-1-george",
   "method": "Drafted by two independent Claude vision passes over 5 fps frame grids (one forward, one in reverse order); a sampled frame is kept where both agree (or one is certain and the other unsure). Each sample covers itself and the next 2 frames.",
-  "checkedBy": "",
+  "checkedBy": "Aldo Tile, 2026-11-03, frame by frame in /label",
   "targets": [
     {
       "name": "lacroix-can",

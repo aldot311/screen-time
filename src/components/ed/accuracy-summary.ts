@@ -137,7 +137,7 @@ export const clipName = (clip: string) => clip.replace(/^.*\//, "");
  * filmed two Reels each; Aldo, who built Screen-Time, filmed both of his). The scored runs (data/runs) are the runs
  * those campaign videos show, so a report and its row are the same run.
  */
-const MEASURED: Record<string, { creator: string; person?: string; videoId: string; builder?: true; notToConfuse?: string }> = {
+const MEASURED: Record<string, { creator: string; person?: string; videoId: string; builder?: true; notToConfuse?: string; relabelledByClaude?: true }> = {
   "lc-1-george": { creator: "George", videoId: "george" },
   "lc-1-michael": { creator: "Michael", videoId: "michael", notToConfuse: "Michael K" },
   "lc-2-jamal": { creator: "Jamal", videoId: "jamal" },
@@ -146,7 +146,8 @@ const MEASURED: Record<string, { creator: string; person?: string; videoId: stri
   "lc-7a-ash": { creator: "Ash, first take", person: "Ash", videoId: "ash" },
   "lc-7b-ash": { creator: "Ash, re-cut", person: "Ash", videoId: "ash-recut" },
   "lc-8-peter": { creator: "Peter", videoId: "peter" },
-  "lc-10-aldo": { creator: "Aldo", videoId: "aldo", builder: true },
+  // Claude flipped this clip to "no product" at full resolution after the run (see its label notes).
+  "lc-10-aldo": { creator: "Aldo", videoId: "aldo", builder: true, relabelledByClaude: true },
   "lc-11-jon": { creator: "Jon", videoId: "jon" },
   "lc-12-aldo": { creator: "Aldo 2", person: "Aldo", videoId: "aldo-2", builder: true },
 };
@@ -361,7 +362,7 @@ export function sparkStory(d: AccuracyData): string[] {
     const builder = MEASURED[clipName(c.clip)]?.builder ? ", which the builder filmed," : "";
     if (c.kind === "lookalike") {
       const what = d.objects?.lookalikes?.find((o) => o.clip === c.clip && o.target === c.target)?.note;
-      const fixed = /^claude\b/i.test(d.labels?.checkedBy[c.clip] ?? "")
+      const fixed = MEASURED[clipName(c.clip)]?.relabelledByClaude
         ? " Claude corrected that clip’s label at full resolution after the run: both drafting passes had marked the look-alike as the product."
         : "";
       out.push(

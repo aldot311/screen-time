@@ -30,8 +30,8 @@ the accuracy page and the follow-up agent.
 
 Measured on the 11 LaCroix test Reels as delivered on the site (9 people; 1,931 frames with the can in 2,800), scored
 from the site's own run reports (data/runs) frame by frame at 15 fps against labels drafted by two independent Claude
-vision passes (George's on our earlier zoomed edit of his Reel). No person has checked the labels yet (0 of 11 clips;
-/label records a check). Details, intervals and the reproduce command (`pnpm accuracy --labels data/labels/lacroix`) are in [docs/ACCURACY.md](docs/ACCURACY.md):
+vision passes (George's on our earlier zoomed edit of his Reel), then checked frame by frame by a person in /label
+(11 of 11 clips, Aldo, Nov 3; no ranges changed). Details, intervals and the reproduce command (`pnpm accuracy --labels data/labels/lacroix`) are in [docs/ACCURACY.md](docs/ACCURACY.md):
 
 | | SAM 3.1 alone | SAM 3.1 + Muse Spark (what the app reports) |
 |---|---|---|

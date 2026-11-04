@@ -398,9 +398,19 @@
   },
   "labels": {
     "clips": 11,
-    "checkedByPerson": 0,
+    "checkedByPerson": 11,
     "checkedBy": {
-      "lacroix/lc-10-aldo": "Claude, at full resolution, for the look-alike clip (see notes)"
+      "lacroix/lc-1-george": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-1-michael": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-10-aldo": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-11-jon": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-12-aldo": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-2-jamal": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-4-lana": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-6-michael": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-7a-ash": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-7b-ash": "Aldo Tile, 2026-11-03, frame by frame in /label",
+      "lacroix/lc-8-peter": "Aldo Tile, 2026-11-03, frame by frame in /label"
     }
   },
   "reports": [

@@ -179,9 +179,10 @@ describe("the measured set, in the page's words", () => {
   it("says who labelled the clips from the label files, and never 'checked' until every clip was", () => {
     const none = labelProvenance(site)!;
     expect(none.line).toBe(
-      "Labels: drafted by two independent Claude vision passes at 5 frames a second (each sample stands for 3 frames); checked frame by frame by a person: 0 of 11 clips.",
+      "Labels: drafted by two independent Claude vision passes at 5 frames a second, then checked frame by frame by a person on all 11 clips.",
     );
-    expect(none.resolution).toBe("Labels were judged on every 3rd frame, so a boundary can be off by 2 frames (0.13 s) from the sampling alone.");
+    // Once a person has checked every clip frame by frame, the 5 fps sampling caveat no longer applies.
+    expect(none.resolution).toBeNull();
     const some = labelProvenance({ ...site, labels: { clips: 11, checkedByPerson: 4, checkedBy: {} } })!;
     expect(some.line).toContain("checked frame by frame by a person: 4 of 11 clips.");
     expect(some.allChecked).toBe(false);
