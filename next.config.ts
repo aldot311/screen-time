@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
   // ffmpeg-static finds its binary next to its own file; bundling it rewrote that path to /ROOT/... and every in-app
   // run failed at "Prepare video". Load it with Node's require instead, and ship the binary with the routes that run.
   serverExternalPackages: ["ffmpeg-static"],
+  // public/ is served from the CDN, never read by a function; keep the demo video and its poster out of the server
+  // bundles.
+  outputFileTracingExcludes: {
+    "/*": ["./public/**/*"],
+  },
   outputFileTracingIncludes: {
     "/api/campaigns/**": ["./node_modules/ffmpeg-static/ffmpeg", "./node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf"],
   },

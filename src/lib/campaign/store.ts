@@ -78,7 +78,7 @@ export interface Backend {
 export const LOCAL_FILE_ROUTE = "/api/store/file";
 
 export function localStoreRoot(): string {
-  return resolve(process.env.SCREEN_TIME_STORE_DIR ?? join(process.cwd(), "data", "store"));
+  return resolve(/*turbopackIgnore: true*/ process.env.SCREEN_TIME_STORE_DIR ?? join(process.cwd(), "data", "store"));
 }
 
 /** Absolute path for a store key, or null if it could escape the root. */
@@ -150,7 +150,7 @@ export function localBackend(root = localStoreRoot()): Backend {
   };
   const readJson = async (key: string): Promise<unknown | null> => {
     try {
-      return JSON.parse(await readFile(pathOf(key), "utf8"));
+      return JSON.parse(await readFile(/*turbopackIgnore: true*/ pathOf(key), "utf8"));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw err;
@@ -172,7 +172,7 @@ export function localBackend(root = localStoreRoot()): Backend {
     removeJson: (key) => rm(pathOf(key), { force: true }),
     async fileInfo(url) {
       const path = localFileFromUrl(url, root);
-      const info = path ? await stat(path).catch(() => null) : null;
+      const info = path ? await stat(/*turbopackIgnore: true*/ path).catch(() => null) : null;
       if (!info?.isFile()) return null;
       return { size: info.size, contentType: FILE_TYPES[path!.split(".").at(-1)!.toLowerCase()] ?? "application/octet-stream" };
     },
@@ -189,7 +189,7 @@ export function localBackend(root = localStoreRoot()): Backend {
     },
     async listKeys(prefix) {
       const dir = pathOf(prefix.replace(/\/$/, ""));
-      const names = await readdir(dir, { recursive: true }).catch((err: NodeJS.ErrnoException) => {
+      const names = await readdir(/*turbopackIgnore: true*/ dir, { recursive: true }).catch((err: NodeJS.ErrnoException) => {
         if (err.code === "ENOENT") return [] as string[];
         throw err;
       });

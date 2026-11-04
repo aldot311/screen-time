@@ -14,6 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Builds outside Vercel resolve share-image URLs against the live site (otherwise Next warns and uses localhost).
+  metadataBase: new URL("https://screen-time-inky.vercel.app"),
   title: { default: "Screen-Time", template: "%s · Screen-Time" },
   description: "Second-by-second proof your product was seen in creator video, checked against the contract.",
 };
