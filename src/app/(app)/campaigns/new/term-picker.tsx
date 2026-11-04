@@ -65,6 +65,13 @@ export function readNumber(v: string, kind: keyof typeof KIND): number | null {
   return n;
 }
 
+/** The spoken card's window as its tick announces it: empty is anywhere, a refused number is not read out as the term's. */
+export function mentionWindowLabel(v: string): string {
+  if (v.trim() === "") return ", anywhere in the video";
+  const w = readNumber(v, "seconds");
+  return w === null ? ", window not set yet" : ` within the first ${w} s`;
+}
+
 /** The terms as the API takes them, plus a problem per card that needs fixing first. */
 export function termsFrom(s: TermState): { terms: string[]; problems: Partial<Record<TermId | "own", string>> } {
   const terms: string[] = [];
@@ -157,10 +164,9 @@ export function TermPicker({
           onToggle={toggle}
           problem={shown("mention")}
           hint="Voice Transcribe listens for it. Leave the window empty to count it anywhere in the video."
-          // Read from the sentence, an empty window field would be named by its own label mid-sentence.
-          label={`Say the brand name at least ${value.mention} ${num(value.mention) === 1 ? "time" : "times"}${
-            value.mentionWithin.trim() ? ` within the first ${value.mentionWithin.trim()} s` : ", anywhere in the video"
-          }`}
+          // Read from the sentence, an empty window field would be named by its own label mid-sentence. The window is read
+          // as termsFrom reads it, so a refused one is never announced as if it were part of the term.
+          label={`Say the brand name at least ${value.mention} ${num(value.mention) === 1 ? "time" : "times"}${mentionWindowLabel(value.mentionWithin)}`}
         >
           Say the brand name at least{" "}
           <Num label="Times the brand name is said" value={value.mention} integer onChange={(v) => edit("mention", { mention: v })} />{" "}
@@ -170,6 +176,7 @@ export function TermPicker({
             value={value.mentionWithin}
             onChange={(v) => edit("mention", { mentionWithin: v })}
             unit=" s"
+            placeholder="any"
           />
         </Card>
         <Card id="continuous" on={value.on.continuous} onToggle={toggle} problem={shown("continuous")}>
@@ -293,6 +300,7 @@ function Num({
   onChange,
   integer = false,
   unit,
+  placeholder,
 }: {
   label: string;
   value: string;
@@ -300,6 +308,8 @@ function Num({
   integer?: boolean;
   /** Kept on the number's line, so "2" and "s" never wrap apart. */
   unit?: string;
+  /** Shown while the field is empty, for a number that may be left out. */
+  placeholder?: string;
 }) {
   const field = (
     <input
@@ -307,9 +317,10 @@ function Num({
       inputMode={integer ? "numeric" : "decimal"}
       aria-label={label}
       value={value}
+      placeholder={placeholder}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => onChange(e.target.value.replace(/[^\d.,]/g, "").slice(0, 5))}
-      className="mx-0.5 my-0.5 inline-block h-11 w-[3.4em] rounded-[10px] bg-(--paper) px-1 text-center align-middle text-[16px] font-semibold text-(--ink) tabular ring-1 ring-(--hair-2) outline-none transition-shadow duration-150 focus:bg-(--card) focus:ring-2 focus:ring-(--ink) [@media(hover:hover)]:hover:ring-(--ink-3)"
+      className="mx-0.5 my-0.5 inline-block h-11 w-[3.4em] rounded-[10px] bg-(--paper) px-1 text-center align-middle text-[16px] font-semibold text-(--ink) tabular ring-1 ring-(--hair-2) outline-none transition-shadow duration-150 placeholder:font-normal placeholder:text-(--ink-3) focus:bg-(--card) focus:ring-2 focus:ring-(--ink) [@media(hover:hover)]:hover:ring-(--ink-3)"
     />
   );
   return unit ? (

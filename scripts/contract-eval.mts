@@ -5,6 +5,8 @@
 // among them) and 9 that no rule kind can check, which must stay unchecked so a person reads them. Each term is read 3
 // times alone and 3 times inside a 15-term contract (which tests that each rule lands on its own term): 96 calls.
 // A term's outcome is the worst of its 6 readings (src/lib/pipeline/contract-eval.ts says what each outcome means).
+// Not all held out: parseTermsPrompt's worked examples follow the same sentence patterns as C3, E2, E6, E7 and E8 (no case
+// is copied word for word), so say so next to any number published from this run.
 //
 // Usage:
 //   pnpm contract-eval                 # dry run: checks the cases, prints the plan and a rough price; no calls
@@ -32,6 +34,11 @@ const CASES = "data/contract-eval/cases.json";
 const args = process.argv.slice(2);
 const run = args.includes("--run");
 const jsonPath = args.includes("--json") ? args[args.indexOf("--json") + 1] : "src/lib/contract-eval-data.json";
+// Checked before anything else: a missing path would only fail at the write, after every paid call.
+if (jsonPath === undefined || jsonPath.startsWith("--")) {
+  console.error("Usage: pnpm contract-eval [--run] [--json <path>]");
+  process.exit(1);
+}
 // A few calls at a time: the whole set takes a couple of minutes instead of several, far under the rate limit.
 const PARALLEL = 4;
 

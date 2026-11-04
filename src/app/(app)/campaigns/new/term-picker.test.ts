@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseTermsPrompt } from "@/lib/pipeline/prompts";
-import { DEFAULT_TERMS, termsFrom, type TermState } from "./term-picker";
+import { DEFAULT_TERMS, mentionWindowLabel, termsFrom, type TermState } from "./term-picker";
 
 const only = (p: Partial<TermState>, on: Partial<TermState["on"]>): TermState => ({
   ...DEFAULT_TERMS,
@@ -53,5 +53,13 @@ describe("term picker timing cards", () => {
     }
     // An unticked card checks nothing, whatever its number says.
     expect(termsFrom(only({ early: "0", mentionWithin: "0" }, {}))).toEqual({ terms: [], problems: {} });
+  });
+
+  it("announces the spoken card's window as the term will be written, never a refused number", () => {
+    expect(mentionWindowLabel("")).toBe(", anywhere in the video");
+    expect(mentionWindowLabel(" 5 ")).toBe(" within the first 5 s");
+    expect(mentionWindowLabel("2,5")).toBe(" within the first 2.5 s");
+    // Negative control: windows termsFrom refuses are not read out as part of the term.
+    for (const w of ["0", "2.55", "."]) expect(mentionWindowLabel(w)).toBe(", window not set yet");
   });
 });
