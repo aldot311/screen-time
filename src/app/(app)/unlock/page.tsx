@@ -28,7 +28,7 @@ export default function UnlockPage() {
           </p>
           <p className="mt-2 text-[16px] leading-[1.55] text-(--ink-2)">
             Anyone can read reports, run the sample, and run the follow-up agent on the example reports in the LaCroix test campaign
-            {liveOpen ? ", Michael K’s live run included" : ""}. Uploading and analyzing your own videos uses paid Meta API credits, and
+            {liveOpen ? ", Aldo’s live run included" : ""}. Uploading and analyzing your own videos uses paid Meta API credits, and
             approving a re-cut link makes a real upload link for a creator, so both need the demo password.
           </p>
           <Suspense fallback={<FormSkeleton />}>
