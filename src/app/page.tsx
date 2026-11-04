@@ -319,34 +319,85 @@ export default async function Landing() {
 
         <section id="accuracy" className="scroll-mt-20 border-t border-(--hair) bg-(--card)">
           <div className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-            <h2 className="ed-display max-w-[22ch] text-[34px] leading-[1.04] sm:text-[44px]">Measured frame by frame on {acc.clips} test Reels.</h2>
-            <p className="mt-5 max-w-[44ch] text-[21px] leading-[1.4] text-(--ink-2) sm:text-[24px]">
-              <span className="ed-num text-(--ink)">{pct(acc.verified.precision)}</span> precision and{" "}
-              <span className="ed-num text-(--ink)">{pct(acc.verified.recall)}</span> recall per frame, on the {acc.clips} Reels as delivered on this
-              site.
-            </p>
-            {labelLine && <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-3)">{labelLine}</p>}
-            <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-3)">
-              {acc.multiProductClips > 0 && `${acc.multiProductClips} of the videos show more than one product, and each product is checked on its own. `}
-              SAM 3.1 tracking costs ${(SAM_USD_PER_FRAME * 1000).toFixed(2)} per 1,000 frames
-              {hero
-                ? `; the whole check of ${possessive(hero.video.creator)} ${heroSec}-second Reel, with Muse Spark and Voice Transcribe, cost $${hero.video.report.cost.usd.toFixed(3)} (${hero.video.report.cost.samFrames} frames).`
-                : "."}
-            </p>
-            <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] font-medium text-(--ink)">
-              The demo is free. Checking one video costs about $0.10–0.25 in Meta API fees.
-            </p>
-            <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-2)">
-              Without Muse Spark, SAM 3.1 alone scores {pct(acc.sam.precision)} precision and {pct(acc.sam.recall)} recall: a look-alike counts as
-              the brand&rsquo;s product. With it, {pct(acc.verified.precision)} and {pct(acc.verified.recall)}.
-              {unconfirmed.length > 0 &&
-                ` Recall is lower with it because on ${unconfirmed.map((c) => `${clipLabel(c.clip)}’s Reel`).join(" and ")} Muse Spark could not confirm the product SAM 3.1 tracked, so it was not counted and the report flags it.`}{" "}
-              <PendingLink href="/accuracy" className={textLink}>
-                How it was measured, and where it is wrong <ArrowRight className="size-4" strokeWidth={2.25} aria-hidden />
-              </PendingLink>
-            </p>
+            {/* Left: the claim and where the labels came from. Right: the figures, read top to bottom. Every number is
+                computed from accuracy-data.json, the cost guard or the hero run's own report. */}
+            <div className="grid gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)] lg:items-start">
+              <div>
+                <h2 className="ed-display max-w-[16ch] text-[34px] leading-[1.04] sm:text-[44px]">Measured frame by frame on {acc.clips} test Reels.</h2>
+                <p className="mt-5 max-w-[40ch] text-[19px] leading-[1.45] text-(--ink-2) sm:text-[21px]">
+                  Screen-Time&rsquo;s count against the labels, per frame, on the {acc.clips} Reels as delivered on this site.
+                  {acc.multiProductClips > 0 && ` ${acc.multiProductClips} of the videos show more than one product, and each product is checked on its own.`}
+                </p>
+                {labelLine && <p className="mt-4 max-w-[52ch] text-[15px] leading-[1.6] text-(--ink-3)">{labelLine}</p>}
+                <PendingLink href="/accuracy" className={`${textLink} mt-4 text-[15px]`}>
+                  How it was measured, and where it is wrong <ArrowRight className="size-4" strokeWidth={2.25} aria-hidden />
+                </PendingLink>
+              </div>
 
-            <h3 className="mt-12 text-[20px] leading-tight font-semibold sm:text-[22px]">Check it yourself</h3>
+              <div className="rounded-(--r-card) bg-(--paper) ring-1 ring-(--hair)">
+                <dl className="grid grid-cols-2 gap-4 px-5 pt-6 pb-5 sm:px-7 sm:pt-7">
+                  <div>
+                    <dt className="text-[13px] font-medium text-(--ink-3)">Precision per frame</dt>
+                    <dd className="ed-num mt-1 text-[44px] leading-none sm:text-[56px]">{pct(acc.verified.precision)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[13px] font-medium text-(--ink-3)">Recall per frame</dt>
+                    <dd className="ed-num mt-1 text-[44px] leading-none sm:text-[56px]">{pct(acc.verified.recall)}</dd>
+                  </div>
+                </dl>
+
+                <div className="border-t border-(--hair) px-5 py-5 sm:px-7">
+                  <table className="w-full text-[14px] tabular-nums">
+                    <caption className="mb-2 text-left text-[13px] font-semibold text-(--ink)">SAM 3.1 alone vs + Muse Spark</caption>
+                    <thead>
+                      <tr className="text-[12px] text-(--ink-3)">
+                        <th scope="col" className="py-1 text-left font-medium">
+                          <span className="sr-only">Score</span>
+                        </th>
+                        <th scope="col" className="py-1 text-right font-medium">SAM 3.1 alone</th>
+                        <th scope="col" className="py-1 pl-4 text-right font-medium">+ Muse Spark</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-(--hair)">
+                      <tr>
+                        <th scope="row" className="py-2 text-left font-medium text-(--ink-2)">Precision</th>
+                        <td className="py-2 text-right text-(--ink-2)">{pct(acc.sam.precision)}</td>
+                        <td className="py-2 pl-4 text-right font-semibold">{pct(acc.verified.precision)}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row" className="py-2 text-left font-medium text-(--ink-2)">Recall</th>
+                        <td className="py-2 text-right text-(--ink-2)">{pct(acc.sam.recall)}</td>
+                        <td className="py-2 pl-4 text-right font-semibold">{pct(acc.verified.recall)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p className="mt-3 text-[14px] leading-[1.55] text-(--ink-2)">
+                    Alone, a look-alike counts as the brand&rsquo;s product.
+                    {unconfirmed.length > 0 &&
+                      ` Recall is lower with Muse Spark because on ${unconfirmed.map((c) => `${clipLabel(c.clip)}’s Reel`).join(" and ")} it could not confirm the product SAM 3.1 tracked, so it was not counted and the report flags it.`}
+                  </p>
+                </div>
+
+                <div className="border-t border-(--hair) px-5 pt-5 pb-6 sm:px-7">
+                  <p className="text-[13px] font-semibold text-(--ink)">What a check costs</p>
+                  {hero && (
+                    <p className="mt-2 text-[14px] leading-[1.55] text-(--ink-2)">
+                      <span className="ed-num mr-1.5 text-[24px] leading-none text-(--ink)">${hero.video.report.cost.usd.toFixed(3)}</span>
+                      for the whole check of {possessive(hero.video.creator)} {heroSec}-second Reel, with Muse Spark and Voice Transcribe (
+                      {hero.video.report.cost.samFrames} frames).
+                    </p>
+                  )}
+                  <p className="mt-2 text-[14px] leading-[1.55] font-medium text-(--ink)">
+                    The demo is free. Checking one video costs about $0.10–0.25 in Meta API fees.
+                  </p>
+                  <p className="mt-1 text-[13px] leading-[1.55] text-(--ink-3)">
+                    SAM 3.1 tracking costs ${(SAM_USD_PER_FRAME * 1000).toFixed(2)} per 1,000 frames.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <h3 className="mt-16 text-[20px] leading-tight font-semibold sm:text-[22px]">Check it yourself</h3>
             <p className="mt-2 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-2)">
               Play a Reel and watch the person&rsquo;s labels and Screen-Time&rsquo;s count run side by side, frame by frame. Pick any row
               below to load its Reel.
