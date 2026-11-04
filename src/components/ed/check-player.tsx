@@ -68,7 +68,8 @@ export function CheckAccuracy({ reels, rows, initialClip }: Props) {
     if (!el) return;
     const box = el.getBoundingClientRect();
     if (always || box.top < 64 || box.top > innerHeight * 0.5) {
-      el.scrollIntoView({
+      // From a "Watch it" button, land on the section so its heading shows above the player.
+      (always ? (el.closest("section") ?? el) : el).scrollIntoView({
         block: "start",
         behavior: matchMedia(REDUCED).matches ? "auto" : "smooth",
       });
