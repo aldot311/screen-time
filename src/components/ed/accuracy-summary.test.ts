@@ -269,10 +269,14 @@ describe("the measured set, in the page's words", () => {
 });
 
 describe("contractEvalSummary", () => {
-  it("says nothing until the eval has run", async () => {
-    const file = (await import("@/lib/contract-eval-data.json")).default as ContractEval | null;
-    expect(file).toBeNull();
+  it("says nothing until the eval has run", () => {
     expect(contractEvalSummary(null)).toBeNull();
+  });
+
+  it("summarizes the committed eval run", async () => {
+    const file = (await import("@/lib/contract-eval-data.json")).default as ContractEval | null;
+    expect(file).not.toBeNull();
+    expect(contractEvalSummary(file)).not.toBeNull();
   });
 
   it("states a filled eval in plain figures", () => {
