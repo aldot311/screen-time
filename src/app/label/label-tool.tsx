@@ -1,8 +1,10 @@
 "use client";
 
-// Local labelling tool: mark the frames where the product is visible, to measure Screen-Time's accuracy.
-// Only works under `pnpm dev`; the API routes it uses return 404 in production.
-import { useCallback, useEffect, useRef, useState } from "react";
+// Local labelling tool: mark the frames where the product is visible, to measure Screen-Time's accuracy, and the
+// spoken terms (the brand said out loud, the ad disclosure) to check the speech side against. Served only under
+// `pnpm dev` or a local build with SCREEN_TIME_LOCAL_FILES=1 (page.tsx); production answers 404.
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { checkedByLine, checklistFor, DISCLOSURES, type CheckItem, type DisclosureLabel } from "@/lib/dev/labels";
 
 const FPS = 15;
 type Range = [number, number];
@@ -20,6 +22,9 @@ interface LabelDoc {
   id: string;
   method: string;
   checkedBy: string;
+  saidBrand?: boolean;
+  saidBrandAtSec?: number | null;
+  disclosure?: DisclosureLabel;
   targets: Target[];
 }
 
@@ -27,7 +32,36 @@ function newTarget(): Target {
   return { name: "product", prompt: "", product: "", brandTerms: [], ranges: [], notes: "" };
 }
 
-export default function LabelPage() {
+// Who is checking, remembered in this browser. Storage can be blocked (a private window), so every access is guarded
+// and a name typed this session still counts.
+const NAME_KEY = "screen-time:label-checker";
+const DEFAULT_NAME = "Aldo Tile";
+let typedName: string | null = null;
+const nameListeners = new Set<() => void>();
+function readName(): string {
+  try {
+    return localStorage.getItem(NAME_KEY) ?? typedName ?? DEFAULT_NAME;
+  } catch {
+    return typedName ?? DEFAULT_NAME;
+  }
+}
+function writeName(name: string) {
+  typedName = name;
+  try {
+    localStorage.setItem(NAME_KEY, name);
+  } catch {
+    // Blocked storage: the name lasts until the page is closed.
+  }
+  for (const l of nameListeners) l();
+}
+function subscribeName(l: () => void) {
+  nameListeners.add(l);
+  return () => {
+    nameListeners.delete(l);
+  };
+}
+
+export function LabelTool({ checklist }: { checklist: Record<string, CheckItem[]> }) {
   const [ids, setIds] = useState<string[]>([]);
   const [id, setId] = useState("");
   const [doc, setDoc] = useState<LabelDoc | null>(null);
@@ -37,6 +71,9 @@ export default function LabelPage() {
   const [frames, setFrames] = useState(0);
   const [rate, setRate] = useState(0.5);
   const [saved, setSaved] = useState("");
+  // Checklist items opened on this clip, so it is clear which are left.
+  const [seen, setSeen] = useState<{ id: string; keys: string[] }>({ id: "", keys: [] });
+  const name = useSyncExternalStore(subscribeName, readName, () => DEFAULT_NAME);
   const video = useRef<HTMLVideoElement>(null);
   // The doc as it came from the server (no need to save it back) and the latest unsaved edit.
   const fromServer = useRef<LabelDoc | null>(null);
@@ -141,6 +178,17 @@ export default function LabelPage() {
       ),
     [targetIdx],
   );
+  // A spoken-term field set to "not set" is removed, so the file says only what a person decided.
+  const setSpoken = useCallback(
+    (patch: Pick<LabelDoc, "saidBrand" | "saidBrandAtSec" | "disclosure">) =>
+      setDoc((d) => {
+        if (!d) return d;
+        const next: LabelDoc = { ...d, ...patch };
+        for (const k of ["saidBrand", "saidBrandAtSec", "disclosure"] as const) if (next[k] === undefined) delete next[k];
+        return next;
+      }),
+    [],
+  );
 
   const seekFrame = useCallback((f: number) => {
     const v = video.current;
@@ -162,7 +210,8 @@ export default function LabelPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       const v = video.current;
       if (!v) return;
       if (e.key === " ") {
@@ -183,6 +232,10 @@ export default function LabelPage() {
   }, [rate, id]);
 
   const visibleFrames = ranges.reduce((n, [a, b]) => n + b - a + 1, 0);
+  const items = checklistFor(checklist[id] ?? [], ranges, frames);
+  const seenKeys = seen.id === id ? seen.keys : [];
+  const itemKey = (c: CheckItem) => `${c.frames.join("-")} ${c.note}`;
+  const playerSec = () => Math.round((video.current?.currentTime ?? frame / FPS) * 100) / 100;
 
   return (
     <main className="mx-auto grid max-w-6xl gap-6 p-4 md:grid-cols-[minmax(0,420px)_1fr]">
@@ -196,7 +249,6 @@ export default function LabelPage() {
           onTimeUpdate={(e) => setFrame(Math.floor(e.currentTarget.currentTime * FPS))}
           onSeeked={(e) => setFrame(Math.floor(e.currentTarget.currentTime * FPS))}
           controls
-          muted
           playsInline
         />
         <Timeline frames={frames} ranges={ranges} markIn={markIn} frame={frame} onSeek={seekFrame} />
@@ -254,14 +306,21 @@ export default function LabelPage() {
           />
         </label>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            className="rounded border border-emerald-600 px-3 py-1 text-emerald-700 dark:text-emerald-400"
-            onClick={() => setDoc((d) => (d ? { ...d, checkedBy: `human, ${new Date().toISOString().slice(0, 10)}` } : d))}
-          >
-            Looks right, mark as checked
-          </button>
-          <span className="text-zinc-500">{doc?.checkedBy ? `Checked by ${doc.checkedBy}` : "Not checked by a human yet"}</span>
+        <div className="space-y-2 rounded border p-3">
+          <label className="block">
+            Checked by
+            <input value={name} onChange={(e) => writeName(e.target.value)} className="mt-1 block w-full rounded border px-2 py-1" />
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="rounded border border-emerald-600 px-3 py-1 text-emerald-700 disabled:opacity-50 dark:text-emerald-400"
+              disabled={!doc || !name.trim()}
+              onClick={() => setDoc((d) => (d ? { ...d, checkedBy: checkedByLine(name) } : d))}
+            >
+              Looks right, mark as checked
+            </button>
+            <span className="text-zinc-500">{doc?.checkedBy ? `Checked by ${doc.checkedBy}` : "Not checked by a person yet"}</span>
+          </div>
         </div>
 
         <p className="font-mono">
@@ -298,6 +357,96 @@ export default function LabelPage() {
             </li>
           ))}
         </ul>
+
+        {items.length > 0 && (
+          <div className="rounded border p-3">
+            <h2 className="font-semibold">
+              Frames to step through ({seenKeys.length} of {items.length} opened)
+            </h2>
+            <ul className="mt-2 space-y-1">
+              {items.map((c) => {
+                const key = itemKey(c);
+                const opened = seenKeys.includes(key);
+                return (
+                  <li key={key} className="flex items-baseline gap-2">
+                    <button
+                      className="shrink-0 font-mono underline"
+                      onClick={() => {
+                        seekFrame(c.frames[0]);
+                        setSeen({ id, keys: opened ? seenKeys : [...seenKeys, key] });
+                      }}
+                    >
+                      {c.frames[0] === c.frames.at(-1) ? c.frames[0] : `${c.frames[0]}–${c.frames.at(-1)}`}
+                    </button>
+                    <span className={opened ? "text-zinc-400" : "text-zinc-600 dark:text-zinc-300"}>
+                      {opened ? "✓ " : ""}
+                      {c.note}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {doc && (
+          <fieldset className="space-y-2 rounded border p-3">
+            <legend className="px-1 font-semibold">Spoken terms (listen with the sound on)</legend>
+            <label className="block">
+              Brand name said out loud{" "}
+              <select
+                value={doc.saidBrand === undefined ? "" : doc.saidBrand ? "yes" : "no"}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSpoken(v === "" ? { saidBrand: undefined, saidBrandAtSec: undefined } : v === "yes" ? { saidBrand: true } : { saidBrand: false, saidBrandAtSec: undefined });
+                }}
+                className="rounded border px-2 py-1"
+              >
+                <option value="">Not set</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            {doc.saidBrand && (
+              <div className="flex flex-wrap items-center gap-2">
+                <label>
+                  First heard at{" "}
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={doc.saidBrandAtSec ?? ""}
+                    onChange={(e) => setSpoken({ saidBrandAtSec: e.target.value === "" ? undefined : Number(e.target.value) })}
+                    className="w-24 rounded border px-2 py-1"
+                  />{" "}
+                  s
+                </label>
+                <button className="rounded border px-3 py-1" onClick={() => setSpoken({ saidBrandAtSec: playerSec() })}>
+                  Use the player time
+                </button>
+              </div>
+            )}
+            <label className="block">
+              Ad disclosure{" "}
+              <select
+                value={doc.disclosure ?? ""}
+                onChange={(e) => setSpoken({ disclosure: (e.target.value || undefined) as DisclosureLabel | undefined })}
+                className="rounded border px-2 py-1"
+              >
+                <option value="">Not set</option>
+                {DISCLOSURES.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-zinc-500">
+              Shown on screen means text in the video that says it is an ad. Only implied means something like &ldquo;even if it
+              wasn&rsquo;t an ad&rdquo;, which is not a disclosure.
+            </p>
+          </fieldset>
+        )}
 
         <label className="block">
           Notes

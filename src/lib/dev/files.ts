@@ -15,9 +15,12 @@ export function safePath(root: string, id: string, ext: string): string | null {
 }
 
 // SCREEN_TIME_LOCAL_FILES=1 opens these routes on a local production build (demo recording); never set it on Vercel.
+export function localFilesOpen(): boolean {
+  return process.env.NODE_ENV === "development" || process.env.SCREEN_TIME_LOCAL_FILES === "1";
+}
+
 export function devOnly(): Response | null {
-  const local = process.env.NODE_ENV === "development" || process.env.SCREEN_TIME_LOCAL_FILES === "1";
-  return local ? null : new Response("Not found", { status: 404 });
+  return localFilesOpen() ? null : new Response("Not found", { status: 404 });
 }
 
 export type ByteRange = { start: number; end: number };

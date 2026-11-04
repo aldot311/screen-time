@@ -1,0 +1,29 @@
+{
+  "about": "Frames to step through in /label before marking a clip checked: where the drafted labels and the scored runs (data/runs) disagree. The tool also lists every range end, plus and minus 3 frames, from the ranges as they are.",
+  "clips": {
+    "lacroix/lc-1-michael": [
+      { "frames": [136, 147], "note": "Is the can visible as it comes out of the fridge? The label starts at 147; the app counted from 140." }
+    ],
+    "lacroix/lc-6-michael": [
+      { "frames": [109, 115], "note": "Labelled not visible at 111–113; the app counted them." },
+      { "frames": [192, 200], "note": "Labelled not visible at 192–200; the app counted them." }
+    ],
+    "lacroix/lc-1-george": [
+      { "frames": [240, 250], "note": "The label ends at 242; SAM 3.1 tracked the can to 250. The label was drawn on our zoomed edit: check it on the Reel as delivered (the wide shot)." }
+    ],
+    "lacroix/lc-12-aldo": [
+      { "frames": [180, 182], "note": "A gap in the label; the app counted these frames." },
+      { "frames": [255, 257], "note": "A gap in the label; the app counted these frames." }
+    ],
+    "lacroix/lc-2-jamal": [
+      { "frames": [216, 216], "note": "The label starts here; the app missed this frame." },
+      { "frames": [320, 320], "note": "The label ends here; the app missed this frame." },
+      { "frames": [386, 386], "note": "The app counted this frame; the label starts at 387." },
+      { "frames": [459, 461], "note": "The app counted these; the label has a gap from 453 to 461." },
+      { "frames": [500, 500], "note": "The label ends here; the app missed this frame." }
+    ],
+    "lacroix/lc-7a-ash": [
+      { "frames": [18, 18], "note": "The label starts here; the app starts at 19." }
+    ]
+  }
+}
