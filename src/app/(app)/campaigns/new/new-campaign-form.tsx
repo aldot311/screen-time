@@ -153,12 +153,31 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
         <Group title="The campaign">
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Campaign name" name="name" required error={invalid.name}>
-              <input id="f-name" name="name" placeholder="e.g. LaCroix: Strawberry Peach creators" autoComplete="off" enterKeyHint="next" aria-required onInput={() => clear("name")} aria-invalid={!!invalid.name} aria-describedby={invalid.name ? "f-name-err" : undefined} className={`${INPUT} h-12`} />
+              <input id="f-name" name="name" placeholder="e.g. Strawberry Peach Reels" autoComplete="off" enterKeyHint="next" aria-required onInput={() => clear("name")} aria-invalid={!!invalid.name} aria-describedby={invalid.name ? "f-name-err" : undefined} className={`${INPUT} h-12`} />
             </Field>
             <Field label="Brand" name="brand" required error={invalid.brand}>
               <input id="f-brand" name="brand" placeholder="e.g. LaCroix" autoComplete="organization" enterKeyHint="next" aria-required onInput={() => clear("brand")} aria-invalid={!!invalid.brand} aria-describedby={invalid.brand ? "f-brand-err" : undefined} className={`${INPUT} h-12`} />
             </Field>
           </div>
+          <Field
+            label="Spoken brand names"
+            name="brandTerms"
+            hint="Comma-separated. Voice Transcribe listens for these in the audio. Left blank, it listens for the brand name when a term asks the creator to say it."
+          >
+            <input id="f-brandTerms" name="brandTerms" placeholder="e.g. LaCroix, La Croix" autoComplete="off" enterKeyHint="next" aria-describedby="f-brandTerms-hint" className={`${INPUT} h-12`} />
+          </Field>
+          <Field
+            label="Fee per video"
+            name="fee"
+            hint="What you pay a creator for one delivered video, in US dollars. Reports then say how much each verdict pays or holds. You can set a different fee per creator later."
+          >
+            <span className="relative block max-w-[200px]">
+              <span aria-hidden className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[16px] text-(--ink-3)">
+                $
+              </span>
+              <input id="f-fee" name="fee" inputMode="decimal" placeholder="e.g. 300" autoComplete="off" enterKeyHint="done" aria-describedby="f-fee-hint" className={`${INPUT} h-12 pl-8 tabular`} />
+            </span>
+          </Field>
         </Group>
 
         <Group title="The product">
@@ -204,25 +223,6 @@ export function NewCampaignForm({ mode }: { mode: "blob" | "direct" }) {
             </p>
             <TermPicker value={terms} onChange={setTerms} showProblems={termsTried} />
           </div>
-          <Field
-            label="Spoken brand names"
-            name="brandTerms"
-            hint="Comma-separated. Voice Transcribe listens for these in the audio. Left blank, it listens for the brand name when a term asks the creator to say it."
-          >
-            <input id="f-brandTerms" name="brandTerms" placeholder="e.g. LaCroix, La Croix" autoComplete="off" enterKeyHint="next" aria-describedby="f-brandTerms-hint" className={`${INPUT} h-12`} />
-          </Field>
-          <Field
-            label="Fee per video"
-            name="fee"
-            hint="What you pay a creator for one delivered video, in US dollars. Reports then say how much each verdict pays or holds. You can set a different fee per creator later."
-          >
-            <span className="relative block max-w-[200px]">
-              <span aria-hidden className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[16px] text-(--ink-3)">
-                $
-              </span>
-              <input id="f-fee" name="fee" inputMode="decimal" placeholder="e.g. 300" autoComplete="off" enterKeyHint="done" aria-describedby="f-fee-hint" className={`${INPUT} h-12 pl-8 tabular`} />
-            </span>
-          </Field>
         </Group>
 
         {error && (

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { TopBar } from "@/components/ed/top-bar";
 import { DISPLAY } from "@/components/ed/campaign-ui";
 import { PendingLink } from "@/components/ed/pending-link";
@@ -35,24 +36,36 @@ export default function NewCampaignPage() {
           aria-labelledby="before-h"
           className="mt-6 max-w-[880px] scroll-mt-20 rounded-(--r-card) bg-(--card) p-4 shadow-(--sh-1) ring-1 ring-(--hair) sm:p-5"
         >
-          <h2 id="before-h" className="text-[17px] font-semibold">
+          <h2 id="before-h" className="sr-only">
             Before you start
           </h2>
-          <dl className="mt-2 divide-y divide-(--hair) text-[14.5px] leading-[1.55] text-(--ink-2)">
-            <Row term="Demo password">
-              Saving a campaign and checking your own video need the demo password, because every check spends real Meta API
-              credits. To try your own video, email aldo@aetrai.com for the password.{" "}
-              <PendingLink href="/unlock?next=/campaigns/new" className={link}>
-                Enter the demo password
-              </PendingLink>
-              <span className="block text-(--ink-3)">
-                No password needed to run the sample or open the{" "}
-                <PendingLink href={campaignHref} className={link}>
-                  example reports
-                </PendingLink>
-                .
-              </span>
-            </Row>
+          <p className="text-[15px] leading-[1.55] text-(--ink-2)">
+            <span className="font-semibold text-(--ink)">Demo password needed</span> to save a campaign and check your own
+            video, because every check spends real Meta API credits. Email aldo@aetrai.com for it.{" "}
+            <PendingLink href="/unlock?next=/campaigns/new" className={link}>
+              Enter the demo password
+            </PendingLink>
+          </p>
+          <p className="text-[14px] leading-[1.55] text-(--ink-3)">
+            No password needed to run the sample or open the{" "}
+            <PendingLink href={campaignHref} className={link}>
+              example reports
+            </PendingLink>
+            .
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2 text-[13.5px] font-medium text-(--ink-2)">
+            <li className="rounded-full bg-(--wash) px-3 py-1.5">
+              MP4 or MOV, up to <span className="tabular">{Math.round(MAX_VIDEO_BYTES / 1024 / 1024)}</span> MB
+            </li>
+            <li className="rounded-full bg-(--wash) px-3 py-1.5">Up to {aboutDuration(maxVideoSeconds(cap))} long</li>
+            <li className="rounded-full bg-(--wash) px-3 py-1.5">A Reel checks in under 1½ minutes</li>
+          </ul>
+          <details className="group mt-2">
+            <summary className="ed-press-soft -mx-2 flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-[10px] px-2 text-[14px] font-semibold text-(--ink) active:bg-(--wash) [&::-webkit-details-marker]:hidden">
+              Limits, the wait and your report
+              <ChevronDown className="size-4 text-(--ink-2) transition-transform duration-200 group-open:rotate-180" strokeWidth={2.25} aria-hidden />
+            </summary>
+          <dl className="divide-y divide-(--hair) text-[14.5px] leading-[1.55] text-(--ink-2)">
             <Row term="Videos">
               MP4 or MOV, up to <span className="tabular">{Math.round(MAX_VIDEO_BYTES / 1024 / 1024)}</span> MB and{" "}
               {aboutDuration(maxVideoSeconds(cap))} long. Each check is capped at <span className="tabular">{dollars(cap)}</span> in Meta API
@@ -67,6 +80,7 @@ export default function NewCampaignPage() {
               checked; open it to watch the steps live. The same page becomes the report when the check finishes.
             </Row>
           </dl>
+          </details>
         </section>
 
         <NewCampaignForm mode={process.env.BLOB_READ_WRITE_TOKEN ? "blob" : "direct"} />
