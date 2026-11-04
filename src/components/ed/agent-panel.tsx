@@ -10,7 +10,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bot, Check, ChevronDown, Copy, Link2, LockKeyhole, RotateCcw } from "lucide-react";
 import type { AgentRun } from "@/lib/agent/campaign-agent";
-import type { AgentAccess } from "@/lib/agent/public";
+import { replayNotice, type AgentAccess } from "@/lib/agent/public";
 import { AGENT_MAX_USD, AGENT_STALE_MS, agentRunning } from "@/lib/agent/state";
 import { ApiError } from "@/components/api-error";
 import { friendlyError } from "@/components/format";
@@ -47,8 +47,8 @@ export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" 
   const path = usePathname();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // A visitor past a limit gets the limit's fixed text from the server, and whether it starts over tomorrow.
-  const [notice, setNotice] = useState<{ reason: string; daily: boolean } | null>(null);
+  // A visitor past a limit gets the limit's fixed text from the server, and the words around it (lib/agent/public.ts).
+  const [notice, setNotice] = useState<{ reason: string; lead: string; ask: string } | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [link, setLink] = useState<{ url: string; expires: string } | null>(null);
   const [copied, flash] = useFlash();
@@ -259,7 +259,7 @@ export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" 
                 onClick={async () => {
                   const out = (await post(endpoint)) as (AgentRun & { mode?: string; reason?: string; limit?: string; agent?: AgentRun }) | null;
                   if (!out) return;
-                  setNotice(out.mode === "replay" ? { reason: out.reason ?? "Today's visitor runs of the agent are used up.", daily: out.limit !== "budget" } : null);
+                  setNotice(out.mode === "replay" ? { reason: out.reason ?? "Today's visitor runs of the agent are used up.", ...replayNotice(out.limit, out.agent) } : null);
                   // A visitor's start answers { mode, agent }; the owner's answers with the run itself.
                   const run = out.mode ? out.agent : out;
                   if (out.mode !== "replay" && run?.status === "running") setLaunched(run);
@@ -281,7 +281,7 @@ export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" 
           )}
           {notice && (
             <p role="status" className="mt-3 max-w-[60ch] rounded-(--r-inner) bg-(--wash) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--ink-2)">
-              <span className="font-semibold text-(--ink)">{notice.reason}</span> To run it again{notice.daily ? " today" : ""},{" "}
+              <span className="font-semibold text-(--ink)">{notice.reason}</span> {notice.lead && `${notice.lead} `}{notice.ask}{" "}
               <Link href={unlock} className="font-medium text-(--ink) underline">
                 enter the demo password
               </Link>

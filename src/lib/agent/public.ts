@@ -44,3 +44,11 @@ export const PUBLIC_AGENT_LIMIT_TEXT: Record<PublicAgentLimit, (n: number) => st
   day: (n) => `Today's ${n} visitor runs of the agent are used up.`,
   budget: () => "The free agent runs for this demo are used up.",
 };
+
+/** The words around a replay's limit text in the panel. "Again" only for the visitor limit, the one that proves the
+ *  visitor has run it; the lead names whose run is on screen, and is left out when the report has none. */
+export function replayNotice(limit: string | undefined, shown: { origin?: string } | undefined): { lead: string; ask: string } {
+  const lead = !shown ? "" : shown.origin === "public" ? "Above is the newest finished run." : "Above is the brand's own run.";
+  const ask = limit === "visitor" ? "To run it again today," : limit === "day" ? "To run it yourself today," : "To run it yourself,";
+  return { lead, ask };
+}
