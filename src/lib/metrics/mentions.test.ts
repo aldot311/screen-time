@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findDisclosures, findMentions, tokenize } from "./mentions";
+import { distinctNames, findDisclosures, findMentions, tokenize } from "./mentions";
 
 const turn = (transcript: string, startMs = 0, endMs = 10_000) => ({ startMs, endMs, transcript });
 
@@ -67,6 +67,25 @@ describe("findMentions", () => {
   it("copes with a zero-length turn", () => {
     expect(findMentions([turn("Nike", 3000, 3000)], ["nike"])).toEqual([{ startSec: 3, endSec: 3, text: "Nike" }]);
   });
+
+  it("counts one name written twice in a row as one mention, and a repeated name as two", () => {
+    // Voice Transcribe, given both spellings as keywords, wrote one spoken "LaCroix" as "La Croix LaCroix" (Lana's run).
+    const lana = findMentions([turn("than a La Croix LaCroix. This is an ad", 0, 9000)], ["LaCroix", "La Croix"]);
+    expect(lana).toEqual([{ startSec: 2, endSec: 5, text: "La Croix LaCroix" }]);
+    expect(findMentions([turn("Nike, Nike!")], ["Nike"]).map((m) => m.text)).toEqual(["Nike", "Nike"]);
+    expect(findMentions([turn("LaCroix and LaCroix")], ["LaCroix"])).toHaveLength(2);
+  });
+});
+
+describe("distinctNames", () => {
+  it("keeps the first spelling of each name, as findMentions matches them", () => {
+    expect(distinctNames(["LaCroix", "La Croix", "la-croix", "Pamplemousse", "  ", "H&M", "H and M"])).toEqual([
+      "LaCroix",
+      "Pamplemousse",
+      "H&M",
+      "H and M",
+    ]);
+  });
 });
 
 describe("decomposed accents", () => {
@@ -121,6 +140,29 @@ describe("findDisclosures", () => {
 
   it("does not let a negation in the previous sentence cancel a disclosure", () => {
     expect(said("No way. This is an ad.")).toEqual(["This is an ad"]);
+  });
+
+  it("does not let a negation of something else cancel a disclosure that has its own subject", () => {
+    // Aldo's turn as Voice Transcribe returned it, with no punctuation: the "not" is about the taste.
+    expect(said("that's actually not bad this is an ad but I'd still buy it")).toEqual(["this is an ad"]);
+    expect(said("not gonna lie this is an ad")).toEqual(["this is an ad"]);
+    expect(said("No, it's sponsored by Alani")).toEqual(["it's sponsored"]);
+  });
+
+  it("still reads a negation inside the statement, or carried by a verb that takes it, as a denial", () => {
+    for (const text of [
+      "this is not an ad",
+      "this isn't an ad",
+      // Michael K's line, word for word.
+      "honestly I would drink them even if it wasn't an ad",
+      "I don't think this is an ad",
+      "I'm not saying it's sponsored",
+      // Phrases without a subject keep the three-word window.
+      "this was never sponsored by anyone",
+      "not a paid partnership",
+    ]) {
+      expect(said(text), text).toEqual([]);
+    }
   });
 
   it("times a disclosure by word position, like a mention", () => {
