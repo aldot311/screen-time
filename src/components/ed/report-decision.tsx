@@ -180,7 +180,7 @@ export function PayOrHold({
           ) : (
             <>
               {verdict === "delivered" && (
-                <p className="mt-1.5 max-w-[60ch] text-[14.5px] leading-[1.5] text-(--ink-2)">Every contract term was met, each with the second that proves it below.</p>
+                <p className="mt-1.5 max-w-[60ch] text-[14.5px] leading-[1.5] text-(--ink-2)">Every contract term was met, each with the moment that proves it below.</p>
               )}
               {verdict === "short" && (
                 <>
