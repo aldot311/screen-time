@@ -1,1 +1,443 @@
-null
+{
+  "measuredAt": "2026-11-04",
+  "model": "muse-spark-1.3",
+  "runsPerCase": 6,
+  "expected": {
+    "total": 21,
+    "exact": 21,
+    "safeMiss": 0,
+    "misread": 0
+  },
+  "mustRefuse": {
+    "total": 9,
+    "refused": 9,
+    "passedThrough": 0
+  },
+  "live": {
+    "total": 3,
+    "exact": 3
+  },
+  "costUsd": 0.34269,
+  "rows": [
+    {
+      "id": "A1",
+      "text": "On screen at least 3 seconds in total",
+      "expected": "on screen ≥ 3 s in total",
+      "got": [
+        "on screen ≥ 3 s in total",
+        "on screen ≥ 3 s in total",
+        "on screen ≥ 3 s in total",
+        "on screen ≥ 3 s in total",
+        "on screen ≥ 3 s in total",
+        "on screen ≥ 3 s in total"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "A2",
+      "text": "On screen at least 2 seconds within the first 5 seconds",
+      "expected": "on screen ≥ 2 s within 0–5 s",
+      "got": [
+        "on screen ≥ 2 s within 0–5 s",
+        "on screen ≥ 2 s within 0–5 s",
+        "on screen ≥ 2 s within 0–5 s",
+        "on screen ≥ 2 s within 0–5 s",
+        "on screen ≥ 2 s within 0–5 s",
+        "on screen ≥ 2 s within 0–5 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "A3",
+      "text": "Say the brand name at least once",
+      "expected": "brand said ≥ 1×",
+      "got": [
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "A4",
+      "text": "One continuous shot of at least 2 seconds",
+      "expected": "one unbroken shot ≥ 2 s",
+      "got": [
+        "one unbroken shot ≥ 2 s",
+        "one unbroken shot ≥ 2 s",
+        "one unbroken shot ≥ 2 s",
+        "one unbroken shot ≥ 2 s",
+        "one unbroken shot ≥ 2 s",
+        "one unbroken shot ≥ 2 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "A5",
+      "text": "Product fills at least 10% of the frame for 2 seconds",
+      "expected": "≥ 10% of the frame for ≥ 2 s",
+      "got": [
+        "≥ 10% of the frame for ≥ 2 s",
+        "≥ 10% of the frame for ≥ 2 s",
+        "≥ 10% of the frame for ≥ 2 s",
+        "≥ 10% of the frame for ≥ 2 s",
+        "≥ 10% of the frame for ≥ 2 s",
+        "≥ 10% of the frame for ≥ 2 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "A6",
+      "text": "Disclose the sponsorship (#ad or “sponsored”)",
+      "expected": "#ad on screen, or “ad” / “sponsored” said aloud",
+      "got": [
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "B1",
+      "text": "Says LaCroix out loud",
+      "expected": "brand said ≥ 1×",
+      "got": [
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×",
+        "brand said ≥ 1×"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "B2",
+      "text": "Discloses the ad: says it is an ad or sponsored",
+      "expected": "#ad on screen, or “ad” / “sponsored” said aloud",
+      "got": [
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C1",
+      "text": "Mention brand name within first 5 seconds of video",
+      "expected": "brand said ≥ 1× within 0–5 s",
+      "got": [
+        "brand said ≥ 1× within 0–5 s",
+        "brand said ≥ 1× within 0–5 s",
+        "brand said ≥ 1× within 0–5 s",
+        "brand said ≥ 1× within 0–5 s",
+        "brand said ≥ 1× within 0–5 s",
+        "brand said ≥ 1× within 0–5 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C2",
+      "text": "Mention the brand name in the first 3 seconds",
+      "expected": "brand said ≥ 1× within 0–3 s",
+      "got": [
+        "brand said ≥ 1× within 0–3 s",
+        "brand said ≥ 1× within 0–3 s",
+        "brand said ≥ 1× within 0–3 s",
+        "brand said ≥ 1× within 0–3 s",
+        "brand said ≥ 1× within 0–3 s",
+        "brand said ≥ 1× within 0–3 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C3",
+      "text": "Show the can in the first 3 seconds",
+      "expected": "first seen before 3 s",
+      "got": [
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C4",
+      "text": "Product visible within the first three seconds",
+      "expected": "first seen before 3 s",
+      "got": [
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C5",
+      "text": "The product must appear by 0:03",
+      "expected": "first seen before 3 s",
+      "got": [
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s",
+        "first seen before 3 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C6",
+      "text": "Open on the product: it has to be in the first 2 seconds (the hook)",
+      "expected": "first seen before 2 s",
+      "got": [
+        "first seen before 2 s",
+        "first seen before 2 s",
+        "first seen before 2 s",
+        "first seen before 2 s",
+        "first seen before 2 s",
+        "first seen before 2 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C7",
+      "text": "At least 3 seconds of the product in the first 10 seconds",
+      "expected": "on screen ≥ 3 s within 0–10 s",
+      "got": [
+        "on screen ≥ 3 s within 0–10 s",
+        "on screen ≥ 3 s within 0–10 s",
+        "on screen ≥ 3 s within 0–10 s",
+        "on screen ≥ 3 s within 0–10 s",
+        "on screen ≥ 3 s within 0–10 s",
+        "on screen ≥ 3 s within 0–10 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "C8",
+      "text": "Say LaCroix within the first 10 seconds of the Reel",
+      "expected": "brand said ≥ 1× within 0–10 s",
+      "got": [
+        "brand said ≥ 1× within 0–10 s",
+        "brand said ≥ 1× within 0–10 s",
+        "brand said ≥ 1× within 0–10 s",
+        "brand said ≥ 1× within 0–10 s",
+        "brand said ≥ 1× within 0–10 s",
+        "brand said ≥ 1× within 0–10 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "D1",
+      "text": "Hold the can on camera for 3 consecutive seconds",
+      "expected": "one unbroken shot ≥ 3 s",
+      "got": [
+        "one unbroken shot ≥ 3 s",
+        "one unbroken shot ≥ 3 s",
+        "one unbroken shot ≥ 3 s",
+        "one unbroken shot ≥ 3 s",
+        "one unbroken shot ≥ 3 s",
+        "one unbroken shot ≥ 3 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "D2",
+      "text": "Product on screen for a minimum of 5 seconds",
+      "expected": "on screen ≥ 5 s in total",
+      "got": [
+        "on screen ≥ 5 s in total",
+        "on screen ≥ 5 s in total",
+        "on screen ≥ 5 s in total",
+        "on screen ≥ 5 s in total",
+        "on screen ≥ 5 s in total",
+        "on screen ≥ 5 s in total"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "D3",
+      "text": "A close-up where the can fills a quarter of the frame for at least 1 second",
+      "expected": "≥ 25% of the frame for ≥ 1 s",
+      "got": [
+        "≥ 25% of the frame for ≥ 1 s",
+        "≥ 25% of the frame for ≥ 1 s",
+        "≥ 25% of the frame for ≥ 1 s",
+        "≥ 25% of the frame for ≥ 1 s",
+        "≥ 25% of the frame for ≥ 1 s",
+        "≥ 25% of the frame for ≥ 1 s"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "D4",
+      "text": "Brand name spoken at least 3 times",
+      "expected": "brand said ≥ 3×",
+      "got": [
+        "brand said ≥ 3×",
+        "brand said ≥ 3×",
+        "brand said ≥ 3×",
+        "brand said ≥ 3×",
+        "brand said ≥ 3×",
+        "brand said ≥ 3×"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "D5",
+      "text": "Include #ad",
+      "expected": "#ad on screen, or “ad” / “sponsored” said aloud",
+      "got": [
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud",
+        "#ad on screen, or “ad” / “sponsored” said aloud"
+      ],
+      "outcome": "exact"
+    },
+    {
+      "id": "E1",
+      "text": "Tag @lacroix in the caption",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E2",
+      "text": "Use #LaCroixSummer in the post caption",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E3",
+      "text": "Please use bright lighting",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E4",
+      "text": "Don’t use other brand logos or names",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E5",
+      "text": "Post between 6 and 9 pm ET",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E6",
+      "text": "Say the discount code LACROIX20",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E7",
+      "text": "#ad on screen in the first 3 seconds",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E8",
+      "text": "Show the can in the first 3 seconds and say LaCroix in the first 5 seconds",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    },
+    {
+      "id": "E9",
+      "text": "Video between 15 and 30 seconds long",
+      "expected": null,
+      "got": [
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it",
+        "no checkable rule, so a person checks it"
+      ],
+      "outcome": "refused"
+    }
+  ]
+}
