@@ -99,6 +99,9 @@ export async function errorFromResponse(res: Response): Promise<MetaApiError> {
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** The TimeoutError message when the run's deadline passed before a request was sent (so nothing was asked). */
+export const DEADLINE_PASSED = "Timed out: the run reached its time limit before this request";
+
 /**
  * How long one request may take, in whole ms (AbortSignal.timeout takes integers only): its own limit (none when unset or
  * 0), cut to the time left before `deadlineAt`; undefined when neither applies. Throws a TimeoutError when the deadline
@@ -108,7 +111,7 @@ export function requestTimeoutMs(timeoutMs: number | undefined, deadlineAt: numb
   const own = timeoutMs && timeoutMs > 0 ? timeoutMs : undefined;
   const left = deadlineAt === undefined ? undefined : deadlineAt - now;
   if (left !== undefined && left <= 0) {
-    throw new DOMException("Timed out: the run reached its time limit before this request", "TimeoutError");
+    throw new DOMException(DEADLINE_PASSED, "TimeoutError");
   }
   const ms = left === undefined ? own : Math.min(own ?? left, left);
   return ms === undefined ? undefined : Math.max(1, Math.ceil(ms));

@@ -2,6 +2,7 @@
 // written to the video in order, and the turns spend through the same cost ledger as runs.
 import { CostGuard } from "@/lib/meta/cost-guard";
 import { budget, executeRun, startRun } from "@/lib/campaign/runner";
+import { RUN_DEADLINE_MS } from "@/lib/campaign/run-time";
 import { sameHandle } from "@/lib/campaign/roster";
 import { getVideo, listVideos, updateVideo, withLedgerFile } from "@/lib/campaign/store";
 import type { Campaign, VideoEntry } from "@/lib/campaign/types";
@@ -50,7 +51,8 @@ export async function executeAgent(campaign: Campaign, video: VideoEntry, opts: 
             if (opts.public) throw new Error("Re-checking a new upload needs the demo password");
             const start = await startRun(campaign.id, videoId);
             if (!start.ok) throw new Error(start.error);
-            await executeRun(start.campaign, start.video);
+            // The run shares this function's time: it stops by the deadline counted from when the agent started.
+            await executeRun(start.campaign, start.video, { deadlineAt: Date.parse(startedAt) + RUN_DEADLINE_MS });
             return (await getVideo(campaign.id, videoId)) ?? start.video;
           },
         },

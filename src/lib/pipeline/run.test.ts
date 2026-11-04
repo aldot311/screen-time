@@ -5,7 +5,7 @@ import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it, vi } from "vitest";
 import { CostGuard, CostLimitError, type FetchLike } from "@/lib/meta";
-import { CHECK_FAILED, disclosureFrames, maxVideoSeconds, pickFrames, runVideo } from "./run";
+import { CHECK_FAILED, CHECK_OUT_OF_TIME, disclosureFrames, maxVideoSeconds, pickFrames, runVideo } from "./run";
 import type { LiveProgress } from "@/lib/types";
 import { toChecks, disclosurePrompt, parseTermsPrompt, TERMS_SCHEMA, toContractTerms, toOnScreen, toSuggestion, verifyPrompt } from "./prompts";
 import type { Detection } from "@/lib/types";
@@ -707,6 +707,32 @@ describe("runVideo when a call fails or runs long", () => {
     // Control: the same video with a working check passes the term.
     const ok = await runVideo({ ...base(dir, src, guard, screenTerm), videoId: "v2", contractTerms: ["On screen at least 0.1 s"] });
     expect(ok.terms[0].pass).toBe(true);
+  }, 30_000);
+
+  it("says an object check never sent because the deadline passed is out of time, not that Muse Spark did not answer", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = fakeApi("match");
+    const deadlineAt = Date.now() + 60_000;
+    // The clock jumps past the deadline once SAM answers, so every later request is refused before it is sent.
+    const realNow = Date.now.bind(Date);
+    let late = false;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => (late ? deadlineAt + 1 : realNow()));
+    let checks = 0;
+    const fetch: FetchLike = async (url, init) => {
+      if (sparkName(url, init) === "product_check") checks++;
+      const res = await ok(url, init);
+      if (isSam(url, init)) late = true;
+      return res;
+    };
+    try {
+      const report = await runVideo({ ...base(dir, src, guard, fetch), deadlineAt });
+      expect(checks).toBe(0);
+      expect(report.tracks).toEqual([{ objectId: 0, verdict: "unclear", visibility: "partial", reason: CHECK_OUT_OF_TIME }]);
+    } finally {
+      clock.mockRestore();
+    }
+    // Control: a check that was sent and failed keeps CHECK_FAILED (the test above).
+    expect(CHECK_OUT_OF_TIME).not.toBe(CHECK_FAILED);
   }, 30_000);
 
   it("keeps the report when the transcription fails, leaving the spoken checks for a person", async () => {

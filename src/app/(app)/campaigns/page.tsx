@@ -9,7 +9,7 @@ import type { Campaign } from "@/lib/campaign/types";
 import { seconds } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
 import { PendingLink } from "@/components/ed/pending-link";
-import { CampaignThumb, DISPLAY, plural, shortName } from "@/components/ed/campaign-ui";
+import { CampaignThumb, DISPLAY, plural, phaseCounts, shortName } from "@/components/ed/campaign-ui";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Campaigns" };
@@ -35,9 +35,7 @@ async function summarize(c: Campaign) {
     review: r.review,
     pending: r.pending.creators,
     replaced: r.replacedBy.size,
-    running: videos.filter((v) => v.status === "running" || (v.status === "uploaded" && !v.consent)).length,
-    waiting: videos.filter((v) => v.status === "uploaded" && v.consent).length,
-    stopped: videos.filter((v) => v.status === "failed").length,
+    ...phaseCounts(videos, Date.now()),
     // Exact per-video values summed once and floored only for display, exactly as the roll-up does; a take a re-cut
     // replaced is left out, as in the money.
     seconds: done.filter((v) => !r.replacedBy.has(v.id)).reduce((s, v) => s + (v.report?.metrics.secondsOnScreen ?? 0), 0),

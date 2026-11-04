@@ -190,7 +190,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
                   : stalled
                     ? "The analysis did not start after the upload, so nothing is counted yet. Start it when you are ready; the video does not need to be uploaded again."
                     : stopped
-                    ? "Nothing from this video is counted yet: the run did not finish within its time limit. Run it again; the video does not need to be uploaded again."
+                    ? "Nothing from this video is counted yet: the run stopped before it could finish, most likely at its time limit. Run it again; the video does not need to be uploaded again."
                     : ended || video.status === "done"
                     ? "Nothing from this video is counted yet. The reason is shown under the step that stopped. Once it is fixed, run it again; the video does not need to be uploaded again."
                     : `Looking for “${campaign.prompt}”, checking each find against ${campaign.productDescription}, then measuring and checking the contract.`}

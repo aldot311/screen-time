@@ -2,8 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { byteLimit, executeRun, startRun, usdFromEnv, withLedgerKept } from "./runner";
-import { STALE_MS } from "./run-time";
+import { byteLimit, executeRun, runDeadline, startRun, usdFromEnv, withLedgerKept } from "./runner";
+import { RUN_DEADLINE_MS, STALE_MS } from "./run-time";
 import { getVideo, putCampaign, putVideo } from "./store";
 import type { Campaign, VideoEntry } from "./types";
 
@@ -49,6 +49,18 @@ describe("executeRun", () => {
     const done = await executeRun(campaign, v);
     expect(done).toMatchObject({ status: "failed", error: "The video's source is not in this campaign's store" });
     expect((await getVideo("c1", "v1"))?.status).toBe("failed");
+  });
+});
+
+describe("runDeadline", () => {
+  it("stops a run RUN_DEADLINE_MS after it starts, or earlier when the caller's function started first (the agent)", () => {
+    const now = Date.parse("2026-11-03T20:00:00Z");
+    expect(runDeadline(now)).toBe(now + RUN_DEADLINE_MS);
+    // The agent spent 100 s before starting the run: the run keeps the agent's deadline, not a fresh 270 s.
+    const agentStarted = now - 100_000;
+    expect(runDeadline(now, agentStarted + RUN_DEADLINE_MS)).toBe(agentStarted + RUN_DEADLINE_MS);
+    // Control: a caller deadline later than the run's own never extends it.
+    expect(runDeadline(now, now + 10 * RUN_DEADLINE_MS)).toBe(now + RUN_DEADLINE_MS);
   });
 });
 

@@ -117,6 +117,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
   const [lit, setLit] = useState<Lit | null>(null);
 
   const m = report.metrics;
+  // The transcription failed: no mentions is unknown, not "not heard".
+  const unheard = m.spokenChecked === false;
   const d = report.info.durationSec;
   const verdict = verdictOf(report);
   const counts = termCounts(report.terms);
@@ -717,6 +719,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               onSeek={seek}
               onToggle={() => player.current?.toggle()}
               noAudio={synthetic}
+              unheard={unheard}
             />
             <p className="mt-3 border-t border-(--hair) pt-3 text-[12.5px] leading-[1.5] text-(--ink-3)">
               {synthetic ? (
@@ -843,9 +846,11 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                   ? `“${m.mentions[0].text}”, by Voice Transcribe`
                   : synthetic
                     ? "Audio is not analyzed in the preview"
-                    : "Not heard by Voice Transcribe"
+                    : unheard
+                      ? "Not checked: the audio could not be transcribed"
+                      : "Not heard by Voice Transcribe"
               }
-              value={`${m.mentions.length}`}
+              value={unheard ? "–" : `${m.mentions.length}`}
               caption={m.mentions[0] ? <Tc>{timecode(m.mentions[0].startSec)}</Tc> : undefined}
               on={isOn("num-mentions")}
               onClick={
@@ -1056,7 +1061,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             })}
             {!m.mentions.length && (
               <li className="rounded-(--r-inner) bg-(--card) p-4 text-(--ink-3) ring-1 ring-(--hair)">
-                {synthetic ? "Audio is not analyzed in the preview." : "The brand name was not heard."}
+                {synthetic ? "Audio is not analyzed in the preview." : unheard ? "Not checked: the audio could not be transcribed." : "The brand name was not heard."}
               </li>
             )}
           </ul>

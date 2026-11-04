@@ -85,11 +85,17 @@ export async function withLedgerKept<T>(
   }
 }
 
-/** Runs the pipeline for a video startRun accepted. Never throws: failures are written to the entry. */
-export async function executeRun(campaign: Campaign, video: VideoEntry): Promise<VideoEntry> {
+/** When a run starting at `now` must stop: RUN_DEADLINE_MS from now, or the caller's own earlier deadline. */
+export const runDeadline = (now: number, callerDeadlineAt?: number) => Math.min(now + RUN_DEADLINE_MS, callerDeadlineAt ?? Infinity);
+
+/**
+ * Runs the pipeline for a video startRun accepted. Never throws: failures are written to the entry. A caller whose own
+ * function started earlier (the agent) passes the deadline of that function, so the run stops before it is cut off.
+ */
+export async function executeRun(campaign: Campaign, video: VideoEntry, opts: { deadlineAt?: number } = {}): Promise<VideoEntry> {
   // Meta API calls stop by this time, so a run that runs long still writes its failure and appends the ledger before the
   // platform stops the function.
-  const deadlineAt = Date.now() + RUN_DEADLINE_MS;
+  const deadlineAt = runDeadline(Date.now(), opts.deadlineAt);
   let current = video;
   // Step and progress writes go out one at a time, in order, so a late write never undoes an earlier one.
   let queue = Promise.resolve();

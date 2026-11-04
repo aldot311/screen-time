@@ -72,6 +72,9 @@ describe("findMentions", () => {
     // Voice Transcribe, given both spellings as keywords, wrote one spoken "LaCroix" as "La Croix LaCroix" (Lana's run).
     const lana = findMentions([turn("than a La Croix LaCroix. This is an ad", 0, 9000)], ["LaCroix", "La Croix"]);
     expect(lana).toEqual([{ startSec: 2, endSec: 5, text: "La Croix LaCroix" }]);
+    // Two different names side by side stay two mentions (control).
+    const two = findMentions([turn("a LaCroix Pamplemousse can", 0, 4000)], ["LaCroix", "Pamplemousse"]);
+    expect(two.map((m) => m.text)).toEqual(["LaCroix", "Pamplemousse"]);
     expect(findMentions([turn("Nike, Nike!")], ["Nike"]).map((m) => m.text)).toEqual(["Nike", "Nike"]);
     expect(findMentions([turn("LaCroix and LaCroix")], ["LaCroix"])).toHaveLength(2);
   });

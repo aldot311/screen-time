@@ -2,7 +2,7 @@
 // (Voice Transcribe) → measure → check contract terms. Every billed call reserves its cost in the CostGuard first.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CostGuard, CostLimitError, MetaApiError, MODELS, requestTimeoutMs, SAM_USD_PER_FRAME, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
+import { CostGuard, CostLimitError, DEADLINE_PASSED, MetaApiError, MODELS, requestTimeoutMs, SAM_USD_PER_FRAME, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
 import { checkTerms, computeMetrics, findDisclosures, findMentions, frameSamples } from "@/lib/metrics";
 import { distinctNames } from "@/lib/metrics/mentions";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
@@ -73,6 +73,8 @@ function callOpts(input: RunInput, timeoutMs: number): ClientOptions {
 
 /** The reason on an object whose check failed (an error, a timeout or output that could not be read). */
 export const CHECK_FAILED = "Muse Spark did not answer; not counted";
+/** The reason on an object whose check was never sent because the run's deadline had already passed. */
+export const CHECK_OUT_OF_TIME = "Not checked: the run reached its time limit; not counted";
 
 export interface RunInput {
   videoId: string;
@@ -264,7 +266,8 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
               // the receipt). Running out of budget still stops the run.
               if (err instanceof CostLimitError) throw err;
               log(`checking object ${t.objectId + 1} failed: ${err instanceof Error ? err.message : err}`);
-              return notChecked(t.objectId, CHECK_FAILED);
+              const outOfTime = err instanceof Error && err.name === "TimeoutError" && err.message === DEADLINE_PASSED;
+              return notChecked(t.objectId, outOfTime ? CHECK_OUT_OF_TIME : CHECK_FAILED);
             })
           : Promise.resolve(notChecked(t.objectId, skipped))
         ).then(async (v) => {

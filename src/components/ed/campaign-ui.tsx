@@ -83,6 +83,14 @@ export function videoPhase(v: { status: string; consent?: unknown; updatedAt: st
   return now - Date.parse(v.updatedAt) < START_GRACE_MS ? "starting" : "uploaded";
 }
 
+/** The index card's tallies, by videoPhase as the campaign page: a run the platform cut off counts as stopped, not in
+ *  progress. "running" also counts uploads whose run has not started yet. */
+export function phaseCounts(videos: { status: string; consent?: unknown; updatedAt: string }[], now: number) {
+  const phases = videos.map((v) => videoPhase(v, now));
+  const count = (...ps: VideoPhase[]) => phases.filter((p) => ps.includes(p)).length;
+  return { running: count("running", "starting", "uploaded"), waiting: count("waiting"), stopped: count("failed", "stopped") };
+}
+
 /**
  * Where one roster creator stands. The newest event wins: their latest video (matched by handle, any case, with or
  * without "@"), unless a request link was made after it, in which case the link's state shows (a new link can be made

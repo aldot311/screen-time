@@ -16,8 +16,9 @@ interface Token {
  * Find brand mentions in timed transcript turns. Matching is case-insensitive and whole-word, ignoring
  * punctuation, accents and possessives, and treating spaced, hyphenated and joined spellings as the same
  * ("Coca-Cola", "coca cola", "CocaCola"). Turns carry no word timings, so a mention's time is estimated
- * by its word position within the turn. A name that follows another with only a space between is one mention
- * ("La Croix LaCroix": one spoken name the transcript wrote in both spellings); "Nike, Nike" is two.
+ * by its word position within the turn. A name that follows the same name with only a space between is one mention
+ * ("La Croix LaCroix": one spoken name the transcript wrote in both spellings); "Nike, Nike" and two different names
+ * side by side are two.
  */
 export function findMentions(turns: TranscriptTurn[], brandTerms: string[]): Mention[] {
   // "&" is spoken as "and" ("H&M" is heard as "H and M"), so match both spellings.
@@ -27,8 +28,8 @@ export function findMentions(turns: TranscriptTurn[], brandTerms: string[]): Men
   const mentions: Mention[] = [];
   for (const turn of turns) {
     const tokens = tokenize(turn.transcript);
-    // The previous match in this turn: its first token, and the token after its last.
-    let prev: { from: number; to: number } | null = null;
+    // The previous match in this turn: its first token, the token after its last, and the name it matched.
+    let prev: { from: number; to: number; name: string } | null = null;
     let i = 0;
     while (i < tokens.length) {
       const length = matchAt(tokens, i, terms);
@@ -36,12 +37,14 @@ export function findMentions(turns: TranscriptTurn[], brandTerms: string[]): Men
         i++;
         continue;
       }
-      // Right after the previous name with only a space between: the same name written twice, so that mention grows.
-      const again: boolean = prev?.to === i && !turn.transcript.slice(tokens[i - 1].end, tokens[i].start).trim();
+      // The same name right after the previous one with only a space between: written twice, so that mention grows.
+      // A different name next to it ("LaCroix Pamplemousse") is its own mention.
+      const name = tokens.slice(i, i + length).map((t) => t.norm).join("");
+      const again: boolean = prev?.to === i && prev.name === name && !turn.transcript.slice(tokens[i - 1].end, tokens[i].start).trim();
       const from: number = again && prev ? prev.from : i;
       if (again) mentions.pop();
       mentions.push(toMention(turn, tokens, from, i + length - from));
-      prev = { from, to: i + length };
+      prev = { from, to: i + length, name };
       i += length;
     }
   }

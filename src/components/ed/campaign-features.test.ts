@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseHandles } from "./campaign-creators";
 import { fixWords } from "./report-decision";
 import { DEFAULT_TERMS, readNumber, termsFrom } from "@/app/(app)/campaigns/new/term-picker";
-import { creatorEntry, START_GRACE_MS, videoPhase } from "./campaign-ui";
+import { creatorEntry, phaseCounts, START_GRACE_MS, videoPhase } from "./campaign-ui";
 import { STALE_MS } from "@/lib/campaign/run-time";
 import type { VideoEntry } from "@/lib/campaign/types";
 import type { TermResult } from "@/lib/types";
@@ -124,6 +124,23 @@ describe("creator status", () => {
     expect(videoPhase({ status: "failed", updatedAt: cut }, now)).toBe("failed");
     expect(creatorEntry({ handle: "@maya" }, [video({ status: "running", updatedAt: cut })], "c", now).status).toBe("stopped");
     expect(creatorEntry({ handle: "@maya" }, [video({ status: "running", updatedAt: live })], "c", now).status).toBe("running");
+  });
+  it("counts a cut-off run as stopped on the campaigns index, not in progress", () => {
+    const live = new Date(now - STALE_MS).toISOString();
+    const cut = new Date(now - STALE_MS - 1).toISOString();
+    const stale = new Date(now - START_GRACE_MS - 1).toISOString();
+    const counts = phaseCounts(
+      [
+        { status: "running", updatedAt: live },
+        { status: "running", updatedAt: cut },
+        { status: "failed", updatedAt: cut },
+        { status: "uploaded", updatedAt: stale },
+        { status: "uploaded", updatedAt: stale, consent: { at: stale, text: "ok" } },
+        { status: "done", updatedAt: cut },
+      ],
+      now,
+    );
+    expect(counts).toEqual({ running: 2, waiting: 1, stopped: 2 });
   });
 });
 
