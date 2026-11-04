@@ -17,13 +17,13 @@ show the creator or their boss.
 Screen-Time measures how long a brand's product is actually on screen in creator video and checks it against the
 sponsorship contract. A brand describes its product in plain words, adds the creator videos and the contract terms, and
 gets a per-video and per-campaign report: seconds on screen, how big and central it was, spoken mentions, and pass/fail
-on each contract term with a jump to the exact second as proof. Success: a manager can decide "pay / don't pay / ask for
+on each contract term with a jump to the moment that proves it. Success: a manager can decide "pay / don't pay / ask for
 a fix" from one page in under a minute, and trust it.
 
 ## Positioning
 
-Proof, not views: "Type what your product looks like; get second-by-second proof it was seen, checked against your
-contract." Sponsorship-analytics vendors (Blinkfire, Relo Metrics, Zoomph, Talkwalker) detect logos from fixed
+Proof, not views: "Type what your product looks like; get frame-by-frame proof it was on screen, checked against
+your contract." Sponsorship-analytics vendors (Blinkfire, Relo Metrics, Zoomph, Talkwalker) detect logos from fixed
 libraries, mostly in sports broadcasts, or report engagement; Blinkfire also breaks down a brand's time on screen in
 social video. Creator-video checkers exist too (README, "Who else checks creator videos", read 2026-11-03): OnBriefing
 checks published videos against a pasted brief, Cohley's AI Asset Analysis checks submitted UGC against brief rules,

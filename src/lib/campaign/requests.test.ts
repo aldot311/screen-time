@@ -49,13 +49,13 @@ describe("request link tokens", () => {
 describe("what the creator is told and agrees to", () => {
   const MODELS = "with AI (Meta SAM 3.1, Muse Spark and Muse Voice Transcribe)";
 
-  it("names the brand, and says its report can be shared by link", () => {
+  it("names the brand, and says its report is open to anyone visiting the site", () => {
     const fall = { id: "alani-nu-fall", brand: "Alani Nu" };
     expect(requester(fall)).toBe("Alani Nu");
     expect(consentText(fall)).toBe(
-      `I agree that Alani Nu may analyze this video ${MODELS} to check the sponsorship terms, and show it in a report they can share by link.`,
+      `I agree that Alani Nu may analyze this video ${MODELS} to check the sponsorship terms, and show it in a report that anyone visiting this site can open.`,
     );
-    expect(uploadNote(fall)).toBe("MP4 or MOV, up to 200 MB. It goes to Alani Nu; their report shows your video to anyone they share its link with.");
+    expect(uploadNote(fall)).toBe("MP4 or MOV, up to 200 MB. It goes to Alani Nu; their report, with your video, can be opened by anyone visiting this site.");
   });
 
   it("names Aetrai, never the brand on the can, and the public demo uses on the site's test campaigns", () => {

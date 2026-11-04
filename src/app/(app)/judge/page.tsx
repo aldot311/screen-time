@@ -86,10 +86,10 @@ export default async function JudgePage() {
             <p className="mt-4">
               <span className="font-semibold text-(--ink)">And a re-cut.</span>{" "}
               {firstTake
-                ? `${firstTake.creator}’s first take: ${missLine(firstTake)}, so it was held. The banner at the top points to the re-cut, which replaced it and now decides pay. Both takes were filmed the same day; the one sent second counts as the re-cut.`
+                ? `${firstTake.creator}’s first upload: ${missLine(firstTake)}, so it was held. The banner at the top points to the re-cut, which replaced it and now decides pay. Both takes were filmed the same day; the one sent second counts as the re-cut.`
                 : "A creator’s re-cut replaces the take it fixes, and the money follows the re-cut."}
             </p>
-            <Go href={open(firstTake)}>{firstTake ? `Open ${firstTake.creator}’s first take` : "Open the campaign"}</Go>
+            <Go href={open(firstTake)}>{firstTake ? `Open ${firstTake.creator}’s first upload` : "Open the campaign"}</Go>
           </Step>
 
           <Step n={4} title="Check the accuracy">

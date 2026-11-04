@@ -68,7 +68,7 @@ const DEMO_SCRIPT: { title: string; text: string; href?: string }[] = [
   },
   { title: "Look-alikes", text: "Aldo’s can (the builder’s own clip) is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },
   { title: "The follow-up agent", text: "Muse Spark drafts the note and a re-cut request; nothing is sent until you approve.", href: reportHref(CASES.agent) },
-  { title: "The re-cut", text: "Ash’s first take never says LaCroix; her re-cut replaces it and pays.", href: reportHref(CASES.firstTake) },
+  { title: "The re-cut", text: "Ash’s first upload never says LaCroix; her other take, sent after it, replaces it and pays.", href: reportHref(CASES.firstTake) },
   { title: "The campaign", text: "Pay or hold for every creator, with dollar totals and a CSV for finance. Screen-Time never moves money.", href: campaignHref },
   { title: "Accuracy, in one line", text: "Precision with and without Muse Spark, measured frame by frame.", href: "/accuracy" },
   { title: "Built during the hackathon", text: "The pipeline, the contract checker, the follow-up agent and the accuracy harness, all open source." },
@@ -484,7 +484,7 @@ function heroCaption(hero: Showcased, brand: string | undefined): string {
   const reel = `${possessive(hero.video.creator)} ${Math.round(report.info.durationSec)}-second ${brand ? `${brand} ` : ""}Reel`;
   const parts = [
     `Lime fills only while ${product ? `the ${product}` : brand ? `the ${brand} product` : "the product"} is on screen`,
-    report.metrics.mentions.length && brand ? `violet marks about when “${brand}” is said out loud` : null,
+    report.metrics.mentions.length && brand ? `violet marks roughly when “${brand}” is said out loud` : null,
     rejected ? `the ${rejected} beside it is boxed, dashed and never counted` : null,
   ].filter(Boolean);
   return `A real run on Meta’s API, replayed: ${reel}. ${parts.join("; ")}.`;

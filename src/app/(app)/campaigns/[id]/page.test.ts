@@ -8,8 +8,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { accessToken } from "@/lib/access";
 import { DEMO_NOTE } from "@/lib/campaign/demo-note";
 import { SHOWCASE_CAMPAIGN } from "@/lib/campaign/showcase";
-import { putCampaign } from "@/lib/campaign/store";
-import type { Campaign } from "@/lib/campaign/types";
+import { putCampaign, putVideo } from "@/lib/campaign/store";
+import type { Campaign, VideoEntry } from "@/lib/campaign/types";
 
 // The request's cookie jar, and a router for the client components the page renders.
 const jar = vi.hoisted(() => ({ access: undefined as string | undefined }));
@@ -43,6 +43,24 @@ const fall: Campaign = {
   creators: [{ handle: "@maya", addedAt: at }],
 };
 
+// A stopped run from a creator not on the list (so @maya's row is unchanged) renders the report page without a player, which is all the note test needs.
+const stopped = (campaignId: string): VideoEntry => ({
+  id: "lee",
+  campaignId,
+  creator: "@lee",
+  title: "lee.mp4",
+  videoUrl: "/lee.mp4",
+  status: "failed",
+  step: null,
+  error: "stopped",
+  createdAt: at,
+  updatedAt: at,
+});
+const renderReport = async (id: string) =>
+  renderToStaticMarkup(
+    await reportPage.default({ params: Promise.resolve({ id, videoId: "lee" }), searchParams: Promise.resolve({}) }),
+  );
+
 const render = async (id: string) =>
   renderToStaticMarkup(await campaignPage.default({ params: Promise.resolve({ id }), searchParams: Promise.resolve({}) }));
 
@@ -56,6 +74,8 @@ describe("the campaign page", () => {
     delete process.env.BLOB_READ_WRITE_TOKEN;
     await putCampaign(fall);
     await putCampaign({ ...fall, id: SHOWCASE_CAMPAIGN, name: "LaCroix: Strawberry Peach", brand: "LaCroix" });
+    await putVideo(stopped("fall"));
+    await putVideo(stopped(SHOWCASE_CAMPAIGN));
   });
   afterAll(async () => {
     process.env = savedEnv;
@@ -102,6 +122,11 @@ describe("the campaign page", () => {
   it("says the site's own test campaign is not affiliated with the brands shown, and only there", async () => {
     expect(await render(SHOWCASE_CAMPAIGN)).toContain(DEMO_NOTE);
     expect(await render("fall")).not.toContain("Not affiliated");
+  });
+
+  it("puts the same note at the bottom of the test campaign's reports, and only there", async () => {
+    expect(await renderReport(SHOWCASE_CAMPAIGN)).toContain(DEMO_NOTE);
+    expect(await renderReport("fall")).not.toContain("Not affiliated");
   });
 
   it("keeps campaign and report pages out of search results, found or not", async () => {

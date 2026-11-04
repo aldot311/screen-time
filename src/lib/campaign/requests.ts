@@ -27,19 +27,19 @@ export function requester(campaign: Asker): string {
 const MODELS = "with AI (Meta SAM 3.1, Muse Spark and Muse Voice Transcribe)";
 
 /** The words the creator agrees to; stored with the video so the consent is on record. They cover where the video is
- *  shown too: reports open by link, and a test campaign is shown publicly. */
+ *  shown too: campaigns and their reports are open to anyone visiting the site, and a test campaign is shown publicly. */
 export function consentText(campaign: Asker): string {
   return isDemoCampaign(campaign.id)
     ? `I agree that ${DEMO_RUN_BY} may analyze this video ${MODELS} for its ${campaign.brand} test campaign, and show it on the Screen-Time demo site, in its demo video and in its Meta hackathon submission.`
-    : `I agree that ${campaign.brand} may analyze this video ${MODELS} to check the sponsorship terms, and show it in a report they can share by link.`;
+    : `I agree that ${campaign.brand} may analyze this video ${MODELS} to check the sponsorship terms, and show it in a report that anyone visiting this site can open.`;
 }
 
-/** The line under the upload button. Uploaded files are public and reports open by link, so it promises no more
- *  privacy than that. */
+/** The line under the upload button. Uploaded files are public and campaign reports are open to any visitor, so it
+ *  promises no more privacy than that. */
 export function uploadNote(campaign: Asker): string {
   return isDemoCampaign(campaign.id)
     ? `MP4 or MOV, up to 200 MB. It goes to ${DEMO_RUN_BY}, which shows it on the public Screen-Time demo site.`
-    : `MP4 or MOV, up to 200 MB. It goes to ${campaign.brand}; their report shows your video to anyone they share its link with.`;
+    : `MP4 or MOV, up to 200 MB. It goes to ${campaign.brand}; their report, with your video, can be opened by anyone visiting this site.`;
 }
 
 /**
