@@ -14,6 +14,9 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Invalid campaign", issues: parsed.error.issues }, { status: 400 });
   }
-  const campaign: Campaign = { id: await freeCampaignId(parsed.data.name), ...parsed.data, createdAt: new Date().toISOString() };
+  // With no spoken names the transcript is searched for nothing, so a "say the brand" term could only fail: listen for
+  // the brand itself instead.
+  const brandTerms = parsed.data.brandTerms.length ? parsed.data.brandTerms : [parsed.data.brand];
+  const campaign: Campaign = { id: await freeCampaignId(parsed.data.name), ...parsed.data, brandTerms, createdAt: new Date().toISOString() };
   return Response.json(await putCampaign(campaign), { status: 201 });
 }

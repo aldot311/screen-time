@@ -36,7 +36,7 @@ describe("termsFrom", () => {
   it("writes edited numbers and the free-text lines", () => {
     const s = {
       ...DEFAULT_TERMS,
-      on: { total: false, within: false, mention: true, continuous: true, area: true, disclose: false },
+      on: { total: false, within: false, early: false, mention: true, continuous: true, area: true, disclose: false },
       mention: "2",
       continuous: "2.5",
       areaPct: "10",

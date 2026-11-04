@@ -138,8 +138,22 @@ export function parseTermsPrompt(terms: string[]): string {
     "- mentioned: brand said aloud at least `minTimes` times; `withinFirstSec` > 0 limits it to the opening seconds, 0 means anywhere.",
     "- first_seen_before: product first appears before `seconds`.",
     "- disclosed: the creator discloses the sponsorship, e.g. says it is an ad or shows #ad on screen. No numbers.",
+    "Telling them apart:",
+    "- The product appears, is shown or is visible in, within or by the first N seconds, with no duration: first_seen_before, `seconds` N.",
+    "- A duration inside an opening window: min_seconds_within.",
+    "- Say or mention the brand in the first N seconds: mentioned, `minTimes` 1 (or the number of times asked for), `withinFirstSec` N. Never put the window in `seconds`.",
+    "- Set checkable to false when one term holds two requirements, or is about the caption, tags or hashtags (a disclosure such as #ad is disclosed).",
+    "- Also set checkable to false for lighting, tone, saying a phrase other than the brand name (saying it is an ad is disclosed), when a disclosure must appear, or the video's length.",
+    "Examples:",
+    '- "Show the bottle in the first 2 seconds" -> first_seen_before, seconds 2.',
+    '- "4 seconds of product time in the opening 8 seconds" -> min_seconds_within, seconds 4, withinFirstSec 8.',
+    '- "Say the brand name in the first 4 seconds" -> mentioned, minTimes 1, withinFirstSec 4.',
+    '- "Show #sponsored in the first 2 seconds" -> checkable false (when a disclosure must appear).',
+    '- "Show the box and say the brand name, both in the first 4 seconds" -> checkable false (two requirements).',
+    '- "Read the promo code SAVE10 aloud" -> checkable false (a phrase other than the brand name).',
+    '- "Put #brandsummer in the caption" -> checkable false (the caption).',
     "Set unused numeric fields to 0. If a term cannot be expressed with these kinds, set checkable to false.",
-    "Return one rule per term, with `index` the term's number.",
+    "Return exactly one rule per term, with `index` the term's number. Never split a term into two rules.",
     "",
     ...terms.map((t, i) => `${i}. ${t}`),
   ].join("\n");
@@ -156,17 +170,24 @@ interface RawRule {
   minTimes: number;
 }
 
-/** Map the model's flat rules back onto the original terms; anything missing or malformed is unchecked. */
+/** Map the model's flat rules back onto the original terms; anything missing, malformed or ambiguous is unchecked. */
 export function toContractTerms(terms: string[], output: unknown): ContractTerm[] {
   const rules = ((output as { rules?: RawRule[] })?.rules ?? []).filter((r) => r && Number.isInteger(r.index));
   return terms.map((text, i) => {
-    const raw = rules.find((r) => r.index === i);
+    // Two rules for one term (a clause split in two, or the numbering mixed up): neither is the whole term.
+    const mine = rules.filter((r) => r.index === i);
+    const raw = mine.length === 1 ? mine[0] : undefined;
     return { text, rule: raw?.checkable ? toRule(raw) : null };
   });
 }
 
 function toRule(r: RawRule): ContractRule | null {
   const pos = (n: number) => Number.isFinite(n) && n > 0;
+  // A window or duration put in a field this kind has no room for would be dropped, quietly loosening the term ("#ad in
+  // the first 3 s" kept as plain disclosed, "say it in the first 5 s" with the 5 in `seconds`), so a person reads it.
+  // Only these two cases: a stray number in any other unused field is ignored as before.
+  const windowed = r.kind === "min_seconds_within" || r.kind === "mentioned";
+  if ((!windowed && r.withinFirstSec) || ((r.kind === "mentioned" || r.kind === "disclosed") && r.seconds)) return null;
   switch (r.kind) {
     case "min_seconds_total":
       return pos(r.seconds) ? { kind: r.kind, seconds: r.seconds } : null;
