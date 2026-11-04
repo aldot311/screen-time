@@ -267,7 +267,7 @@ export default function AccuracyPage() {
             <li>
               <span className="font-semibold text-(--ink)">Labels.</span> Two independent Claude vision passes over frame-numbered grids at 5
               frames a second, kept where both agree, or where one is certain and the other unsure. The look-alike Reel was then corrected by one
-              Claude pass at full resolution.{testSetNote(acc)}
+              Claude pass at full resolution. {labels?.allChecked ? "A person then checked every clip frame by frame in the labelling tool." : ""}{testSetNote(acc)}
             </li>
             <li>
               <span className="font-semibold text-(--ink)">Scoring.</span> Per frame: a frame counts when the pipeline says the product is visible in

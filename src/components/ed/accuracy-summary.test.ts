@@ -280,23 +280,23 @@ describe("contractEvalSummary", () => {
     expect(contractEvalSummary(file)).not.toBeNull();
   });
 
-  it("states a filled eval in plain figures", () => {
+  it("states a filled eval in plain figures, counting clauses by their worst reading", () => {
     const e: ContractEval = {
       measuredAt: "2026-11-04",
       model: "muse-spark-1.3",
-      runsPerCase: 3,
-      expected: { total: 60, exact: 57, safeMiss: 2, misread: 1 },
-      mustRefuse: { total: 15, refused: 14, passedThrough: 1 },
-      live: { total: 9, exact: 9 },
+      runsPerCase: 6,
+      expected: { total: 21, exact: 19, safeMiss: 1, misread: 1 },
+      mustRefuse: { total: 9, refused: 8, passedThrough: 1 },
+      live: { total: 3, exact: 3 },
       costUsd: 0.4,
-      rows: [],
+      rows: Array.from({ length: 30 }, () => ({})),
     };
     expect(contractEvalSummary(e)).toEqual({
-      headline: "25 plain-English clauses × 3 runs: read exactly 95% of the time.",
+      headline: "30 plain-English clauses, each read 6 times: 19 of the 21 with one right reading were read exactly every time.",
       lines: [
-        "Clauses with one right reading: 57 of 60 readings exact, 1 misread (a wrong rule), 2 left for a person.",
-        "Clauses the video cannot settle: refused 14 of 15 readings, so a person checks them; turned into a rule anyway once.",
-        "The terms of this site's campaigns: 9 of 9 readings exact.",
+        "Clauses with one right reading: 19 of 21 exact in every reading, 1 misread (a wrong rule), 1 left for a person.",
+        "Clauses the video cannot settle: 8 of 9 refused in every reading, so a person checks them; turned into a rule once.",
+        "The terms of this site's campaigns: 3 of 3 exact in every reading.",
       ],
       footnote: "muse-spark-1.3, measured 2026-11-04, $0.40 for the whole eval.",
     });

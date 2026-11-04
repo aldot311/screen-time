@@ -529,16 +529,16 @@ export interface ContractEval {
 /** The eval's figures as the page says them, or null when it has not run. */
 export function contractEvalSummary(e: ContractEval | null): { headline: string; lines: string[]; footnote: string } | null {
   if (!e || !e.runsPerCase || !e.expected.total) return null;
-  const clauses = Math.round((e.expected.total + e.mustRefuse.total) / e.runsPerCase);
-  const share = (n: number, of: number) => `${Math.round((n / of) * 100)}%`;
+  // Counts are per clause, each scored by its worst reading out of runsPerCase.
+  const clauses = e.rows?.length || e.expected.total + e.mustRefuse.total;
   return {
-    headline: `${clauses} plain-English clauses × ${e.runsPerCase} runs: read exactly ${share(e.expected.exact, e.expected.total)} of the time.`,
+    headline: `${clauses} plain-English clauses, each read ${e.runsPerCase} times: ${e.expected.exact} of the ${e.expected.total} with one right reading were read exactly every time.`,
     lines: [
-      `Clauses with one right reading: ${e.expected.exact} of ${e.expected.total} readings exact, ${e.expected.misread} misread (a wrong rule), ${e.expected.safeMiss} left for a person.`,
+      `Clauses with one right reading: ${e.expected.exact} of ${e.expected.total} exact in every reading, ${e.expected.misread} misread (a wrong rule), ${e.expected.safeMiss} left for a person.`,
       ...(e.mustRefuse.total
-        ? [`Clauses the video cannot settle: refused ${e.mustRefuse.refused} of ${e.mustRefuse.total} readings, so a person checks them; turned into a rule anyway ${e.mustRefuse.passedThrough === 1 ? "once" : `${e.mustRefuse.passedThrough} times`}.`]
+        ? [`Clauses the video cannot settle: ${e.mustRefuse.refused} of ${e.mustRefuse.total} refused in every reading, so a person checks them; turned into a rule ${e.mustRefuse.passedThrough === 1 ? "once" : `${e.mustRefuse.passedThrough} times`}.`]
         : []),
-      ...(e.live.total ? [`The terms of this site's campaigns: ${e.live.exact} of ${e.live.total} readings exact.`] : []),
+      ...(e.live.total ? [`The terms of this site's campaigns: ${e.live.exact} of ${e.live.total} exact in every reading.`] : []),
     ],
     footnote: `${e.model}, measured ${e.measuredAt}, $${e.costUsd.toFixed(2)} for the whole eval.`,
   };
