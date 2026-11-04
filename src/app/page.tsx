@@ -228,7 +228,8 @@ export default async function Landing() {
                   : "The recorded demo is not up yet. It follows the steps below, and each one is live on this site now."}
               </p>
             </div>
-            <figure className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            {/* Desktop: rides beside the steps, centred in the viewport below the 57px header (never higher than 24px under it). */}
+            <figure className="min-w-0 lg:sticky lg:top-[max(81px,calc(50vh-140px))] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
               {demo ? (
                 <video
                   controls
