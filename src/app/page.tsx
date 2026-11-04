@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { ArrowRight, ArrowUpRight, AudioLines, ChevronRight, FileCheck2, ScanSearch, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, AudioLines, FileCheck2, ScanSearch, ShieldCheck } from "lucide-react";
 import data from "@/lib/accuracy-data.json";
 import { loadShowcase, type Showcased } from "@/lib/campaign/showcase";
 import { SAM_USD_PER_FRAME } from "@/lib/meta/cost-guard";
@@ -10,7 +10,10 @@ import { TrySample } from "@/components/ed/try-sample";
 import { TopBar } from "@/components/ed/top-bar";
 import { Wordmark } from "@/components/ed/bits";
 import { DemoNote } from "@/components/ed/demo-note";
-import { clipLabel, clipVideoId, labelProvenance, pct, pct0, sampleRows, sparkChanges, summarize, targetName, type SampleRow } from "@/components/ed/accuracy-summary";
+import { clipLabel, clipVideoId, labelProvenance, pct, sampleRows, sparkChanges, summarize } from "@/components/ed/accuracy-summary";
+import { CheckAccuracy, type CheckReelView, type CheckRow } from "@/components/ed/check-player";
+import { packBoxes } from "@/components/ed/check-player-data";
+import { CHECK_REELS } from "@/components/ed/check-player-sources";
 import { lookalikeCards, type VerdictCardData } from "@/components/ed/showcase-cards";
 import { demoMedia } from "@/components/ed/demo-media";
 import { CASES, CONTACT_EMAIL, JUDGE_HREF, LACROIX, OWN_VIDEO_HREF, campaignHref, reportHref } from "@/components/ed/judge-path";
@@ -92,10 +95,10 @@ export default async function Landing() {
   const { hero } = showcase;
   const cards = lookalikeCards(showcase);
   const lacroixRead = getCampaign(LACROIX).catch(() => null);
-  const [heroCampaign, lacroix, rows, lacroixVideos] = await Promise.all([
+  const [heroCampaign, lacroix, check, lacroixVideos] = await Promise.all([
     !hero ? null : hero.video.campaignId === LACROIX ? lacroixRead : getCampaign(hero.video.campaignId).catch(() => null),
     lacroixRead,
-    linkedRows(),
+    checkData(),
     listVideos(LACROIX).catch(() => []),
   ]);
   // Creators with a checked Reel in the showcase campaign (a re-cut is the same creator), counted, never typed in.
@@ -343,38 +346,12 @@ export default async function Landing() {
               </PendingLink>
             </p>
 
-            <div className="mt-10 overflow-hidden rounded-(--r-card) bg-(--paper) ring-1 ring-(--hair)">
-              <div
-                className="hidden grid-cols-[minmax(0,1fr)_96px_96px_96px_96px_32px] gap-4 border-b border-(--hair) px-5 py-3.5 text-[13px] font-medium text-(--ink-3) md:grid"
-                aria-hidden
-              >
-                <span>Product check</span>
-                <span className="text-right">Labelled</span>
-                <span className="text-right">Measured</span>
-                <span className="text-right">Precision</span>
-                <span className="text-right">Recall</span>
-                <span />
-              </div>
-              <ul className="divide-y divide-(--hair)">
-                {rows.map((r) => (
-                  <li key={`${r.clip}-${r.target}`}>
-                    {r.href ? (
-                      <PendingLink
-                        href={r.href}
-                        hint="cover"
-                        className={`ed-press-soft relative hover:bg-(--wash)/60 active:bg-(--wash) ${ROW_GRID}`}
-                      >
-                        <RowBody r={r} linked />
-                      </PendingLink>
-                    ) : (
-                      <div className={ROW_GRID}>
-                        <RowBody r={r} />
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <h3 className="mt-12 text-[20px] leading-tight font-semibold sm:text-[22px]">Check it yourself</h3>
+            <p className="mt-2 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-2)">
+              Play a Reel and watch the person&rsquo;s labels and Screen-Time&rsquo;s count run side by side, frame by frame. Pick any row
+              below to load its Reel.
+            </p>
+            <CheckAccuracy reels={check.reels} rows={check.rows} initialClip={CHECK_FIRST} />
 
             <p className="mt-6 max-w-[72ch] text-[15px] leading-[1.6] text-(--ink-2)">
               {testSetLine(acc)}{" "}
@@ -488,60 +465,43 @@ function testSetLine(acc: ReturnType<typeof summarize>): string {
   return `The test set: ${acc.clips} labelled vertical videos${stock}, including ${zero.join(" and ")}, which must count 0 seconds. Screen-Time counted ${tenths(acc.verified.falseSecondsOnEmptyClips)} s on them.`;
 }
 
-/** The sample rows, each linked to its report when the clip is a video in the LaCroix campaign; else not linked. */
-async function linkedRows(): Promise<(SampleRow & { href?: string })[]> {
-  return Promise.all(
+/** The sample rows, each linked to its report when the clip is a video in the LaCroix campaign, and the check player's
+ *  Reels for those rows: the per-frame marks from the label file and the scored run (built at build time), the stored
+ *  normalized video and still, and SAM's boxes when the stored report is that same run. A missing video leaves the
+ *  Reel playable as strips over its still; a missing store leaves the rows as they were. */
+async function checkData(): Promise<{ rows: CheckRow[]; reels: CheckReelView[] }> {
+  const sampled = await Promise.all(
     sampleRows(data).map(async (r) => {
       const id = clipVideoId(r.clip);
       const v = id ? await getVideo(LACROIX, id).catch(() => null) : null;
-      return { ...r, href: v?.status === "done" ? reportHref(v.id) : undefined };
+      return { row: { ...r, href: v?.status === "done" ? reportHref(v.id) : undefined }, video: v };
     }),
   );
+  const reels = sampled.flatMap(({ row, video }) => {
+    const reel = CHECK_REELS.find((c) => c.clip === row.clip && c.target === row.target);
+    if (!reel) return [];
+    const ready = video?.status === "done" && video.videoUrl ? video : null;
+    const sameRun = !!ready?.report && ready.report.receipt?.runId === reel.runId;
+    return [
+      {
+        clip: reel.clip,
+        target: reel.target,
+        marks: reel.marks,
+        precision: reel.precision,
+        recall: reel.recall,
+        videoUrl: ready?.videoUrl,
+        poster: video?.thumbUrl,
+        width: ready?.report?.info.width ?? 540,
+        height: ready?.report?.info.height ?? 960,
+        boxes: sameRun ? packBoxes(ready!.report!.detections) : [],
+      } satisfies CheckReelView,
+    ];
+  });
+  return { rows: sampled.map((s) => s.row), reels };
 }
 
-const ROW_GRID =
-  "grid grid-cols-[minmax(0,1fr)_24px] items-center gap-x-3 gap-y-3 px-4 py-4 md:grid-cols-[minmax(0,1fr)_96px_96px_96px_96px_32px] md:gap-x-4 md:px-5 md:py-3.5";
-
-function RowBody({ r, linked = false }: { r: SampleRow; linked?: boolean }) {
-  return (
-    <>
-      <span className="min-w-0">
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-[15px] font-semibold">
-            <span className="font-medium text-(--ink-3)">{clipLabel(r.clip)}</span> · {targetName(r.target)}
-          </span>
-          {r.weak && <WeakTag label={`Weakest ${r.weak}`} />}
-        </span>
-        {r.note && <span className="mt-0.5 block text-[13px] text-(--ink-3)">{r.note}</span>}
-      </span>
-      {linked ? <ChevronRight className="size-5 self-center text-(--ink-3) md:order-last" strokeWidth={2.25} aria-hidden /> : <span className="md:order-last" aria-hidden />}
-      <dl className="col-span-2 grid grid-cols-4 gap-2 text-[12px] text-(--ink-3) md:col-span-4 md:col-start-2 md:row-start-1 md:grid-cols-subgrid md:gap-4">
-        <Stat label="Labelled" value={`${tenths(r.truthSec)} s`} />
-        <Stat label="Measured" value={`${tenths(r.predictedSec)} s`} strong />
-        <Stat label="Precision" value={pct0(r.precision)} strong={r.weak === "precision"} />
-        <Stat label="Recall" value={pct0(r.recall)} strong={r.weak === "recall"} />
-      </dl>
-    </>
-  );
-}
-
-function Stat({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className="md:text-right">
-      <dt className="md:sr-only">{label}</dt>
-      <dd className={`mt-0.5 text-[15px] text-(--ink) tabular md:mt-0 ${strong ? "font-semibold" : ""}`}>{value}</dd>
-    </div>
-  );
-}
-
-/** The weakest rows are called out in ink, not amber: amber means "needs review" everywhere else. */
-function WeakTag({ label }: { label: string }) {
-  return (
-    <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-(--paper) px-2.5 text-[12px] font-semibold whitespace-nowrap text-(--ink) ring-1 ring-(--ink) ring-inset">
-      {label}
-    </span>
-  );
-}
+/** The Reel the check player opens on: Michael's, the weakest precision, so its over-count is the first thing shown. */
+const CHECK_FIRST = "lacroix/lc-1-michael";
 
 function VerdictCard({ card: { show, track, name } }: { card: VerdictCardData }) {
   const match = track.verdict === "match";

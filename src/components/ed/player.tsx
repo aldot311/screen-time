@@ -28,6 +28,9 @@ export interface PlayerHandle {
   /** Seek and play; optionally pause again at `stopAt` (the end of a stretch of evidence). */
   playFrom: (sec: number, stopAt?: number) => void;
   toggle: () => void;
+  /** Play (muted autoplay rules apply) or pause, whatever the current state. */
+  play: () => void;
+  pause: () => void;
 }
 
 interface Props {
@@ -51,6 +54,12 @@ interface Props {
   dockClassName?: string;
   /** Open paused on this moment (the report's best frame) instead of frame 0. */
   initialSec?: number;
+  /** Ambient players start by themselves unless this is false (the caller then starts them, e.g. once in view). */
+  autoPlay?: boolean;
+  /** The video could not be loaded or decoded. */
+  onError?: () => void;
+  /** How much to fetch before playing: "auto" for the hero, "metadata" where a video may never be played. */
+  preload?: "auto" | "metadata";
 }
 
 const DEFAULT_DOCK =
@@ -84,6 +93,9 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
     showBoxes = true,
     dockClassName = DEFAULT_DOCK,
     initialSec,
+    autoPlay = ambient,
+    preload = "auto",
+    onError,
   },
   ref,
 ) {
@@ -97,10 +109,10 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
   const played = useRef(false);
   const [frame, setFrame] = useState(0);
   const [time, setTime] = useState(0);
-  const [playing, setPlaying] = useState(ambient);
+  const [playing, setPlaying] = useState(ambient && autoPlay);
   const [muted, setMuted] = useState(ambient);
   // The video shows its own pixels (not the poster) once it has played or been seeked.
-  const [framed, setFramed] = useState(ambient);
+  const [framed, setFramed] = useState(ambient && autoPlay);
   const [loaded, setLoaded] = useState(false);
   const [size, setSize] = useState({ w: 0, h: 0 });
 
@@ -131,6 +143,13 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
       stopAt.current = null;
       if (v.paused) void v.play().catch(() => undefined);
       else v.pause();
+    },
+    play() {
+      const v = video.current;
+      if (v?.paused) void v.play().catch(() => undefined);
+    },
+    pause() {
+      video.current?.pause();
     },
   }));
 
@@ -223,6 +242,15 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onTime, onPlayingChange]);
 
+  // A video that failed before hydration has already fired its error event, so check the element too.
+  useEffect(() => {
+    const v = video.current;
+    if (!v || !onError) return;
+    if (v.error) onError();
+    v.addEventListener("error", onError);
+    return () => v.removeEventListener("error", onError);
+  }, [onError]);
+
   const current = useMemo(
     () =>
       framed && showBoxes
@@ -265,11 +293,11 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player(
           src={src}
           poster={framed ? undefined : poster}
           className="absolute inset-0 size-full object-contain"
-          autoPlay={ambient}
+          autoPlay={ambient && autoPlay}
           muted={muted}
           loop={ambient}
           playsInline
-          preload="auto"
+          preload={preload}
           aria-label={ambient ? "Creator video replay with tracking boxes" : "Creator video with tracking boxes"}
         />
         <div
