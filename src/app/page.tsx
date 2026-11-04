@@ -60,10 +60,10 @@ const STEPS = [
 /** The demo video's script, step by step, each linked to the live page it shows (docs/DEMO.md has the full script). */
 const DEMO_SCRIPT: { title: string; text: string; href?: string }[] = [
   { title: "The problem", text: "Brands pay creators for screen time. Screen-Time measures it against the contract." },
-  { title: "The creator link", text: "Michael K’s Reel comes in through his request link (uploaded on his behalf for the recording).", href: campaignHref },
+  { title: "The creator link", text: "Aldo, who built Screen-Time, sends his own Reel through his creator link: no account, no password.", href: campaignHref },
   {
     title: "The live run",
-    text: "SAM 3.1 tracks the can, Muse Spark checks each find against the product photo, Voice Transcribe listens, and every term of the contract is checked. Tap a term to play the moment that proves it.",
+    text: "SAM 3.1 tracks the can, Muse Spark checks each find against the product photo, Voice Transcribe listens, and every term of the contract is checked: a Poppi on the table is rejected as a look-alike. Tap a term to play the moment that proves it.",
     href: reportHref(CASES.live),
   },
   { title: "Look-alikes", text: "Aldo’s can (the builder’s own clip) is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },

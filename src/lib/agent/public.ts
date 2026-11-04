@@ -5,8 +5,9 @@
 // creator.
 
 export const PUBLIC_AGENT: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  // 6-michael-captioned-gk3bzd, Michael K's Reel from the demo video's live run, is added by hand on purpose.
-  ["lacroix-strawberry-peach", new Set(["ash", "ash-recut", "george", "peter", "aldo", "aldo-2", "michael", "jamal", "lana", "jon", "6-michael-captioned-gk3bzd"])],
+  // Added by hand on purpose: 6-michael-captioned-gk3bzd (Michael K, uploaded through his link) and
+  // 12-aldo-captioned-ncx15w (Aldo's own Reel, the live run in the demo video).
+  ["lacroix-strawberry-peach", new Set(["ash", "ash-recut", "george", "peter", "aldo", "aldo-2", "michael", "jamal", "lana", "jon", "6-michael-captioned-gk3bzd", "12-aldo-captioned-ncx15w"])],
 ]);
 
 /** The report pointed at for trying the agent: Peter's Reel, held for no disclosure, where it drafts a note and a re-cut. */

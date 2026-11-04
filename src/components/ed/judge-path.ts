@@ -14,8 +14,8 @@ export const CASES = {
   firstTake: "ash",
   /** Peter's Reel: held for no ad disclosure, the case the follow-up agent works on. */
   agent: "peter",
-  /** Michael K's Reel: sent through his request link and run live in the demo video; pays after a quick look. */
-  live: "6-michael-captioned-gk3bzd",
+  /** Aldo's own Reel, sent through his creator link and run live in the demo video: every term met, a Poppi rejected. */
+  live: "12-aldo-captioned-ncx15w",
 } as const;
 
 export const campaignHref = `/campaigns/${LACROIX}`;
