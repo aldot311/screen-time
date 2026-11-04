@@ -13,6 +13,7 @@ import type { AgentRun } from "@/lib/agent/campaign-agent";
 import type { AgentAccess } from "@/lib/agent/public";
 import { AGENT_MAX_USD, AGENT_STALE_MS, agentRunning } from "@/lib/agent/state";
 import { ApiError } from "@/components/api-error";
+import { friendlyError } from "@/components/format";
 import { Spinner } from "./pending-link";
 import { useFlash } from "./use-flash";
 
@@ -130,7 +131,7 @@ export function AgentPanel({ endpoint, agent: stored, creator, access = "owner" 
           )}
           {agent?.status === "failed" && (
             <p role="alert" className="mt-3 text-[13.5px]">
-              <ApiError message={`The agent stopped: ${agent.error ?? "unknown error"}`} />
+              <ApiError message={`The agent stopped: ${friendlyError(agent.error) ?? "unknown error"}`} />
             </p>
           )}
 
