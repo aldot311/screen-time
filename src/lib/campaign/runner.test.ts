@@ -1,8 +1,9 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { byteLimit, executeRun, startRun, usdFromEnv } from "./runner";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { byteLimit, executeRun, startRun, usdFromEnv, withLedgerKept } from "./runner";
+import { STALE_MS } from "./run-time";
 import { getVideo, putCampaign, putVideo } from "./store";
 import type { Campaign, VideoEntry } from "./types";
 
@@ -34,7 +35,9 @@ describe("startRun", () => {
     const saved = await putVideo(video({ status: "running" }));
     const soon = Date.parse(saved.updatedAt) + 60_000;
     expect(await startRun("c1", "v1", soon)).toMatchObject({ ok: false, status: 409 });
-    const later = Date.parse(saved.updatedAt) + 10 * 60_000;
+    // The same line the screens use to show it as stopped.
+    expect(await startRun("c1", "v1", Date.parse(saved.updatedAt) + STALE_MS)).toMatchObject({ ok: false, status: 409 });
+    const later = Date.parse(saved.updatedAt) + STALE_MS + 1;
     expect(await startRun("c1", "v1", later)).toMatchObject({ ok: true, video: { status: "running" } });
   });
 });
@@ -46,6 +49,34 @@ describe("executeRun", () => {
     const done = await executeRun(campaign, v);
     expect(done).toMatchObject({ status: "failed", error: "The video's source is not in this campaign's store" });
     expect((await getVideo("c1", "v1"))?.status).toBe("failed");
+  });
+});
+
+describe("withLedgerKept", () => {
+  // A ledger like the Blob one: it runs fn, then appends in "finally", and that append fails.
+  const failingAppend = async <T,>(fn: (path: string) => Promise<T>): Promise<T> => {
+    try {
+      return await fn("/ledger.json");
+    } finally {
+      throw new Error("blob append failed"); // the shape under test: an append that throws after fn finished
+    }
+  };
+
+  it("keeps a finished run's report when only the ledger append after it fails, and logs that", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await expect(withLedgerKept("v1", async () => "report", failingAppend)).resolves.toBe("report");
+    expect(error).toHaveBeenCalledWith("The spend of the run on v1 could not be added to the ledger", expect.objectContaining({ message: "blob append failed" }));
+    error.mockRestore();
+  });
+
+  it("still fails a run that failed itself, or a ledger that failed before the run (controls)", async () => {
+    const boom = async () => {
+      throw new Error("SAM failed");
+    };
+    // The append's error replaces the run's in "finally"; either way there is no report to keep.
+    await expect(withLedgerKept("v1", boom, failingAppend)).rejects.toThrow("blob append failed");
+    await expect(withLedgerKept("v1", boom, (fn) => fn("/l.json"))).rejects.toThrow("SAM failed");
+    await expect(withLedgerKept("v1", async () => "report", async () => Promise.reject(new Error("ledger read failed")))).rejects.toThrow("ledger read failed");
   });
 });
 

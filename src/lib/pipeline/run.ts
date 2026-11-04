@@ -2,8 +2,9 @@
 // (Voice Transcribe) → measure → check contract terms. Every billed call reserves its cost in the CostGuard first.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CostGuard, CostLimitError, MetaApiError, MODELS, SAM_USD_PER_FRAME, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
+import { CostGuard, CostLimitError, MetaApiError, MODELS, requestTimeoutMs, SAM_USD_PER_FRAME, samVideo, sparkJson, transcribe, uploadFile, type ClientOptions } from "@/lib/meta";
 import { checkTerms, computeMetrics, findDisclosures, findMentions, frameSamples } from "@/lib/metrics";
+import { distinctNames } from "@/lib/metrics/mentions";
 import { extractFrameJpeg, extractWav, normalizeVideo } from "@/lib/media";
 import { parseSamVideo } from "@/lib/sam";
 import type { SparkContentPart } from "@/lib/meta/client";
@@ -11,7 +12,7 @@ import { openJson, openModelName, type OpenWeightConfig } from "@/lib/meta/open-
 import { evenFrames, filmstripBoxes } from "@/lib/frames";
 export { evenFrames } from "@/lib/frames";
 import type { StepId } from "@/lib/campaign/types";
-import { FPS, type ContractTerm, type Detection, type Disclosure, type Mention, type PromptAttempt, type Track, type LiveProgress, type ReceiptCall, type TrackVerification, type VerifyVerdict, type VideoReport } from "@/lib/types";
+import { FPS, type ContractTerm, type Detection, type Disclosure, type Mention, type PromptAttempt, type Track, type LiveProgress, type ReceiptCall, type TermResult, type TrackVerification, type VerifyVerdict, type VideoMetrics, type VideoReport } from "@/lib/types";
 import {
   DISCLOSURE_FRAMES,
   DISCLOSURE_OPENING_SEC,
@@ -53,6 +54,26 @@ async function fitsBudget(guard: CostGuard, usd: number): Promise<boolean> {
 }
 const TRANSCRIBE_RESERVE_USD = 0.01;
 
+// Time limits per model call, 2-4x the slowest of each seen on stored run receipts (upload 6.0 s, SAM 1.8 s + 55 ms a
+// frame, object check 25.2 s, #ad read 20.0 s, contract 11.4 s, transcription 5.0 s): a call that stalls fails instead of
+// holding the run until the platform stops it. A billed call that times out is never sent again.
+const UPLOAD_TIMEOUT_MS = 60_000; // per attempt: an upload is not billed, so it is tried again
+const SPARK_IMAGES_TIMEOUT_MS = 60_000; // object check, #ad read and search-word suggestion
+const TERMS_TIMEOUT_MS = 45_000;
+const OPEN_TIMEOUT_MS = 60_000;
+const samTimeoutMs = (frames: number) => 30_000 + 150 * frames;
+const transcribeTimeoutMs = (audioSec: number) => 30_000 + 500 * audioSec;
+/** How long a SAM pass takes, from the stored receipts: about 1.8 s plus 55 ms a frame. */
+const samExpectedMs = (frames: number) => 1_800 + 55 * frames;
+
+/** The client options for one model call: its own time limit, and the run's deadline when it has one. */
+function callOpts(input: RunInput, timeoutMs: number): ClientOptions {
+  return { ...input.client, timeoutMs, ...(input.deadlineAt === undefined ? {} : { deadlineAt: input.deadlineAt }) };
+}
+
+/** The reason on an object whose check failed (an error, a timeout or output that could not be read). */
+export const CHECK_FAILED = "Muse Spark did not answer; not counted";
+
 export interface RunInput {
   videoId: string;
   sourcePath: string;
@@ -77,6 +98,9 @@ export interface RunInput {
   onProgress?: (live: LiveProgress) => void | Promise<void>;
   /** Check each tracked object with open-weight Muse Spark Open on this host instead of hosted Muse Spark. */
   openWeight?: OpenWeightConfig;
+  /** Epoch ms after which the run makes no model call (set by the run route's caller, inside its time limit). Unset, as
+   *  in a local script, there is no deadline; each call still has its own time limit. */
+  deadlineAt?: number;
 }
 
 
@@ -150,7 +174,7 @@ class VideoSpend {
 
 export async function runVideo(input: RunInput): Promise<VideoReport> {
   const log = input.log ?? (() => undefined);
-  const { guard, client } = input;
+  const { guard } = input;
   const spend = new VideoSpend(guard);
   const videoPath = join(input.workDir, `${input.videoId}.mp4`);
   const step = async (id: StepId) => input.onStep?.(id);
@@ -173,9 +197,18 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   const attempts: PromptAttempt[] = [];
   // Set when any verification actually sent the product photo.
   const photo = { used: false };
+  // Set aside for the rest of a full report once the objects are checked: the transcript and, with contract terms, their
+  // reading and the on-screen #ad read.
+  const restUsd = TRANSCRIBE_RESERVE_USD + (input.contractTerms.length ? 2 * SPARK_RESERVE_USD : 0);
+  // What object checks must leave: the transcript and the reading of the terms. The #ad read is optional (it ends as
+  // "not checked on screen" when the budget is spent), so checking the objects comes first.
+  const requiredUsd = TRANSCRIBE_RESERVE_USD + (input.contractTerms.length ? SPARK_RESERVE_USD : 0);
+  // What one object check may reserve: one call, or with open weights two (a failed open call falls back to hosted).
+  const checkUsd = SPARK_RESERVE_USD * (input.openWeight ? 2 : 1);
 
   /** One SAM pass over the uploaded video with `prompt`, then a Muse Spark check of the objects it tracked (at most
-   *  `maxVerify` of them). The caller has already reserved `reserved` for it. */
+   *  `maxVerify` of them, and no more than the per-video budget still covers). The caller has already reserved
+   *  `reserved` for it. `unchecked` holds the detections of the objects that were not checked. */
   const trackAndVerify = async (prompt: string, fileId: string, reserved: number, maxVerify = Infinity) => {
     log(`tracking "${prompt}" over ${info.frameCount} frames`);
     let sam: Awaited<ReturnType<typeof samVideo>>;
@@ -183,7 +216,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
       sam = await spend.timed(
         { model: MODELS.sam, purpose: `Track “${prompt}”`, input: `the ${info.frameCount}-frame video, prompt “${prompt}”` },
         (r) => guard.estimateSamUsd(r.framesProcessed ?? info.frameCount),
-        () => samVideo({ fileId, prompt, includeConfidence: true }, client),
+        () => samVideo({ fileId, prompt, includeConfidence: true }, callOpts(input, samTimeoutMs(info.frameCount))),
         (r) => `${r.framesProcessed ?? info.frameCount} frames processed`,
         // As below: a 4xx is refunded, anything else keeps its reservation.
         (err) => (err instanceof MetaApiError && err.status >= 400 && err.status < 500 ? 0 : reserved),
@@ -210,20 +243,30 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     await step("verify");
     log(`verifying ${parsed.tracks.length} tracked object(s)`);
     const tag = `${attempts.length}`;
-    // A retry checks only the objects seen longest, the number its budget check allowed for; the rest do not count.
+    // The objects seen longest are checked first. A retry checks only the number its budget check allowed for, and no
+    // pass checks more than the per-video budget covers once the transcript and the terms are set aside. The rest do not
+    // count.
+    const affordable = Math.max(0, Math.floor((micros(guard.maxUsdPerRun) - micros(guard.runSpentUsd) - micros(requiredUsd)) / micros(checkUsd)));
+    const skipped = affordable < maxVerify ? "Not checked: over the per-video budget." : "Not checked: only the objects on screen longest are checked on a second search.";
     const checked = new Set(
-      [...parsed.tracks].sort((a, b) => b.detections.length - a.detections.length).slice(0, maxVerify).map((t) => t.objectId),
+      [...parsed.tracks].sort((a, b) => b.detections.length - a.detections.length).slice(0, Math.min(maxVerify, affordable)).map((t) => t.objectId),
     );
+    const unchecked = new Set<number>();
+    const notChecked = (objectId: number, reason: string): TrackVerification => {
+      unchecked.add(objectId);
+      return { objectId, verdict: "unclear", visibility: "partial", reason };
+    };
     const verifications = await Promise.all(
       parsed.tracks.map((t) =>
         (checked.has(t.objectId)
-          ? verifyTrack(t, videoPath, { ...input, prompt }, info.frameCount, spend, tag, photo)
-          : Promise.resolve<TrackVerification>({
-              objectId: t.objectId,
-              verdict: "unclear",
-              visibility: "partial",
-              reason: "Not checked: only the objects on screen longest are checked on a second search.",
+          ? verifyTrack(t, videoPath, { ...input, prompt }, info.frameCount, spend, tag, photo).catch((err: unknown) => {
+              // One failed check never costs the paid report: that object is left unchecked (its failed call stays on
+              // the receipt). Running out of budget still stops the run.
+              if (err instanceof CostLimitError) throw err;
+              log(`checking object ${t.objectId + 1} failed: ${err instanceof Error ? err.message : err}`);
+              return notChecked(t.objectId, CHECK_FAILED);
             })
+          : Promise.resolve(notChecked(t.objectId, skipped))
         ).then(async (v) => {
           await progress({ checks: [...(live.checks ?? []), { prompt, objectId: v.objectId, verdict: v.verdict, reason: v.reason }] });
           return v;
@@ -233,7 +276,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     const matchIds = new Set(verifications.filter((v) => v.verdict === "match").map((v) => v.objectId));
     const matched: Detection[] = parsed.detections.filter((d) => matchIds.has(d.objectId));
     const attempt: PromptAttempt = { prompt, objects: parsed.tracks.length, matched: matchIds.size, samFrames };
-    return { parsed, verifications, matched, attempt };
+    return { parsed, verifications, matched, attempt, unchecked: parsed.detections.filter((d) => unchecked.has(d.objectId)), uncheckedObjects: unchecked.size };
   };
 
   // Reserve SAM's cost before the upload; the frames billed come back in usage and settle the reserve.
@@ -247,7 +290,7 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     fileId = await spend.timed(
       { model: "Files API", purpose: "Upload the video for SAM 3.1", input: `${(bytes.length / 1e6).toFixed(1)} MB MP4, ${FPS} fps` },
       0,
-      () => uploadFile(bytes, `${input.videoId}.mp4`, client),
+      () => uploadFile(bytes, `${input.videoId}.mp4`, callOpts(input, UPLOAD_TIMEOUT_MS)),
       () => "file id received",
     );
   } catch (err) {
@@ -264,11 +307,15 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
     // Only try again when the budget still covers the retry and everything after it, so a recovery attempt can
     // never leave the run unable to finish its report.
     const estimate = guard.estimateSamUsd(info.frameCount);
-    // Terms cost one Spark call, and a "disclosed" term one more to read the frames.
-    const rest = TRANSCRIBE_RESERVE_USD + (input.contractTerms.length ? 2 * SPARK_RESERVE_USD : 0);
-    const retryCost = SPARK_RESERVE_USD + estimate + RETRY_VERIFY_TRACKS * SPARK_RESERVE_USD;
-    if (!(await fitsBudget(guard, retryCost + rest))) {
+    const retryCost = SPARK_RESERVE_USD + estimate + RETRY_VERIFY_TRACKS * checkUsd;
+    if (!(await fitsBudget(guard, retryCost + restUsd))) {
       log("not enough budget left to try another prompt");
+      break;
+    }
+    // The same for time: a second SAM pass takes about as long as the first, so it starts only with twice that left
+    // before the deadline.
+    if (input.deadlineAt !== undefined && input.deadlineAt - Date.now() < 2 * samExpectedMs(info.frameCount)) {
+      log("not enough time left to try another prompt");
       break;
     }
     // Recovery is optional: if any part of it fails, the first pass still makes the report.
@@ -293,40 +340,62 @@ export async function runVideo(input: RunInput): Promise<VideoReport> {
   log("listening for spoken mentions");
   const wavPath = await extractWav(videoPath, join(input.workDir, `${input.videoId}.wav`));
   let turns: { startMs: number; endMs: number; transcript: string }[] = [];
+  // False once the audio could not be transcribed: what was said is then unknown, not "nothing".
+  let heard = true;
   if (wavPath) {
+    // One spelling per name: "LaCroix" and "La Croix" both as keywords came back as "La Croix LaCroix" for one name.
+    const keywords = distinctNames(input.brandTerms);
     await spend.reserve(TRANSCRIBE_RESERVE_USD, `transcribe ${input.videoId}`);
-    turns = (
-      await spend.timed(
-        { model: MODELS.transcribe, purpose: "Listen for the brand", input: `${tenthsOf(info.durationSec)} s of 16 kHz audio${input.brandTerms.length ? `, keywords: ${input.brandTerms.join(", ")}` : ""}` },
-        TRANSCRIBE_RESERVE_USD,
-        // The brand names as keywords: without them "LaCroix" came back as "my recorder" and was missed.
-        async () => transcribe(await readFile(wavPath), client, input.brandTerms),
-        (r) => `${r.turns.length} speech turn${r.turns.length === 1 ? "" : "s"}, ${r.turns.reduce((n, t) => n + t.transcript.split(/\s+/).filter(Boolean).length, 0)} words`,
-      )
-    ).turns;
+    try {
+      turns = (
+        await spend.timed(
+          { model: MODELS.transcribe, purpose: "Listen for the brand", input: `${tenthsOf(info.durationSec)} s of 16 kHz audio${keywords.length ? `, keywords: ${keywords.join(", ")}` : ""}` },
+          TRANSCRIBE_RESERVE_USD,
+          // The brand names as keywords: without them "LaCroix" came back as "my recorder" and was missed.
+          async () => transcribe(await readFile(wavPath), callOpts(input, transcribeTimeoutMs(info.durationSec)), keywords),
+          (r) => `${r.turns.length} speech turn${r.turns.length === 1 ? "" : "s"}, ${r.turns.reduce((n, t) => n + t.transcript.split(/\s+/).filter(Boolean).length, 0)} words`,
+        )
+      ).turns;
+    } catch (err) {
+      // The paid report still stands: the spoken checks are left for a person instead (its failed call stays on the
+      // receipt).
+      log(`transcription failed: ${err instanceof Error ? err.message : err}`);
+      heard = false;
+    }
   }
   const mentions = findMentions(turns, input.brandTerms);
   const spoken: Mention[] = findDisclosures(turns);
   await progress({ heard: { audio: Boolean(wavPath), mentions, disclosures: spoken } });
+  const unheard = heard ? {} : { spokenChecked: false };
 
   await step("measure");
-  const metrics = computeMetrics(matched, info, mentions);
+  const measure = (detections: Detection[]): VideoMetrics => ({ ...computeMetrics(detections, info, mentions), ...unheard });
+  const metrics = measure(matched);
   await progress({ measured: { secondsOnScreen: metrics.secondsOnScreen, shareOfVideo: metrics.shareOfVideo, firstSeenSec: metrics.firstSeenSec } });
   await step("contract");
-  const terms = await parseTerms(input, spend);
+  // A failed reading of the contract leaves every term for a person (null rules) rather than failing the paid run.
+  const read = await parseTerms(input, spend);
+  const terms = read ?? input.contractTerms.map((text) => ({ text, rule: null }));
   // Reading the frames for #ad costs a Spark call, so it runs only when a term asks for disclosure.
   let disclosure: Disclosure | undefined;
   if (terms.some((t) => t.rule?.kind === "disclosed")) {
     log("looking for a sponsorship disclosure on screen");
     // Optional by design: a failed frame check (extraction, budget or Spark) never costs the finished report.
     try {
-      disclosure = { spoken, onScreen: await findOnScreenDisclosure(videoPath, info.frameCount, input, spend), onScreenChecked: true };
+      disclosure = { spoken, onScreen: await findOnScreenDisclosure(videoPath, info.frameCount, input, spend), onScreenChecked: true, ...unheard };
     } catch (err) {
       log(`on-screen disclosure check failed: ${err instanceof Error ? err.message : err}`);
-      disclosure = { spoken, onScreen: [], onScreenChecked: false };
+      disclosure = { spoken, onScreen: [], onScreenChecked: false, ...unheard };
     }
   }
-  const termResults = checkTerms(terms, metrics, frameSamples(matched, info), disclosure);
+  let termResults = checkTerms(terms, metrics, frameSamples(matched, info), disclosure);
+  if (!read) termResults = termResults.map((t) => ({ ...t, detail: "Not checked: reading the contract terms failed on this run." }));
+  if (best.uncheckedObjects) {
+    // An object that was never checked does not count, but it may be the product: a term only it could meet is left
+    // for a person rather than failed. (Counting more objects only adds screen time, so no passing term can change.)
+    const all = [...matched, ...best.unchecked];
+    termResults = openForUnchecked(termResults, checkTerms(terms, measure(all), frameSamples(all, info), disclosure), best.uncheckedObjects);
+  }
   await progress({ terms: termResults.map((t) => ({ text: t.term.text, pass: t.pass, detail: t.detail })) });
 
   return {
@@ -387,11 +456,13 @@ async function verifyTrack(
     return spend.timed(
       call(MODELS.spark),
       SPARK_RESERVE_USD,
-      () => sparkJson<VerifyOutput>({ name: "product_check", schema: VERIFY_SCHEMA, strict: true, input: parts }, input.client),
+      () => sparkJson<VerifyOutput>({ name: "product_check", schema: VERIFY_SCHEMA, strict: true, input: parts }, callOpts(input, SPARK_IMAGES_TIMEOUT_MS)),
       verdictLine,
     );
   };
   let out: VerifyOutput;
+  // Which engine gave the verdict, recorded on campaigns that check with open weights.
+  let checkedBy: TrackVerification["checkedBy"];
   const open = input.openWeight;
   if (open) {
     // Muse Spark Open is priced like hosted Spark, so the same reservation covers it. A failed open call stays on the
@@ -401,18 +472,43 @@ async function verifyTrack(
       out = await spend.timed(
         { ...call(openModelName(open)), purpose: `Check object ${track.objectId + 1} against the product (open weights, ${open.provider})` },
         SPARK_RESERVE_USD,
-        () => openJson<VerifyOutput>(open, { name: "product_check", schema: VERIFY_SCHEMA, input: parts }, { fetch: input.client?.fetch }),
+        () =>
+          openJson<VerifyOutput>(open, { name: "product_check", schema: VERIFY_SCHEMA, input: parts }, {
+            fetch: input.client?.fetch,
+            timeoutMs: requestTimeoutMs(OPEN_TIMEOUT_MS, input.deadlineAt),
+          }),
         verdictLine,
       );
-    } catch {
+      checkedBy = "open";
+    } catch (err) {
+      console.warn(`${input.videoId} object ${track.objectId + 1}: ${open.provider} failed, so hosted Muse Spark checks it (${err instanceof Error ? err.message : err})`);
       out = await hosted();
+      checkedBy = "hosted";
     }
   } else {
     out = await hosted();
   }
   if (withPhoto) photo.used = true;
   const checks = toChecks(out.checks);
-  return { objectId: track.objectId, verdict: out.verdict, visibility: out.visibility, reason: out.reason, ...(checks.length ? { checks } : {}) };
+  return {
+    objectId: track.objectId,
+    verdict: out.verdict,
+    visibility: out.visibility,
+    reason: out.reason,
+    ...(checks.length ? { checks } : {}),
+    ...(checkedBy ? { checkedBy } : {}),
+  };
+}
+
+/**
+ * Leaves for a person each term that failed only because `objects` tracked objects went unchecked: they are not counted,
+ * but any of them may be the product. `ifCounted` is the same terms checked with those objects counted.
+ */
+function openForUnchecked(results: TermResult[], ifCounted: TermResult[], objects: number): TermResult[] {
+  const which = objects === 1 ? "1 tracked object was not checked; counting it" : `${objects} tracked objects were not checked; counting them`;
+  return results.map((t, i) =>
+    t.pass === false && ifCounted[i]?.pass === true ? { ...t, pass: null, detail: `${t.detail} ${which} would meet this term.` } : t,
+  );
 }
 
 /** Every tracked box with its object's verdict, for the player overlay; only the fields the overlay draws. */
@@ -487,7 +583,7 @@ async function findOnScreenDisclosure(
               ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
             ],
           },
-          input.client,
+          callOpts(input, SPARK_IMAGES_TIMEOUT_MS),
         ),
         frames.map((f) => f / FPS),
       ),
@@ -505,31 +601,40 @@ async function frameImages(videoPath: string, frames: number[], input: RunInput,
   );
 }
 
-async function parseTerms(input: RunInput, spend: VideoSpend): Promise<ContractTerm[]> {
+/**
+ * The contract terms as checkable rules, or null when reading them failed (the failed call stays on the receipt): the
+ * caller then leaves every term for a person rather than losing the paid report.
+ */
+async function parseTerms(input: RunInput, spend: VideoSpend): Promise<ContractTerm[] | null> {
   if (!input.contractTerms.length) return [];
   await spend.reserve(SPARK_RESERVE_USD, `terms ${input.videoId}`);
-  return spend.timed(
-    {
-      model: MODELS.spark,
-      purpose: "Turn the contract into checkable rules",
-      input: `${input.contractTerms.length} term${input.contractTerms.length === 1 ? "" : "s"} in plain English`,
-    },
-    SPARK_RESERVE_USD,
-    async () =>
-      toContractTerms(
-        input.contractTerms,
-        await sparkJson<unknown>(
-          {
-            name: "contract_rules",
-            schema: TERMS_SCHEMA,
-            strict: true,
-            input: [{ type: "input_text", text: parseTermsPrompt(input.contractTerms) }],
-          },
-          input.client,
+  try {
+    return await spend.timed(
+      {
+        model: MODELS.spark,
+        purpose: "Turn the contract into checkable rules",
+        input: `${input.contractTerms.length} term${input.contractTerms.length === 1 ? "" : "s"} in plain English`,
+      },
+      SPARK_RESERVE_USD,
+      async () =>
+        toContractTerms(
+          input.contractTerms,
+          await sparkJson<unknown>(
+            {
+              name: "contract_rules",
+              schema: TERMS_SCHEMA,
+              strict: true,
+              input: [{ type: "input_text", text: parseTermsPrompt(input.contractTerms) }],
+            },
+            callOpts(input, TERMS_TIMEOUT_MS),
+          ),
         ),
-      ),
-    (r) => `${r.filter((t) => t.rule).length} of ${r.length} checkable`,
-  );
+      (r) => `${r.filter((t) => t.rule).length} of ${r.length} checkable`,
+    );
+  } catch (err) {
+    input.log?.(`reading the contract terms failed: ${err instanceof Error ? err.message : err}`);
+    return null;
+  }
 }
 
 /**
@@ -562,7 +667,7 @@ async function suggestPrompt(
               ...images.map((image_url) => ({ type: "input_image" as const, image_url })),
             ],
           },
-          input.client,
+          callOpts(input, SPARK_IMAGES_TIMEOUT_MS),
         ),
         attempts.map((a) => a.prompt),
       ),
