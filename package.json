@@ -13,6 +13,7 @@
     "run-clip": "tsx --tsconfig tsconfig.json scripts/run-clip.mts",
     "accuracy": "tsx --tsconfig tsconfig.json scripts/accuracy.mts",
     "import-runs": "tsx --tsconfig tsconfig.json scripts/import-runs.mts",
+    "contract-eval": "tsx --tsconfig tsconfig.json scripts/contract-eval.mts",
     "test:linux": "sh scripts/test-linux.sh"
   },
   "dependencies": {
