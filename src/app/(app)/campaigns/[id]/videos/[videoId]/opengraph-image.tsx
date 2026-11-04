@@ -36,6 +36,7 @@ export default async function ReportCard({ params }: { params: Promise<{ id: str
     ...(display ? [{ name: "Display", data: display, weight: 600 as const, style: "normal" as const }] : []),
     ...(body ? [{ name: "Body", data: body, weight: 500 as const, style: "normal" as const }] : []),
   ];
+  // Faces are named even when a fetch failed: satori throws on fontFamily: undefined, but falls back for a missing name.
   // Only a stored https still can be fetched by the renderer.
   const still = video?.thumbUrl?.startsWith("https://") ? video.thumbUrl : null;
   const D = r?.info.durationSec ?? 1;
@@ -47,7 +48,7 @@ export default async function ReportCard({ params }: { params: Promise<{ id: str
           <img src={still} alt="" width={290} height={518} style={{ borderRadius: 28, objectFit: "cover", border: `6px solid ${SIGNAL}` }} />
         ) : null}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 30, fontWeight: 600, fontFamily: display ? "Display" : undefined }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 30, fontWeight: 600, fontFamily: "Display" }}>
             <div style={{ display: "flex", position: "relative", width: 46, height: 46, borderRadius: 13, background: INK }}>
               <div style={{ position: "absolute", left: 7, top: 19, width: 32, height: 8, borderRadius: 4, background: "rgba(255,255,255,0.2)" }} />
               <div style={{ position: "absolute", left: 7, top: 19, width: 20, height: 8, borderRadius: 4, background: SIGNAL }} />
@@ -55,11 +56,11 @@ export default async function ReportCard({ params }: { params: Promise<{ id: str
             Screen-Time
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-            <div style={{ display: "flex", alignSelf: "flex-start", padding: "10px 22px", borderRadius: 999, background: v.bg, color: "#fff", fontSize: 34, fontWeight: 600, fontFamily: display ? "Display" : undefined }}>
+            <div style={{ display: "flex", alignSelf: "flex-start", padding: "10px 22px", borderRadius: 999, background: v.bg, color: "#fff", fontSize: 34, fontWeight: 600, fontFamily: "Display" }}>
               {v.word}
             </div>
-            <div style={{ display: "flex", fontSize: 64, lineHeight: 1.02, fontWeight: 600, letterSpacing: -2, fontFamily: display ? "Display" : undefined }}>{head}</div>
-            <div style={{ display: "flex", fontSize: 28, color: INK_2, fontFamily: body ? "Body" : undefined }}>{sub}</div>
+            <div style={{ display: "flex", fontSize: 64, lineHeight: 1.02, fontWeight: 600, letterSpacing: -2, fontFamily: "Display" }}>{head}</div>
+            <div style={{ display: "flex", fontSize: 28, color: INK_2, fontFamily: "Body" }}>{sub}</div>
           </div>
           <div style={{ display: "flex", position: "relative", height: 44, borderRadius: 10, background: WASH, overflow: "hidden" }}>
             {(r?.metrics.segments ?? []).map((s) => (
