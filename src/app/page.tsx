@@ -63,19 +63,20 @@ const STEPS = [
 
 /** The demo video's script, step by step, each linked to the live page it shows (docs/DEMO.md has the full script). */
 const DEMO_SCRIPT: { title: string; text: string; href?: string }[] = [
-  { title: "The problem", text: "Brands pay creators for screen time. Screen-Time measures it against the contract." },
+  { title: "The problem", text: "Brand deals come with rules: three seconds on screen, say the name, disclose the ad. By hand, someone scrubs every Reel, or nobody checks." },
   { title: "The creator link", text: "Aldo, who built Screen-Time, sends his own Reel through his creator link: no account, no password.", href: campaignHref },
   {
     title: "The live run",
-    text: "SAM 3.1 tracks the can, Muse Spark checks each find against the product photo, Voice Transcribe listens, and every term of the contract is checked: a Poppi on the table is rejected as a look-alike. Tap a term to play the moment that proves it.",
+    text: "SAM 3.1 tracks the can, Muse Spark checks each find against the product photo, Voice Transcribe listens, and every term of the contract is checked: a Poppi on the table is rejected as a look-alike.",
     href: reportHref(CASES.live),
   },
-  { title: "Look-alikes", text: "Aldo’s can (the builder’s own clip) is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },
-  { title: "The follow-up agent", text: "Muse Spark drafts the note and a re-cut request; nothing is sent until you approve.", href: reportHref(CASES.agent) },
-  { title: "The re-cut", text: "Ash’s first upload never says LaCroix; her other take, sent after it, replaces it and pays.", href: reportHref(CASES.firstTake) },
+  { title: "Pay $300", text: "21.7 s on screen, LaCroix said, “this is an ad” out loud: all three terms met. Tap a term to play the moment that proves it.", href: reportHref(CASES.live) },
+  { title: "A can nobody can confirm", text: "George’s can is tiny and blurred: Muse Spark can’t confirm it’s the right one, so nothing counts and the report asks a person to look.", href: reportHref("george") },
+  { title: "The follow-up agent", text: "Peter never says it’s an ad. Muse Spark with tools drafts the note and a re-cut request; nothing is sent until you approve.", href: reportHref(CASES.agent) },
+  { title: "The other take", text: "Ash’s first take never says LaCroix, so the fee is held; her other take says it, is checked again, and pays.", href: reportHref(CASES.firstTake) },
   { title: "The campaign", text: "Pay or hold for every creator, with dollar totals and a CSV for finance. Screen-Time never moves money.", href: campaignHref },
-  { title: "Accuracy, in one line", text: "Precision with and without Muse Spark, measured frame by frame.", href: "/accuracy" },
-  { title: "Built during the hackathon", text: "The pipeline, the contract checker, the follow-up agent and the accuracy harness, all open source." },
+  { title: "Check it yourself", text: "Precision and recall per frame against labels a person checked, with the labels and Screen-Time’s count playing side by side.", href: "/accuracy" },
+  { title: "Built during the hackathon", text: "The pipeline, the contract checker, the follow-up agent and the accuracy harness, all open source, at cents a Reel." },
 ];
 
 const btnPrimary =
