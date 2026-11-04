@@ -6,7 +6,7 @@
 // is from a real run in the LaCroix test campaign (Aldo 2's Reel, Peter's Reel), not made up.
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight, Check, Clock, Copy, Mic, Play, X } from "lucide-react";
-import { timecode, tenths } from "@/components/format";
+import { spokenTime, timecode, tenths } from "@/components/format";
 import { PendingLink } from "./pending-link";
 import { CASES, campaignHref, reportHref } from "./judge-path";
 import { ADVANCE_MS, initialSwitcher, isRunning, stepForKey, switcherReducer } from "./how-switcher";
@@ -385,7 +385,7 @@ function RunMock() {
             <span className="flex flex-wrap gap-1.5">
               {heard.map((h) => (
                 <span key={h.t} className="inline-flex h-6 items-center gap-1 rounded-full bg-(--voice-soft) px-2 text-[11.5px] sm:text-[12px] font-semibold text-(--voice)">
-                  <Mic className="size-3" strokeWidth={2.5} aria-hidden />“{h.text}”<span className="ed-tc font-normal">{tc(h.t)}</span>
+                  <Mic className="size-3" strokeWidth={2.5} aria-hidden />“{h.text}”<span className="ed-tc font-normal">{spokenTime(h.t)}</span>
                 </span>
               ))}
             </span>
@@ -417,7 +417,7 @@ function VerdictMock() {
   const proofs = [
     { text: TERMS[0], detail: `On screen ${tenths(ALDO2.onScreenSec)} s in total (needs 3 s)`, t: 0 },
     { text: TERMS[1], detail: `Mentioned ${ALDO2.mentions.length} times (needs 1 time)`, t: ALDO2.mentions[0] },
-    { text: "Discloses the ad", detail: `Said “${ALDO2.disclosure.text}” at ${tc(ALDO2.disclosure.startSec)}`, t: ALDO2.disclosure.startSec },
+    { text: "Discloses the ad", detail: `Said “${ALDO2.disclosure.text}” at ${spokenTime(ALDO2.disclosure.startSec)}`, t: ALDO2.disclosure.startSec },
   ];
   const win = ALDO2.disclosure;
   return (
