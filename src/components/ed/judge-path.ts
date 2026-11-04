@@ -24,4 +24,4 @@ export const reportHref = (videoId: string) => `${campaignHref}/videos/${videoId
 /** Where "Try your own video" lands: the gate, limits and wait, stated above the new-campaign form. */
 export const OWN_VIDEO_HREF = "/campaigns/new#before-you-start";
 export const JUDGE_HREF = "/judge";
-export const CONTACT_EMAIL = "founder@aetrai.com";
+export const CONTACT_EMAIL = "aldo@aetrai.com";
