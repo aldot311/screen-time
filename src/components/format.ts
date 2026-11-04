@@ -1,5 +1,5 @@
 import { sizeFactor } from "@/lib/metrics/compute";
-import { FPS, type ContractRule, type Segment, type TermResult, type VideoMetrics, type VideoReport } from "@/lib/types";
+import { FPS, type ContractRule, type Disclosure, type Segment, type TermResult, type VideoMetrics, type VideoReport } from "@/lib/types";
 
 /** 12.4 -> "0:12.4"; whole minutes for long clips. */
 export function timecode(sec: number): string {
@@ -17,6 +17,52 @@ export function tenths(sec: number): string {
 
 export function seconds(sec: number): string {
   return `${tenths(sec)} s`;
+}
+
+/** 9.27 -> "0:09": whole seconds on the clock, rounded down like the other figures. */
+function wholeClock(sec: number): string {
+  const s = Math.floor(Math.max(0, sec) + 1e-6);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** "≈0:05": a time something was said. Voice Transcribe times each spoken turn, not each word, so a word's time is
+ *  estimated from its place in the turn and can be off by a second or two: whole seconds, marked as an estimate. */
+export function spokenTime(sec: number): string {
+  return `≈${wholeClock(sec)}`;
+}
+
+/** "by 0:09": when on-screen text was read. Muse Spark reads about ten sampled frames, so the text was on screen by
+ *  then and may have appeared earlier. */
+export function shownBy(sec: number): string {
+  return `by ${wholeClock(sec)}`;
+}
+
+/** How much a spoken proof plays around the word's estimated time, so the sentence with the word is heard. */
+export const SPOKEN_BEFORE_SEC = 2.5;
+export const SPOKEN_AFTER_SEC = 2;
+
+/** The stretch a spoken proof plays: from 2.5 s before the word's estimated start to 2 s after its end, inside the
+ *  video. */
+export function spokenWindow(said: { startSec: number; endSec: number }, durationSec: number): Segment {
+  return { startSec: Math.max(0, said.startSec - SPOKEN_BEFORE_SEC), endSec: Math.min(durationSec, said.endSec + SPOKEN_AFTER_SEC) };
+}
+
+/** "said “this is an ad” at ≈0:08; on screen “#ad” by 0:09": the first spoken and the first on-screen disclosure. */
+export function disclosureLine(d: Disclosure): string {
+  const said = [...d.spoken].sort((a, b) => a.startSec - b.startSec)[0];
+  const seen = [...d.onScreen].sort((a, b) => a.startSec - b.startSec)[0];
+  return [
+    ...(said ? [`said “${said.text}” at ${spokenTime(said.startSec)}`] : []),
+    ...(seen ? [`on screen “${seen.text}” ${shownBy(seen.startSec)}`] : []),
+  ].join("; ");
+}
+
+/** A term's detail as the report shows it. A met disclosure term is worded from the report's disclosure when shown, so
+ *  reports stored with the older wording ("shown on screen “AN AD” at 0:09.2") read like new ones; every other term
+ *  shows its stored detail. */
+export function termDetail(t: TermResult, d: Disclosure | undefined): string {
+  if (t.term.rule?.kind !== "disclosed" || t.pass !== true || !d || d.spoken.length + d.onScreen.length === 0) return t.detail;
+  return `Disclosed: ${disclosureLine(d)}`;
 }
 
 /** The share shown next to a seconds figure, worked out from the two figures as displayed (10.2 of 11.6 s = 88%), so

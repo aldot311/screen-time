@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { friendlyError, countedBefore, verdictOf } from "./format";
+import type { Disclosure, TermResult } from "@/lib/types";
+import { friendlyError, countedBefore, disclosureLine, shownBy, spokenTime, spokenWindow, termDetail, verdictOf } from "./format";
 
 describe("friendlyError", () => {
   it("turns API failures into what happened and who acts", () => {
@@ -42,5 +43,59 @@ describe("countedBefore", () => {
     const m = { ...base, segments: [{ startSec: 1, endSec: 3 }, { startSec: 5, endSec: 6 }] };
     expect(countedBefore(m, 2)).toBe(1);
     expect(countedBefore(m, 10)).toBe(3);
+  });
+});
+
+describe("spoken and on-screen times", () => {
+  it("prints a spoken time to the whole second, marked as an estimate", () => {
+    // Michael K's "LaCroix", estimated at 5.28 s from its place in a speech turn.
+    expect(spokenTime(5.278823529411765)).toBe("≈0:05");
+    expect(spokenTime(0.27)).toBe("≈0:00");
+    expect(spokenTime(59.99)).toBe("≈0:59");
+    expect(spokenTime(65.9)).toBe("≈1:05");
+  });
+
+  it("prints on-screen text as read by a sampled frame", () => {
+    expect(shownBy(9.266666666666667)).toBe("by 0:09");
+  });
+
+  it("plays the sentence around a spoken word: 2.5 s before it to 2 s after, inside the video", () => {
+    expect(spokenWindow({ startSec: 5.278823529411765, endSec: 5.53764705882353 }, 14.533333333333333)).toEqual({
+      startSec: 5.278823529411765 - 2.5,
+      endSec: 5.53764705882353 + 2,
+    });
+    expect(spokenWindow({ startSec: 0.27642857142857147, endSec: 0.8292857142857143 }, 16.5).startSec).toBe(0);
+    expect(spokenWindow({ startSec: 23.28, endSec: 24.37333333333333 }, 25).endSec).toBe(25);
+  });
+});
+
+describe("disclosureLine and termDetail", () => {
+  // Michael K's stored report: nothing said, the on-screen text "AN AD" read on the frame at 9.27 s.
+  const michaelK: Disclosure = { spoken: [], onScreen: [{ startSec: 9.266666666666667, text: "AN AD" }], onScreenChecked: true };
+  const ash: Disclosure = {
+    spoken: [{ startSec: 8.605882352941176, endSec: 9.589411764705883, text: "this is an ad" }],
+    onScreen: [{ startSec: 9.8, text: "THIS IS AN AD" }],
+    onScreenChecked: true,
+  };
+  const disclosed = (pass: boolean | null, detail: string): TermResult => ({
+    term: { text: "Discloses the ad: says it is an ad or sponsored", rule: { kind: "disclosed" } },
+    pass,
+    evidence: [],
+    detail,
+  });
+
+  it("names the first spoken and the first on-screen disclosure, with times that do not claim more than they know", () => {
+    expect(disclosureLine(michaelK)).toBe("on screen “AN AD” by 0:09");
+    expect(disclosureLine(ash)).toBe("said “this is an ad” at ≈0:08; on screen “THIS IS AN AD” by 0:09");
+  });
+
+  it("rewords a met disclosure term stored with the older wording, and leaves every other detail as stored", () => {
+    expect(termDetail(disclosed(true, "Disclosed: shown on screen “AN AD” at 0:09.2"), michaelK)).toBe("Disclosed: on screen “AN AD” by 0:09");
+    const missed = "Not disclosed: no “ad” or “sponsored” said or shown on screen";
+    expect(termDetail(disclosed(false, missed), { spoken: [], onScreen: [], onScreenChecked: true })).toBe(missed);
+    // An older report without disclosure data keeps what it says.
+    expect(termDetail(disclosed(true, "Disclosed: said “ad” at 0:01.2"), undefined)).toBe("Disclosed: said “ad” at 0:01.2");
+    const total: TermResult = { term: { text: "3 s", rule: { kind: "min_seconds_total", seconds: 3 } }, pass: true, evidence: [], detail: "On screen 14.5 s in total (needs 3 s)." };
+    expect(termDetail(total, michaelK)).toBe("On screen 14.5 s in total (needs 3 s).");
   });
 });
