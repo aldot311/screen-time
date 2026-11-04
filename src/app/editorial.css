@@ -239,3 +239,189 @@
     animation: none;
   }
 }
+
+/* "How it works" step switcher. Every mock is drawn in its finished state; these keyframes only replay how it got
+   there, each piece staggered by --d, so with reduced motion (or before JS) the finished state is what shows. */
+@keyframes hw-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.ed .hw-in {
+  animation: hw-in 520ms var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes hw-slide {
+  from {
+    opacity: 0;
+    transform: translateX(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ed .hw-slide {
+  animation: hw-slide 620ms var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes hw-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ed .hw-pop {
+  animation: hw-pop 360ms var(--ease-out) var(--d, 0ms) both;
+}
+/* The state a piece leaves: shown until --d, then gone. It carries opacity-0, so its resting state is gone. */
+@keyframes hw-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.ed .hw-out {
+  animation: hw-out 160ms ease-out var(--d, 0ms) both;
+}
+@keyframes hw-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+.ed .hw-grow {
+  transform-origin: left center;
+  animation: hw-grow var(--dur, 1200ms) cubic-bezier(0.4, 0, 0.2, 1) var(--d, 0ms) both;
+}
+/* A drafted note writes itself in, top to bottom. */
+@keyframes hw-write {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.ed .hw-write {
+  animation: hw-write var(--dur, 1600ms) linear var(--d, 0ms) both;
+}
+/* The playhead travels from the start to the moment a term's play button points at (--to). */
+@keyframes hw-seek {
+  from {
+    left: 0%;
+  }
+  to {
+    left: var(--to);
+  }
+}
+.ed .hw-seek {
+  left: var(--to);
+  animation: hw-seek 700ms var(--ease-out) var(--d, 0ms) both;
+}
+/* The pointer: glides in from below right, presses, lets go, then fades. */
+@keyframes hw-cursor {
+  0% {
+    opacity: 0;
+    transform: translate(46px, 38px);
+  }
+  18% {
+    opacity: 1;
+  }
+  60% {
+    transform: translate(0, 0);
+  }
+  68% {
+    transform: translate(0, 0) scale(0.84);
+  }
+  78% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+}
+.ed .hw-cursor {
+  opacity: 0;
+  animation: hw-cursor 1500ms var(--ease-out) var(--d, 0ms) both;
+}
+@keyframes hw-ring {
+  from {
+    opacity: 0.5;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+.ed .hw-ring {
+  opacity: 0;
+  animation: hw-ring 520ms var(--ease-out) var(--d, 0ms) both;
+}
+/* The active step's rail fills over the step's time on screen; the step moves on when it is full. */
+@keyframes hw-rail {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: none;
+  }
+}
+.ed .hw-rail {
+  transform-origin: top center;
+  animation: hw-rail var(--dur, 5000ms) linear both;
+}
+.ed .hw-rail[data-paused="true"] {
+  animation-play-state: paused;
+}
+/* A gentle drift on the front card, so the mock reads as a live surface while it waits. */
+@keyframes hw-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.ed .hw-float {
+  animation: hw-float 5s ease-in-out var(--d, 0ms) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed .hw-in,
+  .ed .hw-slide,
+  .ed .hw-pop,
+  .ed .hw-out,
+  .ed .hw-grow,
+  .ed .hw-write,
+  .ed .hw-seek,
+  .ed .hw-rail,
+  .ed .hw-float {
+    animation: none;
+  }
+  .ed .hw-cursor,
+  .ed .hw-ring {
+    display: none;
+  }
+}

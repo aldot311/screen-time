@@ -4,6 +4,7 @@ import data from "@/lib/accuracy-data.json";
 import { loadShowcase, type Showcased } from "@/lib/campaign/showcase";
 import { SAM_USD_PER_FRAME } from "@/lib/meta/cost-guard";
 import { LiveReplay } from "@/components/ed/live-replay";
+import { HowItWorks } from "@/components/ed/how-it-works";
 import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
 import { TopBar } from "@/components/ed/top-bar";
@@ -286,27 +287,9 @@ export default async function Landing() {
               </div>
             </div>
 
-            <ol className="relative mt-12 grid gap-9 sm:grid-cols-2 lg:mt-14 lg:grid-cols-4 lg:gap-8">
-              {/* The rule that joins the steps: down the left on a phone, across the icons on a wide screen. */}
-              <span className="absolute top-5 bottom-5 left-5 w-px bg-(--hair-2) sm:hidden lg:right-5 lg:bottom-auto lg:block lg:h-px lg:w-auto" aria-hidden />
-              {STEPS.map((s) => (
-                <li key={s.title} className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-4 lg:block">
-                  <span className="relative grid size-10 place-items-center rounded-[12px] bg-(--paper) text-(--ink) ring-1 ring-(--hair-2)">
-                    <s.icon className="size-[19px]" strokeWidth={2} aria-hidden />
-                  </span>
-                  <div className="min-w-0 lg:mt-5">
-                    <h3 className="ed-display text-[22px] leading-tight">{s.title}</h3>
-                    <p className="mt-1 text-[13px] font-medium text-(--ink-3)">{s.model}</p>
-                    <p className="mt-2 text-[15px] leading-[1.55] text-(--ink-2)">{s.text}</p>
-                    {"extra" in s && (
-                      <p className="mt-2 text-[14px] leading-[1.5] text-(--ink-3)">
-                        <span className="font-semibold text-(--ink-2)">{s.extraLabel}</span> {s.extra}
-                      </p>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className="mt-12 lg:mt-14">
+              <HowItWorks />
+            </div>
           </div>
         </section>
 
