@@ -480,14 +480,14 @@ export function whereWrong(d: AccuracyData): WrongCard[] {
   const cards: (WrongCard | undefined)[] = [
     weak.precision && {
       key: "precision",
-      title: "Counted more than was there",
+      title: weak.precision.precision === 0 ? "Counted only what was not there" : "Counted more than was there",
       clip: name(weak.precision),
       what: `Precision ${pct(weak.precision.precision)}: ${tenths(missSeconds(weak.precision).extraSec)} s counted that the labels mark as not on screen (${counts(weak.precision)}).`,
       why: `The lowest precision in the test set. Over-counting is the costly error: it would pay for screen time the brand did not get.${consequence(weak.precision)}`,
     },
     weak.recall && {
       key: "recall",
-      title: "Missed some of it",
+      title: weak.recall.recall === 0 ? "Missed all of it" : "Missed some of it",
       clip: name(weak.recall),
       what: `Recall ${pct(weak.recall.recall)}: ${tenths(missSeconds(weak.recall).missedSec)} s of real screen time not counted (${counts(weak.recall)}).`,
       why: `The lowest recall in the test set. Here the report under-counts, so the brand sees less screen time than it got, not more.${consequence(weak.recall)}`,

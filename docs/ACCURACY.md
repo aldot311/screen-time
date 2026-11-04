@@ -33,19 +33,21 @@ precision 96.7–99.6%, recall 70.3–100.0%, F1 81.9–99.6%. They cover which 
 
 | Per frame, same runs | Precision | Recall | F1 | Avg. error per Reel | Seconds counted on the look-alike Reel |
 |---|---|---|---|---|---|
-| SAM 3.1 alone (every tracked object counts) | 95.0% (86.0–99.1%) | 99.3% | 97.1% | 0.56 s | 4.27 s |
+| SAM 3.1 alone (every tracked object counts) | 95.0% (86.0–99.1%) | 99.3% | 97.1% | 0.5 s | 4.2 s |
 | SAM 3.1 + Muse Spark (confirmed objects only) | 98.4% (96.7–99.6%) | 91.1% | 94.6% | 1.18 s | 0.0 s |
 
 What Muse Spark adds, honestly. It changed the count on 2 of the 11 Reels:
-- Aldo's look-alike Reel (Pamplemousse): SAM alone counted 4.27 s, Muse Spark rejected the can, 0 s. Without that
+- Aldo's look-alike Reel (Pamplemousse): SAM alone counted 4.2 s, Muse Spark rejected the can, 0 s. Without that
   Reel, SAM alone scores 98.2% precision (99.3% recall) and SAM + Muse Spark 98.4% (91.1%): all but 0.2 points of the
   per-frame precision gain is this one Reel. The builder filmed it, and its label was corrected after the run (above).
 - George's Reel: Muse Spark could not confirm his small can (it called it "unclear"), so nothing was counted:
   0 s against 11.2 s labelled. That is the whole recall loss. The report holds the fee and flags the Reel for a look.
 
-Object by object (data/labels/lacroix/objects.json: each object SAM 3.1 tracked, judged by Claude from its crops as
-the product, something else, or too small to tell; one fridge-door sliver is left out), scored against the verdicts in
-the site's runs, with exact Clopper-Pearson 95% intervals:
+Object by object (data/labels/lacroix/objects.json: each object SAM 3.1 tracked in the earlier runs, our zoomed edit of
+George's Reel among them, judged by Claude from its crops as the product, something else, or too small to tell),
+matched to the site's runs by track number and scored against their verdicts, with exact Clopper-Pearson 95%
+intervals. A fridge-door sliver judged "too small to tell" in the zoomed George run is not tracked in the delivered
+one, so it is not counted at all:
 
 | Object check (12 objects) | Correct | Look-alikes counted | Products missed |
 |---|---|---|---|
@@ -75,8 +77,8 @@ were drawn on the zoomed frames; the zoom follows the can, so they can only miss
 on the /label check list.
 
 Cost of the 11 runs scored here: $1.56 of Meta API ($0.106–0.230 per Reel), with the product photo and transcription.
-SAM 3.1 is billed per frame ($0.20 per 1,000); Muse Spark and Voice Transcribe count a fixed reserve per call ($0.02 /
-$0.01), above what they cost, so the total is an upper bound.
+SAM 3.1 is billed per frame ($0.20 per 1,000); Muse Spark and Voice Transcribe count the fixed amount the budget reserves
+per call ($0.02 / $0.01), not the billed amount.
 
 # Earlier test set (2026-10-28, the builder's own clips; not shown on the site)
 

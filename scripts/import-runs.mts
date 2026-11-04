@@ -31,7 +31,10 @@ const BRANDS: Record<string, string> = {
 // Target definitions come from the labels, so prompts and product descriptions match the runs.
 const targets = new Map<string, Target>();
 for (const f of (await readdir("data/labels", { recursive: true })).filter((f) => f.endsWith(".json"))) {
-  for (const t of JSON.parse(await readFile(join("data/labels", f), "utf8")).targets as Target[]) targets.set(t.name, t);
+  // objects.json and checklist.json sit beside the label files but hold no targets.
+  const doc = JSON.parse(await readFile(join("data/labels", f), "utf8"));
+  if (!Array.isArray(doc.targets)) continue;
+  for (const t of doc.targets as Target[]) targets.set(t.name, t);
 }
 
 const now = new Date().toISOString();

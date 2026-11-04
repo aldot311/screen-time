@@ -23,15 +23,15 @@ the accuracy page and the follow-up agent.
 
 Measured on the 11 LaCroix test Reels as delivered on the site (9 people; 1,931 frames with the can in 2,800), scored
 from the site's own run reports (data/runs) frame by frame at 15 fps against labels drafted by two independent Claude
-vision passes. No person has checked the labels yet (0 of 11 clips; /label records a check). Details, intervals and
-the reproduce command (`pnpm accuracy --labels data/labels/lacroix`) are in [docs/ACCURACY.md](docs/ACCURACY.md):
+vision passes (George's on our earlier zoomed edit of his Reel). No person has checked the labels yet (0 of 11 clips;
+/label records a check). Details, intervals and the reproduce command (`pnpm accuracy --labels data/labels/lacroix`) are in [docs/ACCURACY.md](docs/ACCURACY.md):
 
 | | SAM 3.1 alone | SAM 3.1 + Muse Spark (what the app reports) |
 |---|---|---|
 | Precision | 95.0% | **98.4%** (95% interval 96.7–99.6%) |
 | Recall | 99.3% | **91.1%** (70.3–100.0%) |
 | F1 | 97.1% | **94.6%** |
-| Seconds counted on the look-alike Reel | 4.27 s | **0.0 s** |
+| Seconds counted on the look-alike Reel | 4.2 s | **0.0 s** |
 
 - What Muse Spark adds: it rejected both look-alikes SAM alone counts (a LaCroix Pamplemousse can, a different flavor,
   and a Poppi can). Per frame, nearly all of the precision gain is the one look-alike Reel, which the builder filmed.
@@ -44,8 +44,8 @@ the reproduce command (`pnpm accuracy --labels data/labels/lacroix`) are in [doc
 - Until Nov 4 the published figures scored a zoomed edit of George's Reel that we made (2.3x, following the can); they
   now score the Reel as delivered.
 - Cost: $0.106–0.230 of Meta API per Reel on these runs ($1.56 for all 11), with the product photo and
-  transcription. SAM 3.1 is $0.20 per 1,000 frames; Muse Spark and Voice Transcribe are counted at a fixed per-call
-  reserve above what they cost, so this is an upper bound.
+  transcription. SAM 3.1 is $0.20 per 1,000 frames; Muse Spark and Voice Transcribe are counted at the fixed amount
+  the budget reserves per call, not the billed amount.
 - An earlier test set of 20 clips the builder filmed himself or took from Pexels (2026-10-28: precision 97.7%,
   recall 95.6%) is kept in [docs/ACCURACY.md](docs/ACCURACY.md); its campaigns are archived and hidden from the site.
 

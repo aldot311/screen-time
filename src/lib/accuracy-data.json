@@ -359,7 +359,7 @@
   },
   "objects": {
     "judged": 12,
-    "unsure": 1,
+    "unsure": 0,
     "hosted": {
       "correct": 11,
       "lookalikesCounted": 0,

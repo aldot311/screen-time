@@ -64,8 +64,8 @@ export function accuracyGloss(report?: { receipt?: { runId: string } }, data: Ac
 export function costGloss(): string {
   const r = RECEIPT_RATES;
   return (
-    `SAM 3.1 is billed per frame ($${r.samPer1000Frames.toFixed(2)} per 1,000); Muse Spark and Voice Transcribe count a fixed reserve per call ` +
-    `($${r.sparkPerCall.toFixed(2)} / $${r.transcribePerCall.toFixed(2)}), above what they cost, so the total is an upper bound.`
+    `SAM 3.1 is billed per frame ($${r.samPer1000Frames.toFixed(2)} per 1,000); Muse Spark and Voice Transcribe count the fixed amount the ` +
+    `budget reserves per call ($${r.sparkPerCall.toFixed(2)} / $${r.transcribePerCall.toFixed(2)}), not the billed amount.`
   );
 }
 

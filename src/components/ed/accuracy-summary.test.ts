@@ -227,6 +227,15 @@ describe("the measured set, in the page's words", () => {
     expect(under.what).toContain("(labelled 11.2 s, counted 0.0 s)");
     expect(under.why).toContain("by the labels this Reel should pay, and the report says hold");
     expect(under.why).toContain("The report flags it");
+    // George's recall is 0, so the card says all of it was missed; Michael over-counted only part of his.
+    expect(under.title).toBe("Missed all of it");
+    expect(over.title).toBe("Counted more than was there");
+  });
+
+  it("says some of it was missed when the weakest recall is above zero", () => {
+    const scores = site.scores.map((s) => ({ ...s, rows: s.rows.map((r) => (r.recall === 0 ? { ...r, recall: 0.5 } : r)) }));
+    const [, under] = whereWrong({ ...site, scores });
+    expect(under.title).toBe("Missed some of it");
   });
 
   it("shows George's delivered row and links Michael K's on the landing page", () => {

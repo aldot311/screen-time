@@ -239,7 +239,9 @@ const payHoldRows = cases.flatMap(({ labels, target, report, truth }, i) => {
 const payHold = { agree: payHoldRows.filter((r) => r.labelsPay === r.appPay).length, of: payHoldRows.length, rows: payHoldRows };
 
 // Object by object (objects.json): hosted Muse Spark as it ran on these reports, and SAM 3.1 alone, where every
-// tracked object counts. An object the run did not track is not scored; "unsure" objects are left out.
+// tracked object counts. objects.json was judged from crops of the earlier data/out runs (our zoomed edit of George's
+// Reel among them) and is matched to these runs by track number. An object the run did not track is not scored;
+// "unsure" objects are left out.
 function objectScores() {
   const judged = objectTruth.flatMap((o) => {
     const c = cases.find((k) => k.labels.id === o.clip && k.target.name === o.target);
@@ -253,7 +255,11 @@ function objectScores() {
   const correct = judged.filter((o) => (o.truth === "product") === (o.verdict === "match")).length;
   return {
     judged: judged.length,
-    unsure: objectTruth.filter((o) => o.truth === "unsure" && cases.some((k) => k.labels.id === o.clip && k.target.name === o.target)).length,
+    // Only objects these runs tracked: a judgement from the earlier runs' crops with no matching track here is not one.
+    unsure: objectTruth.filter((o) => {
+      const c = o.truth === "unsure" && cases.find((k) => k.labels.id === o.clip && k.target.name === o.target);
+      return !!c && (c.report.tracks ?? []).some((t) => t.objectId === o.objectId);
+    }).length,
     hosted: {
       correct,
       lookalikesCounted: others.filter((o) => o.verdict === "match").length,

@@ -31,7 +31,7 @@ describe("receipt cost words", () => {
 
   it("says it in one line", () => {
     expect(costGloss()).toBe(
-      "SAM 3.1 is billed per frame ($0.20 per 1,000); Muse Spark and Voice Transcribe count a fixed reserve per call ($0.02 / $0.01), above what they cost, so the total is an upper bound.",
+      "SAM 3.1 is billed per frame ($0.20 per 1,000); Muse Spark and Voice Transcribe count the fixed amount the budget reserves per call ($0.02 / $0.01), not the billed amount.",
     );
   });
 

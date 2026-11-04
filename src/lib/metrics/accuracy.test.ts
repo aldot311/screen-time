@@ -155,6 +155,10 @@ describe("scripts/accuracy.mts", () => {
     const dir = tempDir();
     const jsonPath = join(dir, "score.json");
     script(root, ["--labels", "data/labels/lacroix", "--json", jsonPath]);
-    expect(JSON.parse(readFileSync(jsonPath, "utf8"))).toEqual(JSON.parse(readFileSync(join(root, "src/lib/accuracy-data.json"), "utf8")));
+    const scored = JSON.parse(readFileSync(jsonPath, "utf8"));
+    expect(scored).toEqual(JSON.parse(readFileSync(join(root, "src/lib/accuracy-data.json"), "utf8")));
+    // objects.json judged a fridge-door sliver (George, track 1) in the earlier zoomed run; the delivered run never
+    // tracked it, so it is neither scored nor reported as left out.
+    expect(scored.objects).toMatchObject({ judged: 12, unsure: 0 });
   }, 60_000);
 });

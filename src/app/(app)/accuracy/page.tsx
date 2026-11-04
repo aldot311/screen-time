@@ -140,7 +140,8 @@ export default function AccuracyPage() {
               Object by object
             </h2>
             <p className={`mt-2 ${PROSE}`}>
-              Every object SAM 3.1 tracked was also labelled from its crops as the product or something else: {data.objects.judged} could be
+              Each object was judged by Claude from crops of the earlier runs (our zoomed edit of George&rsquo;s Reel among them) as the product or
+              something else, and matched to these runs by track number: {data.objects.judged} could be
               judged{data.objects.unsure ? `, ${data.objects.unsure} too small to tell is left out` : ""}. The intervals are exact (Clopper-Pearson)
               95% intervals: with {data.objects.judged} objects they are wide.
             </p>
@@ -265,7 +266,8 @@ export default function AccuracyPage() {
             </li>
             <li>
               <span className="font-semibold text-(--ink)">Labels.</span> Two independent Claude vision passes over frame-numbered grids at 5
-              frames a second, kept where both agreed.{testSetNote(acc)}
+              frames a second, kept where both agree, or where one is certain and the other unsure. The look-alike Reel was then corrected by one
+              Claude pass at full resolution.{testSetNote(acc)}
             </li>
             <li>
               <span className="font-semibold text-(--ink)">Scoring.</span> Per frame: a frame counts when the pipeline says the product is visible in
@@ -277,7 +279,8 @@ export default function AccuracyPage() {
             </li>
             <li>
               <span className="font-semibold text-(--ink)">History.</span> Until Nov 4 this page scored a zoomed edit of George&rsquo;s Reel that we
-              made (2.3x, following the can); it now scores the Reel as delivered.
+              made (2.3x, following the can); it now scores the Reel as delivered. George&rsquo;s labels were drawn on that zoomed edit; the zoom
+              follows the can, so on the wide cut they can only miss frames.
             </li>
           </ul>
         </section>
