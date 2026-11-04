@@ -3,3 +3,5 @@ allowBuilds:
   sharp: false
   unrs-resolver: false
   esbuild: false
+overrides:
+  "@vercel/cli-config>zod": 4.6.7
