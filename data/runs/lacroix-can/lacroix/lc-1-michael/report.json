@@ -1,0 +1,364 @@
+{
+  "videoId": "michael",
+  "info": {
+    "frameCount": 186
+  },
+  "tracks": [
+    {
+      "objectId": 0,
+      "verdict": "match",
+      "visibility": "partial"
+    }
+  ],
+  "detections": [
+    {
+      "frame": 140,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 141,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 142,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 143,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 144,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 145,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 146,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 147,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 148,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 149,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 150,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 151,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 152,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 153,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 154,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 155,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 156,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 157,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 158,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 159,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 160,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 161,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 162,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 163,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 164,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 165,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 166,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 167,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 168,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 169,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 170,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 171,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 172,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 173,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 174,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 175,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 176,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 177,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 178,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 179,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 180,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 181,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 182,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 183,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 184,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 185,
+      "objectId": 0,
+      "verdict": "match"
+    }
+  ],
+  "metrics": {
+    "secondsOnScreen": 3.066666666666667,
+    "visibleFrames": [
+      140,
+      141,
+      142,
+      143,
+      144,
+      145,
+      146,
+      147,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160,
+      161,
+      162,
+      163,
+      164,
+      165,
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176,
+      177,
+      178,
+      179,
+      180,
+      181,
+      182,
+      183,
+      184,
+      185
+    ],
+    "segments": [
+      {
+        "startSec": 9.333333333333334,
+        "endSec": 12.4
+      }
+    ],
+    "mentions": [
+      {
+        "startSec": 8.051111111111112,
+        "endSec": 8.566666666666666,
+        "text": "La Croix"
+      }
+    ]
+  },
+  "terms": [
+    {
+      "term": {
+        "text": "On screen at least 3 seconds in total",
+        "rule": {
+          "kind": "min_seconds_total",
+          "seconds": 3
+        }
+      },
+      "pass": true
+    },
+    {
+      "term": {
+        "text": "Says LaCroix out loud",
+        "rule": {
+          "kind": "mentioned",
+          "minTimes": 1
+        }
+      },
+      "pass": true
+    },
+    {
+      "term": {
+        "text": "Discloses the ad: says it is an ad or sponsored",
+        "rule": {
+          "kind": "disclosed"
+        }
+      },
+      "pass": true
+    }
+  ],
+  "disclosure": {
+    "spoken": [
+      {
+        "startSec": 11.1,
+        "endSec": 11.66,
+        "text": "this is an ad"
+      }
+    ],
+    "onScreen": [
+      {
+        "startSec": 11.866666666666667,
+        "text": "THIS IS AN AD"
+      }
+    ],
+    "onScreenChecked": true
+  },
+  "cost": {
+    "samFrames": 186,
+    "usd": 0.1072
+  },
+  "receipt": {
+    "runId": "michael-2026-11-03T06:05:41.776Z",
+    "startedAt": "2026-11-03T06:05:41.776Z"
+  }
+}
