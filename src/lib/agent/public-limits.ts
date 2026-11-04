@@ -1,15 +1,16 @@
 // Fences for a visitor's run of the follow-up agent (no demo password, on the example reports in ./public.ts), in the
 // pattern of the sample run (lib/campaign/try.ts): a visitor (hashed address) gets a few runs a day, everyone together
-// gets a daily cap, and while a run is in progress on a video a new visitor joins it. Past a limit, the brand's run
-// (VideoEntry.agent) is shown instead. A visitor's run is stored beside it (VideoEntry.visitorAgent), never over it.
-// Each run's own budget is capped at the turn cap (run-agent.ts), so a day costs at most perDay x AGENT_MAX_USD,
-// inside the total budget cap every run shares.
+// gets a daily cap, while a run is in progress on a video a new visitor joins it, and no run starts into the budget
+// kept for the demo password (runner.ts ownerReserveUsd). Past a limit, the brand's run (VideoEntry.agent) is shown
+// instead. A visitor's run is stored beside it (VideoEntry.visitorAgent), never over it. Each run's own budget is
+// capped at the turn cap (run-agent.ts), so a day costs at most perDay x AGENT_MAX_USD, inside the total budget cap
+// every run shares.
 import { linkSecret } from "@/lib/campaign/requests";
-import { usdFromEnv } from "@/lib/campaign/runner";
+import { openRunFits, usdFromEnv } from "@/lib/campaign/runner";
 import { createDoc, readDoc, takeSlot, updateVideo } from "@/lib/campaign/store";
 import type { VideoEntry } from "@/lib/campaign/types";
 import { clientKey } from "@/lib/client-ip";
-import { agentRunning } from "./state";
+import { AGENT_MAX_USD, agentRunning } from "./state";
 import { PUBLIC_AGENT_LIMIT_TEXT, type PublicAgentLimit } from "./public";
 
 export const publicAgentLimits = (env: Record<string, string | undefined> = process.env) => ({
@@ -45,11 +46,13 @@ export async function startPublicAgent(ip: string, video: VideoEntry, now = new 
     const reason = PUBLIC_AGENT_LIMIT_TEXT[limit](limit === "visitor" ? limits.perVisitor : limits.perDay);
     return video.agent?.status === "done"
       ? { mode: "replay", video, limit, reason }
-      : { mode: "unavailable", status: 429, error: `${reason} Try again tomorrow, or enter the demo password to run it.` };
+      : { mode: "unavailable", status: 429, error: `${reason} ${limit === "budget" ? "Enter" : "Try again tomorrow, or enter"} the demo password to run it.` };
   };
   const day = now.toISOString().slice(0, 10);
   // Once the day is full, one read answers every later request: no slot writes to spam.
   if (await readDoc(`agent-public/${day}/full.json`)) return replay("day");
+  // The budget the demo password needs is never spent here: checked before any slot is taken.
+  if (!(await openRunFits(AGENT_MAX_USD))) return replay("budget");
   if (!(await takeSlot(`agent-public/${day}/visitor-${await visitorKey(ip)}`, limits.perVisitor))) return replay("visitor");
   if (!(await takeSlot(`agent-public/${day}/run`, limits.perDay))) {
     await createDoc(`agent-public/${day}/full.json`, { at: now.toISOString() });

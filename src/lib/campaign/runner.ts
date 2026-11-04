@@ -13,7 +13,7 @@ import { runVideo } from "@/lib/pipeline/run";
 import { isBlobUrl, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, sniffImageType } from "./schema";
 import { saveVisuals } from "./visuals";
 import { PREVIEW_ID } from "./preview";
-import { getCampaign, getVideo, localFileFromUrl, putVideo, saveVideoFile, updateVideo, withLedgerFile } from "./store";
+import { getCampaign, getVideo, ledgerSpentUsd, localFileFromUrl, putVideo, saveVideoFile, updateVideo, withLedgerFile } from "./store";
 import type { Campaign, VideoEntry } from "./types";
 
 /** The run route's maxDuration; a "running" entry untouched for longer than this plus a margin was killed mid-run. */
@@ -29,6 +29,17 @@ export const budget = () => ({
   maxUsdPerRun: usdFromEnv(process.env.SCREEN_TIME_MAX_USD_PER_VIDEO, 0.5),
   maxUsdTotal: usdFromEnv(process.env.SCREEN_TIME_MAX_USD_TOTAL, 20),
 });
+
+/** The part of the total cap kept for the demo password: open runs (the sample, a visitor's agent run) never start
+ *  into it. Separate from budget(), which a run's own CostGuard is built from. */
+export const ownerReserveUsd = () => usdFromEnv(process.env.SCREEN_TIME_OWNER_RESERVE_USD, 5);
+
+/** True while an open run of at most `runMaxUsd` still fits under the total cap less the owner's reserve, by the
+ *  ledger as stored now. Checked before an open run takes any slot; the run's own guard still checks the total. */
+export async function openRunFits(runMaxUsd: number): Promise<boolean> {
+  const room = budget().maxUsdTotal - ownerReserveUsd();
+  return Math.round(((await ledgerSpentUsd()) + runMaxUsd) * 1e6) <= Math.round(room * 1e6);
+}
 
 export type StartResult =
   | { ok: true; campaign: Campaign; video: VideoEntry }

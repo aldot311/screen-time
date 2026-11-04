@@ -38,7 +38,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   // Set by "Try a sample video" when a limit was reached and this is the newest finished sample instead: a code mapped
   // to fixed text, so a link cannot put its own words on a report.
   const { id: routeId } = await params;
-  const limitCode = routeId === TRY_ID && (query.limit === "visitor" || query.limit === "day") ? query.limit : null;
+  const limitCode = routeId === TRY_ID && (query.limit === "visitor" || query.limit === "day" || query.limit === "budget") ? query.limit : null;
   const limits = tryLimits();
   const limit = limitCode ? TRY_LIMIT_TEXT[limitCode](limitCode === "visitor" ? limits.perVisitor : limits.perDay) : null;
   const { id, videoId } = await params;

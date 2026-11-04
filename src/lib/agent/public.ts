@@ -35,9 +35,10 @@ export function isPublicAgentPath(pathname: string): boolean {
 
 /** Which limit sent a visitor to the brand's run instead of a run of their own. Responses carry this code and text
  *  built from it. */
-export type PublicAgentLimit = "visitor" | "day";
+export type PublicAgentLimit = "visitor" | "day" | "budget";
 
 export const PUBLIC_AGENT_LIMIT_TEXT: Record<PublicAgentLimit, (n: number) => string> = {
   visitor: (n) => `You have run the agent ${n} times today.`,
   day: (n) => `Today's ${n} visitor runs of the agent are used up.`,
+  budget: () => "The free agent runs for this demo are used up.",
 };

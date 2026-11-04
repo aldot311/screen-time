@@ -1,6 +1,6 @@
 // The agent and approve routes against a temp local store. Muse Spark is a scripted fake fetch: the real API is never
 // called, and a run only starts when a test calls the after() callback itself.
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
@@ -215,6 +215,25 @@ describe("POST agent without the demo password", () => {
     expect(((await none.json()) as { error: string }).error).toMatch(/^Today's 3 visitor runs of the agent are used up\. .*demo password/);
     expect(await readDoc(`agent-public/${new Date().toISOString().slice(0, 10)}/full.json`)).not.toBeNull();
     expect(afterSpy).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("the owner's reserve", () => {
+  it("past the total cap less the reserve, a visitor gets the brand's run and the owner still runs", async () => {
+    vi.stubEnv("SCREEN_TIME_MAX_USD_TOTAL", "20");
+    vi.stubEnv("SCREEN_TIME_OWNER_RESERVE_USD", "5");
+    await writeFile(join(dir, "ledger.json"), JSON.stringify([{ at: "2026-11-03T00:00:00Z", usd: 14.9, note: "earlier runs" }]));
+    await updateVideo(ID, "peter", (v) => ({ ...v, agent: brandRun }));
+    const res = await startAgent("peter");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ mode: "replay", limit: "budget", reason: "The free agent runs for this demo are used up.", agent: { summary: "The brand's run." } });
+    // A report with no brand's run to show says so, without "tomorrow": this limit does not start over.
+    const none = await startAgent("jamal");
+    expect(none.status).toBe(429);
+    expect(await none.json()).toEqual({ error: "The free agent runs for this demo are used up. Enter the demo password to run it." });
+    expect(await readDoc(`agent-public/${new Date().toISOString().slice(0, 10)}/run-1.json`)).toBeNull();
+    expect((await startAgent("peter", { cookie: await accessToken(PASSWORD) })).status).toBe(202);
+    expect(afterSpy).toHaveBeenCalledTimes(1);
   });
 });
 

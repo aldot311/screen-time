@@ -1,8 +1,8 @@
 // "Try a sample video": anyone can run the real pipeline on one fixed sample Reel, without the demo password. It
-// spends real Meta credits, so it is fenced three ways: a visitor (hashed IP; an IPv6 address by its /64) gets a few
-// runs a day, everyone together gets a daily cap, and while a sample run is in progress new visitors join it instead
-// of starting another. The per-video and total budget caps of every run still apply. Past a limit, the newest finished
-// run is shown instead.
+// spends real Meta credits, so it is fenced four ways: a visitor (hashed IP; an IPv6 address by its /64) gets a few
+// runs a day, everyone together gets a daily cap, while a sample run is in progress new visitors join it instead of
+// starting another, and no run starts into the budget kept for the demo password (runner.ts ownerReserveUsd). The
+// per-video and total budget caps of every run still apply. Past a limit, the newest finished run is shown instead.
 import { readFile } from "node:fs/promises";
 import { linkSecret } from "./requests";
 import { newVideoId } from "./add-video";
@@ -21,7 +21,7 @@ import {
   saveVideoFile,
   takeSlot,
 } from "./store";
-import { usdFromEnv } from "./runner";
+import { budget, openRunFits, usdFromEnv } from "./runner";
 import { clientKey } from "@/lib/client-ip";
 import type { Campaign, VideoEntry } from "./types";
 
@@ -41,11 +41,12 @@ export const tryLimits = (env: Record<string, string | undefined> = process.env)
 });
 
 /** Which limit sent a visitor to a replay. Links carry this code, never free text. */
-export type TryLimit = "visitor" | "day";
+export type TryLimit = "visitor" | "day" | "budget";
 
 export const TRY_LIMIT_TEXT: Record<TryLimit, (n: number) => string> = {
   visitor: (n) => `You have run the sample ${n} times today.`,
   day: (n) => `Today's ${n} sample runs are used up.`,
+  budget: () => "The free sample runs for this demo are used up.",
 };
 
 export type TryResult =
@@ -142,11 +143,13 @@ export async function startTry(ip: string, now = new Date()): Promise<TryResult>
     const done = newest(videos).find((v) => v.status === "done" && v.report);
     return done
       ? { mode: "replay", video: done, reason, limit }
-      : { mode: "unavailable", status: 429, error: `${reason} Try again tomorrow, or open the LaCroix campaign to see finished runs.` };
+      : { mode: "unavailable", status: 429, error: `${reason} ${limit === "budget" ? "Open" : "Try again tomorrow, or open"} the LaCroix campaign to see finished runs.` };
   };
   const day = now.toISOString().slice(0, 10);
   // Once the day is full, one read answers every later request: no slot writes to spam.
   if (await readDoc(`try/${day}/full.json`)) return replay("day");
+  // The budget the demo password needs is never spent here: checked before any slot is taken.
+  if (!(await openRunFits(budget().maxUsdPerRun))) return replay("budget");
   if (!(await takeSlot(`try/${day}/visitor-${await visitorKey(ip)}`, limits.perVisitor))) return replay("visitor");
   if (!(await takeSlot(`try/${day}/run`, limits.perDay))) {
     await createDoc(`try/${day}/full.json`, { at: now.toISOString() });

@@ -1,8 +1,8 @@
 "use client";
 
 // "Try a sample video": runs the real pipeline on a fixed sample Reel, no password, and opens its live run page. When a
-// run is already going it joins that one; past the day's limits it opens the newest finished run, whose Replay
-// analysis shows the same steps.
+// run is already going it joins that one; past a limit it opens the newest finished run, whose Replay analysis shows
+// the same steps.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
@@ -20,7 +20,7 @@ export function TrySample({ className, label = "Try a sample video" }: { classNa
       const res = await fetch("/api/try", { method: "POST" });
       const out = (await res.json().catch(() => null)) as { campaignId?: string; videoId?: string; mode?: string; limit?: string; error?: string } | null;
       if (!res.ok || !out?.campaignId || !out.videoId) throw new Error(out?.error ?? `The sample could not start (${res.status}).`);
-      const note = out.mode === "replay" && (out.limit === "visitor" || out.limit === "day") ? `?limit=${out.limit}` : "";
+      const note = out.mode === "replay" && (out.limit === "visitor" || out.limit === "day" || out.limit === "budget") ? `?limit=${out.limit}` : "";
       router.push(`/campaigns/${out.campaignId}/videos/${out.videoId}${note}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The sample could not start.");
