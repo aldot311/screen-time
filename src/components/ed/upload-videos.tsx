@@ -167,8 +167,8 @@ export function UploadVideos({ campaignId, mode, maxSeconds }: Props) {
         </RequestFromCreator>
       </div>
       <p id="creator-note" className="mt-2 text-[13px] leading-snug text-(--ink-2)">
-        Platforms don&rsquo;t let third parties download creator videos. Upload the file the creator delivered, or ask the
-        creator to send it.
+        Platform terms bar downloading other people&rsquo;s videos without permission. Upload the file the creator delivered, or
+        ask the creator to send it.
       </p>
 
       <div
