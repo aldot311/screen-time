@@ -45,7 +45,7 @@ export function EngineSwitch({ endpoint, engine, provider }: { endpoint: string;
             onClick={() => void pick(o.id)}
             disabled={busy !== null}
             title={o.hint}
-            className={`ed-press inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13.5px] font-semibold disabled:cursor-wait ${
+            className={`ed-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13.5px] font-semibold disabled:cursor-wait ${
               engine === o.id ? "bg-(--card) text-(--ink) shadow-(--sh-1)" : "text-(--ink-3)"
             }`}
           >

@@ -3,12 +3,32 @@
 // The interactive report. It opens on proof: the player sits paused on the video's best frame with its boxes drawn.
 // Then the verdict as a sentence with its proof chips (and, when it fell short, each missed term), the contract, the
 // lane timeline, the numbers, the objects checked and what was said. Every proof (chip, term, number, object, mention)
-// plays exactly the moment that proves it: in the main player when at least half of it is on screen, otherwise in a
-// mini player docked at the bottom of a phone, without moving the page. The control that started it shows "Playing".
+// plays the moment that proves it, in the main player when at least half of it is on screen. On a phone with the player
+// scrolled away, a proof to see brings the player into view and plays there; a proof to hear plays in a mini player
+// docked at the bottom, which stays on its last frame until it is closed or the player is back in view. A spoken proof
+// plays the sentence around the word: Voice Transcribe times turns, not words. The control that started it shows
+// "Playing".
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Check, ChevronDown, CircleHelp, Clapperboard, Mic, Pause, Play, Redo2, ScanLine, ScanText, X } from "lucide-react";
-import { FPS, type Disclosure, type Segment, type TermResult, type VerifyVerdict, type VideoReport } from "@/lib/types";
-import { countedBefore, framesToSegments, percent, prominenceOf, ruleReading, shareShown, tenths, termCounts, termWindow, timecode, verdictOf, type Verdict } from "@/components/format";
+import { Check, ChevronDown, CircleHelp, Mic, Pause, Play, Redo2, ScanLine, ScanText, X } from "lucide-react";
+import { FPS, type Disclosure, type Mention, type Segment, type TermResult, type VerifyVerdict, type VideoReport } from "@/lib/types";
+import {
+  countedBefore,
+  framesToSegments,
+  percent,
+  prominenceOf,
+  ruleReading,
+  shareShown,
+  shownBy,
+  spokenTime,
+  spokenWindow,
+  tenths,
+  termCounts,
+  termDetail,
+  termWindow,
+  timecode,
+  verdictOf,
+  type Verdict,
+} from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
 import { Strip } from "./strip";
 import { Figure, Swatch } from "./bits";
@@ -19,10 +39,12 @@ import { usd } from "@/lib/campaign/money";
 import { AnalysisReplay } from "./analysis-replay";
 import { RunReceiptCard } from "./run-receipt";
 import { accuracyGloss, costGloss, modelLine as modelSentence, notCounted, notCountedNote, notCountedPlay, phoneChip, prominenceGloss, receiptUsd, type NotCountedKind } from "./report-words";
-import { ACTION_TILE } from "./action-style";
 import { AgentPanel } from "./agent-panel";
+import { ProofClipTile } from "./proof-clip";
+import { reportHeadline } from "./report-headline";
 import type { AgentAccess } from "@/lib/agent/public";
 import { reviewFlags } from "@/lib/campaign/review";
+import { DISCLOSURE_FRAMES } from "@/lib/pipeline/prompts";
 import type { VideoEntry } from "@/lib/campaign/types";
 
 interface Props {
@@ -83,6 +105,10 @@ const VERDICT_SOLID: Record<Verdict, { card: string; badge: string; Icon: typeof
 const DOCK_VIDEO =
   "fixed bottom-[calc(env(safe-area-inset-bottom)+16px)] left-4 z-50 aspect-[9/16] w-[72px] overflow-hidden rounded-[12px] shadow-(--sh-2) ring-1 ring-black/10 sm:left-6";
 
+// The footer's two links: 44 px tall to tap, without growing the line (as "See each search").
+const FOOT_LINK =
+  "ed-press -my-2 inline-flex min-h-11 items-center font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink) active:opacity-70";
+
 /** "0:10.6", "0:05" (a whole second drops its ".0"): timecodes for range labels. */
 const tc = (sec: number) => timecode(sec).replace(/\.0$/, "");
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -105,6 +131,10 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
   const origin = useRef<HTMLElement | null>(null);
   const ratioRef = useRef(1);
   const wideRef = useRef(false);
+  const playingRef = useRef(false);
+  const dockHoldRef = useRef(false);
+  // A proof to see, tapped with the player scrolled away: it plays once the player is at least half in view.
+  const queued = useRef<{ from: number; to: number } | null>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [started, setStarted] = useState(false);
@@ -162,7 +192,18 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
     return best?.t;
   }, [boxes, largestMatch]);
 
-  // How much of the main player is on screen decides where a proof plays.
+  const holdDock = useCallback((on: boolean) => {
+    dockHoldRef.current = on;
+    setDockHold(on);
+  }, []);
+  const playQueued = useCallback(() => {
+    const q = queued.current;
+    queued.current = null;
+    if (q) player.current?.playFrom(q.from, q.to);
+  }, []);
+
+  // How much of the main player is on screen decides where a proof plays. Back in view, the player takes over from
+  // the dock, and a proof waiting for it plays.
   useEffect(() => {
     const el = stage.current;
     if (!el) return;
@@ -170,13 +211,17 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
       ([e]) => {
         ratioRef.current = e.intersectionRatio;
         setRatio(e.intersectionRatio);
-        if (e.intersectionRatio >= 0.5) setDockHold(false);
+        if (e.intersectionRatio >= 0.5) {
+          if (dockHoldRef.current && !playingRef.current && !queued.current) setNowPlaying(null);
+          holdDock(false);
+          playQueued();
+        }
       },
       { threshold: [0, 0.25, 0.5, 0.75, 1] },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [holdDock, playQueued]);
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
     const on = () => {
@@ -192,19 +237,21 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
   }, []);
   const docked = !wide && ratio < 0.5 && (playing || dockHold);
 
-  // When playback stops (the stretch ended, the viewer paused, or the video ended) the proof is over: the control,
-  // the dock title and the lit evidence all reset.
+  // When playback stops (the stretch ended, the viewer paused, or the video ended) the proof is over: the control and
+  // the lit evidence reset. A dock held open keeps naming what it played.
   const onPlayingChange = useCallback((p: boolean) => {
+    playingRef.current = p;
     setPlaying(p);
     if (p) setStarted(true);
     else {
       setActive(null);
-      setNowPlaying(null);
+      if (!dockHoldRef.current) setNowPlaying(null);
       setLit(null);
     }
   }, []);
 
   const seek = (sec: number) => {
+    queued.current = null;
     player.current?.seek(sec);
     setTime(sec);
     setStarted(true);
@@ -212,10 +259,12 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
     setNowPlaying(null);
     setLit(null);
     // Scrubbing with the player off screen brings up the dock so the frame is visible.
-    if (!wideRef.current && ratioRef.current < 0.5) setDockHold(true);
+    if (!wideRef.current && ratioRef.current < 0.5) holdDock(true);
   };
 
-  /** Play exactly the stretch where the viewer is: the main player if it is half on screen, else the dock. */
+  /** Play exactly the stretch that proves it, where it can be seen: the main player if it is half on screen. Otherwise
+   *  a proof to see scrolls the player into view and plays there (the dock is too small to read a label in), and a
+   *  proof to hear plays in the dock, held open on its last frame. */
   const show = (e: MouseEvent<HTMLElement>, key: string, proof: Proof, title: string, segs: Segment[], win: Segment | null = null) => {
     if (active === key && playing) {
       player.current?.toggle();
@@ -226,18 +275,53 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
     setNowPlaying(title);
     setLit((l) => ({ segs, window: win, tone: proof.tone, key: (l?.key ?? 0) + 1 }));
     const start = Math.max(0, proof.from - proof.lead);
-    player.current?.playFrom(start, proof.to);
     setTime(start);
     setStarted(true);
+    queued.current = null;
+    if (!wideRef.current && ratioRef.current < 0.5) {
+      if (proof.tone === "ink") {
+        queued.current = { from: start, to: proof.to };
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        stage.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+        // A scroll the viewer stops short still plays the proof (in the dock, if the player is still out of view).
+        window.setTimeout(playQueued, 1500);
+        return;
+      }
+      holdDock(true);
+    }
+    player.current?.playFrom(start, proof.to);
   };
   const playRange = (e: MouseEvent<HTMLElement>, key: string, from: number, to: number, label: string, tone: Proof["tone"] = "ink", lead = 0.3) =>
     show(e, key, { from, to, label, range: null, lead, tone }, label, [{ startSec: from, endSec: to }]);
 
   const closeDock = (e: MouseEvent<HTMLElement>) => {
-    setDockHold(false);
+    holdDock(false);
+    setNowPlaying(null);
     if (playing) player.current?.toggle();
     // Return focus to what started playback, for keyboard users only (a pointer tap leaves focus alone).
     if (e.detail === 0) origin.current?.focus({ preventScroll: true });
+  };
+
+  /** A spoken proof: the sentence around the word, since its time is estimated from its place in a speech turn. */
+  const hear = (said: Mention): Proof => {
+    const w = spokenWindow(said, d);
+    return {
+      from: w.startSec,
+      to: w.endSec,
+      label: `Hear the sentence with “${said.text}”`,
+      range: (
+        <>
+          said at <Tc>{spokenTime(said.startSec)}</Tc>
+        </>
+      ),
+      lead: 0,
+      tone: "voice",
+    };
+  };
+  /** Plays a spoken mention or disclosure from a list row: the same sentence its term's proof plays. */
+  const playSaid = (e: MouseEvent<HTMLElement>, key: string, said: Mention) => {
+    const w = spokenWindow(said, d);
+    playRange(e, key, w.startSec, w.endSec, `Hear the sentence with “${said.text}”`, "voice", 0);
   };
 
   const termProof = (t: TermResult): Proof | null => {
@@ -280,16 +364,9 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         tone: "ink",
       };
     if (rule?.kind === "mentioned") {
-      const mn = m.mentions.find((x) => !rule.withinFirstSec || x.startSec <= rule.withinFirstSec);
-      if (mn)
-        return {
-          from: mn.startSec,
-          to: mn.endSec,
-          label: `Hear “${mn.text}”`,
-          range: <Range a={mn.startSec} b={mn.endSec} />,
-          lead: 0.8,
-          tone: "voice",
-        };
+      // In the window as the contract checker counts it: strictly before its end.
+      const mn = m.mentions.find((x) => !rule.withinFirstSec || x.startSec < rule.withinFirstSec);
+      if (mn) return hear(mn);
       return win
         ? { from: 0, to: win.endSec, label: `Play the first ${win.endSec} s`, range: <Range a={0} b={win.endSec} />, lead: 0, tone: "voice" }
         : null;
@@ -314,8 +391,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
       const said = disclosure?.spoken[0];
       const shown = disclosure?.onScreen[0];
       // Whichever disclosure comes first in the video is the proof.
-      if (said && (!shown || said.startSec <= shown.startSec))
-        return { from: said.startSec, to: said.endSec, label: `Hear “${said.text}”`, range: <Range a={said.startSec} b={said.endSec} />, lead: 0.8, tone: "voice" };
+      if (said && (!shown || said.startSec <= shown.startSec)) return hear(said);
       if (shown)
         return {
           from: shown.startSec,
@@ -354,18 +430,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         : n
           ? `${plural(counts.unchecked, "term")} to check by eye`
           : "No contract terms to check";
-  const headline =
-    verdict === "delivered"
-      ? `${brand} was on screen, and the contract was met.`
-      : verdict === "short"
-        ? found
-          ? `${brand} was on screen, but the contract fell short.`
-          : `${brand} was never on screen, so the contract fell short.`
-        : verdict === "review"
-          ? n
-            ? `${brand} was on screen; a person needs to check ${counts.unchecked === 1 ? "one term" : `${counts.unchecked} terms`}.`
-            : `No contract terms were set, so a person needs to check this one.`
-          : `Not analyzed yet.`;
+  const headline = reportHeadline({ verdict, brand, secondsOnScreen: m.secondsOnScreen, tracks: report.tracks, terms: n, unchecked: counts.unchecked });
   const termsLine = !n
     ? ""
     : verdict === "delivered"
@@ -409,7 +474,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
 
   return (
     <div className="grid gap-x-8 gap-y-4 sm:gap-y-8 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-x-12">
-      {/* Player on a paper card: first on a phone, sized so the verdict and its chips fit the first screen; sticky from tablet up. */}
+      {/* Player on a paper card: on a phone it fills most of the first screen under the decision chip (which already says
+          the verdict), leaving the top of the verdict card in view; sticky from tablet up. */}
       {/* Phones: the decision comes first, above the video, so the answer is on screen before anything plays. */}
       {verdict !== "pending" && (
         // A link to the decision card: the next step is one tap away, however long the video is.
@@ -441,7 +507,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
           ref={stage}
           className="relative rounded-(--r-card) bg-(--wash) p-3 shadow-[inset_0_0_0_1px_var(--hair)] sm:p-4 md:max-h-[calc(100svh-120px)] lg:p-5"
         >
-          <div className="relative mx-auto w-[min(100%,calc(min(36svh,calc(100svh-420px))*0.5625))] sm:w-[min(100%,calc(min(56svh,calc(100svh-380px))*0.5625))] md:w-[min(100%,calc((100svh-160px)*0.5625))]">
+          <div className="relative mx-auto w-[min(100%,calc((100svh-200px)*0.5625))] sm:w-[min(100%,calc(min(56svh,calc(100svh-380px))*0.5625))] md:w-[min(100%,calc((100svh-160px)*0.5625))]">
             <Player
               ref={player}
               src={videoUrl}
@@ -532,7 +598,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                   <X className="mt-[3px] size-4 shrink-0 text-(--short)" strokeWidth={3} aria-label="Missed" />
                   <span>
                     <span className="font-semibold text-(--ink)">{t.term.text}</span>{" "}
-                    <span className="text-(--ink-2)">· {t.detail.replace(/\.$/, "")}</span>
+                    <span className="text-(--ink-2)">· {termDetail(t, disclosure).replace(/\.$/, "")}</span>
                   </span>
                 </li>
               ))}
@@ -574,13 +640,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               <ShareReport title={`${title} · ${creator}`} />
               {!synthetic && <AnalysisReplay report={report} videoUrl={videoUrl} brand={brand} />}
-              {proofHref && (
-                <a href={proofHref} target="_blank" rel="noopener" className={ACTION_TILE}>
-                  <Clapperboard className="size-4" aria-hidden />
-                  <span className="sm:hidden">Proof clip</span>
-                  <span className="hidden sm:inline">Proof clip (MP4)</span>
-                </a>
-              )}
+              {proofHref && <ProofClipTile href={proofHref} />}
             </div>
             <p className="mt-2 text-[13px] leading-snug text-(--ink-3)">Anyone with the link can view this report and its proof clip.</p>
           </div>
@@ -617,7 +677,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               const text = (
                 <span className="min-w-0">
                   <span className="block text-[15.5px] leading-snug font-semibold">{t.term.text}</span>
-                  <span className="mt-0.5 block text-[14px] text-(--ink-2)">{t.detail}</span>
+                  <span className="mt-0.5 block text-[14px] text-(--ink-2)">{termDetail(t, disclosure)}</span>
                   {!synthetic && (
                     <span className="mt-1 block text-[12.5px] text-(--ink-3)">
                       Muse Spark read it as: <span className="font-semibold text-(--ink-2)">{ruleReading(t.term.rule)}</span>
@@ -851,11 +911,11 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                       : "Not heard by Voice Transcribe"
               }
               value={unheard ? "–" : `${m.mentions.length}`}
-              caption={m.mentions[0] ? <Tc>{timecode(m.mentions[0].startSec)}</Tc> : undefined}
+              caption={m.mentions[0] ? <Tc>{spokenTime(m.mentions[0].startSec)}</Tc> : undefined}
               on={isOn("num-mentions")}
               onClick={
                 m.mentions[0]
-                  ? (e) => playRange(e, "num-mentions", m.mentions[0].startSec, m.mentions[0].endSec, `Hear “${m.mentions[0].text}”`, "voice", 0.8)
+                  ? (e) => playSaid(e, "num-mentions", m.mentions[0])
                   : undefined
               }
             />
@@ -1039,7 +1099,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                     type="button"
                     aria-pressed={live}
                     aria-label={`${live ? "Pause" : "Play"} mention: ${mn.text}`}
-                    onClick={(e) => playRange(e, key, mn.startSec, mn.endSec, `Hear “${mn.text}”`, "voice", 0.8)}
+                    onClick={(e) => playSaid(e, key, mn)}
                     className="ed-press ed-press-soft flex min-h-14 w-full items-center gap-3 rounded-(--r-inner) bg-(--card) px-4 py-3 text-left shadow-(--sh-1) ring-1 ring-(--hair) hover:ring-(--hair-2) active:bg-(--voice-soft)"
                   >
                     <span
@@ -1053,7 +1113,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                     </span>
                     <span className="min-w-0 flex-1 text-[16px] font-medium">&ldquo;{mn.text}&rdquo;</span>
                     <span className="text-[13px] text-(--voice)">
-                      {live ? <span className="font-semibold">Playing</span> : <Tc>{timecode(mn.startSec)}</Tc>}
+                      {live ? <span className="font-semibold">Playing</span> : <Tc>{spokenTime(mn.startSec)}</Tc>}
                     </span>
                   </button>
                 </li>
@@ -1073,8 +1133,8 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
             Disclosure
           </h2>
           <p className="mt-1 max-w-[60ch] text-[14px] text-(--ink-3)">
-            Whether the video says it is an ad: heard by Muse Voice Transcribe, or read on screen by Muse Spark (#ad, &ldquo;Sponsored&rdquo;,
-            &ldquo;Paid partnership&rdquo;).
+            Whether the video says it is an ad: heard by Muse Voice Transcribe, or read on screen by Muse Spark in up to {DISCLOSURE_FRAMES}{" "}
+            sampled frames (#ad, &ldquo;Sponsored&rdquo;, #partner).
           </p>
           {onScreenFailed && (
             <p className="mt-3 flex max-w-[60ch] gap-2 rounded-(--r-ctl) bg-(--review-soft) px-3.5 py-2.5 text-[13.5px] leading-snug font-medium text-(--review)">
@@ -1114,7 +1174,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                       type="button"
                       aria-pressed={live}
                       aria-label={`${live ? "Pause" : "Play"}: said aloud, ${mn.text}`}
-                      onClick={(e) => playRange(e, key, mn.startSec, mn.endSec, `Hear “${mn.text}”`, "voice", 0.8)}
+                      onClick={(e) => playSaid(e, key, mn)}
                       className="ed-press ed-press-soft flex min-h-14 w-full items-center gap-3 rounded-(--r-inner) bg-(--card) px-4 py-3 text-left shadow-(--sh-1) ring-1 ring-(--hair) hover:ring-(--hair-2) active:bg-(--voice-soft)"
                     >
                       <span className={`grid size-9 shrink-0 place-items-center rounded-full ${live ? "bg-(--voice) text-white" : "bg-(--voice-soft) text-(--voice)"}`}>
@@ -1124,7 +1184,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                         <span className="block text-[12.5px] font-semibold text-(--ink-3)">Said aloud</span>
                         <span className="block text-[16px] font-medium">&ldquo;{mn.text}&rdquo;</span>
                       </span>
-                      <span className="text-[13px] text-(--voice)">{live ? <span className="font-semibold">Playing</span> : <Tc>{timecode(mn.startSec)}</Tc>}</span>
+                      <span className="text-[13px] text-(--voice)">{live ? <span className="font-semibold">Playing</span> : <Tc>{spokenTime(mn.startSec)}</Tc>}</span>
                     </button>
                   </li>
                 );
@@ -1149,7 +1209,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                         <span className="block text-[12.5px] font-semibold text-(--ink-3)">Shown on screen</span>
                         <span className="block text-[16px] font-medium break-words">&ldquo;{o.text}&rdquo;</span>
                       </span>
-                      <span className="text-[13px] text-(--ink-2)">{live ? <span className="font-semibold text-(--ink)">Playing</span> : <Tc>{timecode(o.startSec)}</Tc>}</span>
+                      <span className="text-[13px] text-(--ink-2)">{live ? <span className="font-semibold text-(--ink)">Playing</span> : <Tc>{shownBy(o.startSec)}</Tc>}</span>
                     </button>
                   </li>
                 );
@@ -1174,14 +1234,14 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                         const el = document.getElementById("receipt");
                         if (el instanceof HTMLDetailsElement) el.open = true;
                       }}
-                      className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
+                      className={FOOT_LINK}>
                       Every Meta API call, {receiptUsd(report.cost.usd)}
                     </a>
                   ) : (
                     <>Meta API cost {receiptUsd(report.cost.usd)}</>
                   )}{" "}
                   ·{" "}
-                  <a href="/accuracy" className="font-semibold text-(--ink-2) underline decoration-(--hair-2) underline-offset-2 hover:text-(--ink)">
+                  <a href="/accuracy" className={FOOT_LINK}>
                     How accurate is this?
                   </a>
                 </p>
@@ -1220,7 +1280,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                 onSeek={seek}
                 onToggle={() => {
                   // As the dock's own play button: pausing keeps the dock up.
-                  if (playing) setDockHold(true);
+                  if (playing) holdDock(true);
                   player.current?.toggle();
                 }}
                 size="compact"
@@ -1249,7 +1309,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
               <button
                 type="button"
                 onClick={() => {
-                  if (playing) setDockHold(true);
+                  if (playing) holdDock(true);
                   player.current?.toggle();
                 }}
                 className="ed-press grid size-11 place-items-center rounded-full bg-(--ink) text-white active:bg-black"

@@ -67,19 +67,55 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 const isFilter = (s: string | null): s is Filter => FILTERS.some((f) => f.id === s);
 
+type TabRow = Pick<Row, "status" | "replacedBy" | "verdict">;
+
+/** A take a re-cut replaced keeps its own verdict on its card, but only the take that decides counts in a filter. */
+export function inFilter(r: TabRow, id: Filter): boolean {
+  return id === "all" || (r.status === "done" && !r.replacedBy && r.verdict === id);
+}
+
+/** The cards All holds that no verdict tab counts, by why: so the tabs plus these always add up to All. */
+export function beyondTabs(rows: TabRow[]) {
+  const rest = rows.filter((r) => !FILTERS.some((f) => f.id !== "all" && inFilter(r, f.id)));
+  const n = (test: (r: TabRow) => boolean) => rest.filter(test).length;
+  return {
+    replaced: n((r) => r.status === "done" && Boolean(r.replacedBy)),
+    waiting: n((r) => r.status === "waiting" || r.status === "uploaded"),
+    running: n((r) => r.status === "running" || r.status === "starting"),
+    stopped: n((r) => r.status === "failed"),
+    // Finished without a verdict (no report): shown as "Not run".
+    notRun: n((r) => r.status === "done" && !r.replacedBy),
+  };
+}
+
+/** The line under the tabs when All counts more than they do: "All includes 1 take replaced by a re-cut and 1 waiting
+ *  to run." Null when the tabs add up to All. */
+export function allIncludes(b: ReturnType<typeof beyondTabs>): string | null {
+  const parts = [
+    b.replaced && (b.replaced === 1 ? "1 take replaced by a re-cut" : `${b.replaced} takes replaced by re-cuts`),
+    b.waiting && `${b.waiting} waiting to run`,
+    b.running && `${b.running} running`,
+    b.stopped && `${b.stopped} stopped`,
+    b.notRun && `${b.notRun} not run`,
+  ].filter((p): p is string => Boolean(p));
+  if (!parts.length) return null;
+  return `All includes ${parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`}.`;
+}
+
 export function CampaignList({ rows }: { rows: Row[] }) {
   const params = useSearchParams();
   const top = useRef<HTMLDivElement>(null);
   const group = useRef<HTMLDivElement>(null);
 
-  // A take a re-cut replaced keeps its own verdict on its card, but only the take that decides counts in a filter.
-  const inFilter = (r: Row, id: Filter) => id === "all" || (r.status === "done" && !r.replacedBy && r.verdict === id);
   const count = (id: Filter) => rows.filter((r) => inFilter(r, id)).length;
+  const includes = allIncludes(beyondTabs(rows));
   // Empty segments are noise ("Needs review 0"); All always stays.
   const segments = FILTERS.filter((f) => f.id === "all" || count(f.id) > 0);
   const asked = params.get("show");
   const active: Filter = isFilter(asked) && segments.some((s) => s.id === asked) ? asked : "all";
   const shown = rows.filter((r) => inFilter(r, active));
+  // Under three videos the cards are the whole story; a filter would only add chrome.
+  const filtered = rows.length >= 3 && segments.length > 1;
 
   function choose(id: Filter, focus = false) {
     if (id !== active) {
@@ -118,9 +154,8 @@ export function CampaignList({ rows }: { rows: Row[] }) {
 
   return (
     <div ref={top} className="scroll-mt-[calc(env(safe-area-inset-top)+64px)]">
-      {/* Under three videos the cards are the whole story; a filter would only add chrome. From three up it sticks under
-          the header so it stays in reach while scrolling a long list. */}
-      {rows.length >= 3 && segments.length > 1 && (
+      {/* From three videos up the filter sticks under the header, so it stays in reach while scrolling a long list. */}
+      {filtered && (
         <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-20 -mx-4 bg-(--paper) px-4 pt-2 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
         <div
           ref={group}
@@ -153,6 +188,8 @@ export function CampaignList({ rows }: { rows: Row[] }) {
         </div>
         </div>
       )}
+      {/* All counts every card; say what it holds beyond the verdict tabs, so the counts add up. */}
+      {filtered && includes && <p className="mt-1 text-[12.5px] leading-snug text-(--ink-3)">{includes}</p>}
 
       <p className="sr-only" aria-live="polite">
         {active === "all" ? `Showing all ${rows.length}` : `Showing ${shown.length} ${FILTERS.find((f) => f.id === active)?.label}`}

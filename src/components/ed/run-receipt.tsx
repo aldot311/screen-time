@@ -2,13 +2,27 @@
 // long it took and what it cost, then the model versions and the sampling. Closed by default; a judge opens it to see
 // the work behind the verdict. Server-safe.
 import { ChevronDown, ReceiptText } from "lucide-react";
-import type { RunReceipt } from "@/lib/types";
+import type { ReceiptCall, RunReceipt } from "@/lib/types";
 import { costGloss, receiptUsd as money } from "./report-words";
 
 const secs = (ms: number) => (ms < 1000 ? `${(ms / 1000).toFixed(2)} s` : `${(ms / 1000).toFixed(1)} s`);
 
+/** Whether a call's amount is the fixed amount the budget reserves for it, not a metered bill: Muse Spark (hosted or
+ *  open weights) and Voice Transcribe calls, and any failed call, which keeps its reservation. SAM 3.1 is settled from
+ *  the frames Meta reports processing; the upload is free. */
+export function reservedCall(c: ReceiptCall, models: RunReceipt["models"]): boolean {
+  return c.usd > 0 && (c.model !== models.sam || c.output.startsWith("failed:"));
+}
+
+/** The receipt's total, split into what was billed and what was reserved. */
+export function receiptSplit(receipt: RunReceipt): { billed: number; reserved: number } {
+  const reserved = receipt.calls.filter((c) => reservedCall(c, receipt.models)).reduce((n, c) => n + c.usd, 0);
+  const billed = receipt.calls.filter((c) => !reservedCall(c, receipt.models)).reduce((n, c) => n + c.usd, 0);
+  return { billed, reserved };
+}
+
 export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
-  const total = receipt.calls.reduce((n, c) => n + c.usd, 0);
+  const { billed, reserved } = receiptSplit(receipt);
   const ms = receipt.calls.reduce((n, c) => n + c.ms, 0);
   // UTC, so the server's render and the browser's agree.
   const started = `${new Date(receipt.startedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC`;
@@ -20,7 +34,8 @@ export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
           <span className="block text-[15px] font-semibold">Run receipt</span>
           {/* What the receipt is, in place: the list of paid calls behind this report. */}
           <span className="block text-[13px] text-(--ink-3) tabular">
-            Every Meta API call behind this report: {receipt.calls.length} calls · {money(total)} · {secs(ms)} of model time
+            Every Meta API call behind this report: {receipt.calls.length} calls · {money(billed)} billed
+            {reserved > 0 && ` + ${money(reserved)} reserved`} · {secs(ms)} of model time
           </span>
         </span>
         <ChevronDown className="size-5 shrink-0 text-(--ink-3) transition-transform group-open:rotate-180" strokeWidth={2.25} aria-hidden />
@@ -34,6 +49,7 @@ export function RunReceiptCard({ receipt }: { receipt: RunReceipt }) {
                 <span className="text-[14px] font-semibold">{c.purpose}</span>
                 <span className="text-[12.5px] text-(--ink-3) tabular">
                   {secs(c.ms)} · {money(c.usd)}
+                  {reservedCall(c, receipt.models) && " reserved"}
                 </span>
               </span>
               <span className="mt-0.5 block text-[12.5px] font-semibold text-(--ink-2)">{c.model}</span>
