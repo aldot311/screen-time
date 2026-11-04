@@ -458,7 +458,7 @@ export default async function Landing() {
             ))}
           </ul>
           <p className="mt-1 max-w-[72ch] text-[13.5px] leading-[1.55] text-(--ink-3)">
-            A campaign can run Verify on Muse Spark Open, Meta&rsquo;s open-weight model, served by Fireworks.
+            A campaign can run Verify on Muse Spark Open, Meta&rsquo;s open-weight model, served by Together through OpenRouter.
           </p>
         </section>
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 pt-8 pb-4 text-[14px] text-(--ink-3) sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6 lg:px-8">
