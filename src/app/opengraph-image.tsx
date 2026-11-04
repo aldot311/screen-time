@@ -30,8 +30,10 @@ export default async function OpengraphImage() {
     ...(display ? [{ name: "Display", data: display, weight: 600 as const, style: "normal" as const }] : []),
     ...(body ? [{ name: "Body", data: body, weight: 500 as const, style: "normal" as const }] : []),
   ];
-  const displayFamily = display ? "Display" : undefined;
-  const bodyFamily = body ? "Body" : undefined;
+  // Named even when its fetch failed: satori falls back to a loaded face for a missing one, but throws on
+  // fontFamily: undefined, so a slow or unreachable Google Fonts failed the build.
+  const displayFamily = "Display";
+  const bodyFamily = "Body";
 
   return new ImageResponse(
     (
