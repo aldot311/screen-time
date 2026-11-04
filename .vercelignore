@@ -1,6 +1,8 @@
-# Local media, run outputs and stores never go to Vercel; only the labels are read at build time (preview campaign).
+# Local media, run outputs and stores never go to Vercel. The labels and the committed site runs (data/runs, frame
+# lists only) are read at build time by the accuracy pages.
 data/*
 !data/labels
+!data/runs
 .impeccable
 .playwright-mcp
 .remember
