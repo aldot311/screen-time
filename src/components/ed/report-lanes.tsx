@@ -38,6 +38,8 @@ interface Props {
   onToggle: () => void;
   /** Preview reports have no audio: the voice lane says so instead of "Not heard". */
   noAudio?: boolean;
+  /** The audio could not be transcribed (VideoMetrics.spokenChecked false): the voice lane says so, not "Not heard". */
+  unheard?: boolean;
 }
 
 // Labels on the first 14 px, the playhead knob on its own row below them, so they never overlap.
@@ -57,6 +59,7 @@ export function ReportLanes({
   onSeek,
   onToggle,
   noAudio = false,
+  unheard = false,
 }: Props) {
   const d = Math.max(durationSec, 0.001);
   const pct = (s: number) => (Math.min(Math.max(s, 0), d) / d) * 100;
@@ -116,7 +119,7 @@ export function ReportLanes({
       Icon: Mic,
       h: 22,
       tone: "text-(--voice)",
-      empty: mentions.length ? null : noAudio ? "Audio not analyzed in the preview" : "Not heard",
+      empty: mentions.length ? null : noAudio ? "Audio not analyzed in the preview" : unheard ? "Not checked: the audio could not be transcribed" : "Not heard",
     },
   ];
   // Ticks plus the end of the video, dropping a tick that would crowd the end label.

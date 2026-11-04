@@ -1,4 +1,5 @@
 // Thin Meta Model API client: Files upload, SAM 3.1 video, Muse Spark structured output, Voice transcribe.
+// Every call honours opts.timeoutMs (per attempt, response body included) and opts.deadlineAt (see metaRequest).
 import { readFile } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import { type ClientOptions, MetaApiError, metaRequest } from "./http";

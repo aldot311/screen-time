@@ -16,16 +16,20 @@ interface Token {
  * Find brand mentions in timed transcript turns. Matching is case-insensitive and whole-word, ignoring
  * punctuation, accents and possessives, and treating spaced, hyphenated and joined spellings as the same
  * ("Coca-Cola", "coca cola", "CocaCola"). Turns carry no word timings, so a mention's time is estimated
- * by its word position within the turn.
+ * by its word position within the turn. A name that follows the same name with only a space between is one mention
+ * ("La Croix LaCroix": one spoken name the transcript wrote in both spellings); "Nike, Nike" and two different names
+ * side by side are two.
  */
 export function findMentions(turns: TranscriptTurn[], brandTerms: string[]): Mention[] {
   // "&" is spoken as "and" ("H&M" is heard as "H and M"), so match both spellings.
   const spellings = brandTerms.flatMap((t) => (t.includes("&") ? [t, t.replace(/&/g, " and ")] : [t]));
-  const terms = [...new Set(spellings.map((t) => tokenize(t).map((x) => x.norm).join("")).filter(Boolean))];
+  const terms = [...new Set(spellings.map(joined).filter(Boolean))];
   if (!terms.length) return [];
   const mentions: Mention[] = [];
   for (const turn of turns) {
     const tokens = tokenize(turn.transcript);
+    // The previous match in this turn: its first token, the token after its last, and the name it matched.
+    let prev: { from: number; to: number; name: string } | null = null;
     let i = 0;
     while (i < tokens.length) {
       const length = matchAt(tokens, i, terms);
@@ -33,11 +37,39 @@ export function findMentions(turns: TranscriptTurn[], brandTerms: string[]): Men
         i++;
         continue;
       }
-      mentions.push(toMention(turn, tokens, i, length));
+      // The same name right after the previous one with only a space between: written twice, so that mention grows.
+      // A different name next to it ("LaCroix Pamplemousse") is its own mention.
+      const name = tokens.slice(i, i + length).map((t) => t.norm).join("");
+      const again: boolean = prev?.to === i && prev.name === name && !turn.transcript.slice(tokens[i - 1].end, tokens[i].start).trim();
+      const from: number = again && prev ? prev.from : i;
+      if (again) mentions.pop();
+      mentions.push(toMention(turn, tokens, from, i + length - from));
+      prev = { from, to: i + length, name };
       i += length;
     }
   }
   return mentions.sort((a, b) => a.startSec - b.startSec);
+}
+
+/**
+ * One spelling per name, as findMentions matches them, keeping the first of each: "LaCroix" and "La Croix" are the same
+ * name to it. Voice Transcribe given both as keywords wrote one spoken "LaCroix" as "La Croix LaCroix".
+ */
+export function distinctNames(brandTerms: string[]): string[] {
+  const seen = new Set<string>();
+  return brandTerms.filter((t) => {
+    const key = joined(t);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** A name as one run of normalized letters: "La Croix", "LaCroix" and "la-croix" are all "lacroix". */
+function joined(name: string): string {
+  return tokenize(name)
+    .map((x) => x.norm)
+    .join("");
 }
 
 /** Lowercased, accent-free word tokens (combining marks stay inside the word, so decomposed "é" does not split it); hyphens and other punctuation split words, possessives are dropped. */
@@ -88,19 +120,24 @@ function toMention(turn: TranscriptTurn, tokens: Token[], i: number, length: num
  * Each pattern is a word sequence after tokenize; "a|b" are alternatives and a trailing "?" makes a word optional.
  * IS is "is", or nothing right after a word written with "'s" (tokenize reads "it's" as the token "it").
  */
-const DISCLOSURE_PATTERNS: string[][] = [
-  "hashtag ad|sponsored",
+const toPatterns = (patterns: string[]) => patterns.map((p) => p.split(" "));
+
+/** Patterns that open a clause of their own. A negation inside one stops it matching ("this is not an ad", "this isn't an
+ *  ad"), so a negation before one belongs to something else ("that's actually not bad this is an ad"), unless a verb
+ *  that takes the clause comes between ("I don't think this is an ad"). */
+const CLAUSE_PATTERNS = toPatterns([
   "this|it|that video|post|reel|clip|one? IS an|a paid? ad",
   "this|it|that video|post|reel|clip|one? IS a? paid? sponsored",
-  "sponsored by",
-  "paid partnership",
-  "partnered with",
-  "in partnership with",
-].map((p) => p.split(" "));
+]);
+
+/** Patterns without a subject, which a negation up to three words before denies ("not a paid partnership"). */
+const PHRASE_PATTERNS = toPatterns(["hashtag ad|sponsored", "sponsored by", "paid partnership", "partnered with", "in partnership with"]);
 
 /** Words that turn a following disclosure into a denial ("this is not sponsored", "no ads"). */
 const NEGATIONS = new Set(["not", "no", "isnt", "wasnt", "arent", "werent", "never", "without", "dont", "doesnt", "nt"]);
 const NEGATION_WINDOW = 3;
+/** Verbs that carry a negation before them onto the clause they take: "I don't think this is an ad", "not saying it's an ad". */
+const CLAUSE_VERBS = new Set(["think", "believe", "say", "saying", "said", "mean", "means", "know", "sure"]);
 /** "thanks to Alani for sponsoring": how far back from "for sponsoring" the "thanks" may be. */
 const THANKS_WINDOW = 8;
 
@@ -130,8 +167,9 @@ function matchPattern(tokens: Token[], text: string, i: number, pattern: string[
  * Where a transcript discloses the sponsorship: "#ad", "hashtag ad", "this is an ad", "this video is an ad", "Ad." on
  * its own, "sponsored by", "this is sponsored", "paid partnership", "partnered with", "in partnership with", "thanks to
  * X for sponsoring". Never a word inside another ("add", "had", "made", "advert"), never a passing "I saw an ad" or
- * "no ads", and never a denial: a negation up to three words earlier in the same sentence ("this is not sponsored",
- * "this isn't an ad") cancels it. Timing is estimated by word position, as in findMentions.
+ * "no ads", and never a denial: a negation inside the statement ("this is not sponsored", "this isn't an ad") or, for
+ * the phrases without a subject, up to three words earlier in the same sentence ("not a paid partnership") cancels it.
+ * Timing is estimated by word position, as in findMentions.
  */
 export function findDisclosures(turns: TranscriptTurn[]): Mention[] {
   const found: Mention[] = [];
@@ -141,8 +179,10 @@ export function findDisclosures(turns: TranscriptTurn[]): Mention[] {
     // Sentence number of each token, so a negation in the previous sentence does not count.
     const sentence = tokens.map((t) => (text.slice(0, t.start).match(/[.!?]+/g) ?? []).length);
     const negated = (i: number) => {
+      const clause = CLAUSE_PATTERNS.some((p) => matchPattern(tokens, text, i, p) > 0);
       for (let j = Math.max(0, i - NEGATION_WINDOW); j < i; j++) {
-        if (sentence[j] === sentence[i] && NEGATIONS.has(tokens[j].norm)) return true;
+        if (sentence[j] !== sentence[i] || !NEGATIONS.has(tokens[j].norm)) continue;
+        if (!clause || tokens.slice(j + 1, i).some((t) => CLAUSE_VERBS.has(t.norm))) return true;
       }
       return false;
     };
@@ -183,7 +223,7 @@ function disclosureAt(
     }
   }
   let best = 0;
-  for (const p of DISCLOSURE_PATTERNS) best = Math.max(best, matchPattern(tokens, text, i, p));
+  for (const p of [...PHRASE_PATTERNS, ...CLAUSE_PATTERNS]) best = Math.max(best, matchPattern(tokens, text, i, p));
   // The match may end inside a hyphenated word ("this is an ad-free video").
   if (best && text[tokens[i + best - 1].end] === "-") return 0;
   return best;

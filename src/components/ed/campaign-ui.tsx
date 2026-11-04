@@ -1,6 +1,7 @@
 // Small server-safe pieces for the campaign screens (list, roll-up, new). Kept here so the shared kit stays untouched.
 import type { VideoEntry } from "@/lib/campaign/types";
 import { sameHandle } from "@/lib/campaign/handle";
+import { STALE_MS } from "@/lib/campaign/run-time";
 import { verdictOf } from "@/components/format";
 import { Mark } from "./bits";
 import type { CreatorEntry } from "./campaign-creators";
@@ -66,14 +67,28 @@ export const START_GRACE_MS = 2 * 60_000;
  * - "waiting": a creator sent it through a request link; it runs only when the brand starts it.
  * - "starting": the brand just uploaded it and its run is expected to start any moment.
  * - "uploaded": uploaded, but no run started (the start failed or the tab closed); it needs "Run analysis".
+ * - "stopped": stored as running, but untouched for longer than a run can last, so the platform cut it off before it
+ *   could write its failure. Shown like "failed", and it may be run again (the run route accepts it after STALE_MS too).
  * - "running" / "done" / "failed": as stored.
  */
-export type VideoPhase = "waiting" | "starting" | "uploaded" | "running" | "done" | "failed";
+export type VideoPhase = "waiting" | "starting" | "uploaded" | "running" | "stopped" | "done" | "failed";
+
+/** What a "stopped" run says, where a failed one shows its error. */
+export const STOPPED_TEXT = "The analysis ran out of time.";
 
 export function videoPhase(v: { status: string; consent?: unknown; updatedAt: string }, now: number): VideoPhase {
+  if (v.status === "running") return now - Date.parse(v.updatedAt) > STALE_MS ? "stopped" : "running";
   if (v.status !== "uploaded") return v.status as VideoPhase;
   if (v.consent) return "waiting";
   return now - Date.parse(v.updatedAt) < START_GRACE_MS ? "starting" : "uploaded";
+}
+
+/** The index card's tallies, by videoPhase as the campaign page: a run the platform cut off counts as stopped, not in
+ *  progress. "running" also counts uploads whose run has not started yet. */
+export function phaseCounts(videos: { status: string; consent?: unknown; updatedAt: string }[], now: number) {
+  const phases = videos.map((v) => videoPhase(v, now));
+  const count = (...ps: VideoPhase[]) => phases.filter((p) => ps.includes(p)).length;
+  return { running: count("running", "starting", "uploaded"), waiting: count("waiting"), stopped: count("failed", "stopped") };
 }
 
 /**
@@ -102,7 +117,7 @@ export function creatorEntry(
   if (!v) return { ...base, status: "none" };
   const href = `/campaigns/${campaignId}/videos/${v.id}`;
   const phase = videoPhase(v, now);
-  if (phase === "failed") return { ...base, status: "stopped", videoId: v.id, href };
+  if (phase === "failed" || phase === "stopped") return { ...base, status: "stopped", videoId: v.id, href };
   if (phase === "waiting" || phase === "uploaded") return { ...base, status: phase, videoId: v.id };
   if (phase === "starting" || phase === "running") return { ...base, status: phase, videoId: v.id, href };
   const verdict = verdictOf(v.report);

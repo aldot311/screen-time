@@ -79,6 +79,8 @@ function checkRule(rule: ContractRule, m: VideoMetrics, frames?: FrameSample[], 
       };
     }
     case "mentioned": {
+      // No transcript is not "never said": the term waits for a person.
+      if (m.spokenChecked === false) return { pass: null, evidence: [], detail: "Not checked: the audio could not be transcribed." };
       const within = rule.withinFirstSec;
       const counted = within === undefined ? m.mentions : m.mentions.filter((x) => x.startSec < within);
       const pass = counted.length >= rule.minTimes;
@@ -113,21 +115,28 @@ function checkDisclosed(d: Disclosure | undefined): Outcome {
   if (!d) return { pass: null, evidence: [], detail: "Not checked: this video was analyzed before disclosure checks." };
   const shown: Segment[] = d.onScreen.map((s) => ({ startSec: s.startSec, endSec: s.startSec + 1 / FPS }));
   const evidence = [...d.spoken.map(mentionSegment), ...shown].sort((a, b) => a.startSec - b.startSec);
-  // Said aloud settles it; otherwise a frame check that failed leaves it open rather than "not disclosed".
-  if (!d.spoken.length && d.onScreenChecked === false) {
-    return { pass: null, evidence: [], detail: "Not checked on screen: the frame check failed" };
+  // Said aloud or shown on screen settles it; otherwise a check that failed leaves it open rather than "not disclosed".
+  if (!evidence.length && (d.onScreenChecked === false || d.spokenChecked === false)) {
+    const detail =
+      d.onScreenChecked === false && d.spokenChecked === false
+        ? "Not checked: the transcription and the frame check failed"
+        : d.onScreenChecked === false
+          ? "Not checked on screen: the frame check failed"
+          : "Not checked aloud: the transcription failed; nothing shown on screen";
+    return { pass: null, evidence: [], detail };
   }
   if (!evidence.length) return { pass: false, evidence, detail: "Not disclosed: no “ad” or “sponsored” said or shown on screen" };
   return { pass: true, evidence, detail: `Disclosed: ${disclosureWhere(d)}` };
 }
 
-/** "said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5": the first spoken and first on-screen disclosure. */
+/** "said “ad” at 0:01.2; on screen “#ad” by 0:00.5": the first spoken disclosure, and the first of the sampled frames
+ *  read that showed one ("by": the text may have appeared before that frame). */
 export function disclosureWhere(d: Disclosure): string {
   const said = d.spoken[0];
   const seen = [...d.onScreen].sort((a, b) => a.startSec - b.startSec)[0];
   return [
     ...(said ? [`said “${said.text}” at ${clock(said.startSec)}`] : []),
-    ...(seen ? [`shown on screen “${seen.text}” at ${clock(seen.startSec)}`] : []),
+    ...(seen ? [`on screen “${seen.text}” by ${clock(seen.startSec)}`] : []),
   ].join("; ");
 }
 

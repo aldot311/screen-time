@@ -3,9 +3,9 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CostGuard, CostLimitError, type FetchLike } from "@/lib/meta";
-import { disclosureFrames, maxVideoSeconds, pickFrames, runVideo } from "./run";
+import { CHECK_FAILED, CHECK_OUT_OF_TIME, disclosureFrames, maxVideoSeconds, pickFrames, runVideo } from "./run";
 import type { LiveProgress } from "@/lib/types";
 import { toChecks, disclosurePrompt, parseTermsPrompt, TERMS_SCHEMA, toContractTerms, toOnScreen, toSuggestion, verifyPrompt } from "./prompts";
 import type { Detection } from "@/lib/types";
@@ -615,7 +615,7 @@ describe("runVideo with open-weight Muse Spark Open", () => {
     const report = await runVideo({ ...base(dir, src, guard, fetch), openWeight: open });
     expect(openCalls.length).toBeGreaterThan(0);
     expect(openCalls[0]).toEqual({ model: "meta/muse-spark-open", auth: "Bearer open-key" });
-    expect(report.tracks.every((t) => t.verdict === "lookalike")).toBe(true);
+    expect(report.tracks.every((t) => t.verdict === "lookalike" && t.checkedBy === "open")).toBe(true);
     expect(report.receipt?.models.check).toBe("muse-spark-open (open weights, Fireworks)");
     const checks = report.receipt!.calls.filter((c) => c.purpose.startsWith("Check object"));
     expect(checks.every((c) => c.model === "muse-spark-open")).toBe(true);
@@ -626,8 +626,12 @@ describe("runVideo with open-weight Muse Spark Open", () => {
   it("falls back to hosted Muse Spark when the open host fails, keeping the failed call on the receipt", async () => {
     const { dir, src, guard } = await setup();
     const { fetch } = withOpen(fakeApi("match").fetch, () => Response.json({ error: { message: "overloaded" } }, { status: 503 }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const report = await runVideo({ ...base(dir, src, guard, fetch), openWeight: open });
-    expect(report.tracks.every((t) => t.verdict === "match")).toBe(true);
+    // The report says which engine decided each object, and the fallback is logged.
+    expect(report.tracks.every((t) => t.verdict === "match" && t.checkedBy === "hosted")).toBe(true);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Fireworks failed, so hosted Muse Spark checks it"));
+    warn.mockRestore();
     const checks = report.receipt!.calls.filter((c) => c.purpose.startsWith("Check object"));
     expect(checks.some((c) => c.model === "muse-spark-open" && c.output.startsWith("failed: Fireworks returned 503"))).toBe(true);
     expect(checks.some((c) => c.model === "muse-spark-1.3" && c.output.startsWith("match"))).toBe(true);
@@ -635,4 +639,166 @@ describe("runVideo with open-weight Muse Spark Open", () => {
     const total = report.receipt!.calls.reduce((n, c) => n + c.usd, 0);
     expect(Math.abs(total - report.cost.usd)).toBeLessThan(1e-9);
   });
+});
+
+describe("runVideo when a call fails or runs long", () => {
+  const sparkName = (url: string, init?: RequestInit) =>
+    new URL(url).pathname === "/v1/responses" ? (JSON.parse(String(init?.body)).text?.format?.name as string | undefined) : undefined;
+  const isSam = (url: string, init?: RequestInit) =>
+    new URL(url).pathname === "/v1/responses" && JSON.parse(String(init?.body)).model === "sam-3.1";
+  const apiError = (status: number) => Response.json({ error: { message: "down", type: "server_error", code: "x" } }, { status });
+  // A request that never answers until its signal aborts it, as fetch does on a timeout.
+  const hang = (init?: RequestInit) =>
+    new Promise<Response>((_, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
+  // The terms parser reads the one term as "on screen for at least 0.1 s in total".
+  const screenTerm: FetchLike = async (url, init) =>
+    sparkName(url, init) === "contract_rules"
+      ? sparkReply({ rules: [{ index: 0, checkable: true, kind: "min_seconds_total", seconds: 0.1, withinFirstSec: 0, fraction: 0, forSeconds: 0, minTimes: 0 }] })
+      : fakeApi("match").fetch(url, init);
+
+  it("gives every model call a time limit", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = fakeApi("match");
+    const signals: boolean[] = [];
+    const fetch: FetchLike = async (url, init) => {
+      signals.push(init?.signal instanceof AbortSignal);
+      return ok(url, init);
+    };
+    await runVideo(base(dir, src, guard, fetch));
+    expect(signals).toHaveLength(5); // upload, SAM, check, transcribe, terms
+    expect(signals.every(Boolean)).toBe(true);
+  }, 30_000);
+
+  it("fails the run when SAM hangs past the run's deadline, after one request, keeping SAM's reserve", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = fakeApi("match");
+    let samCalls = 0;
+    const fetch: FetchLike = async (url, init) => (isSam(url, init) ? (samCalls++, hang(init)) : ok(url, init));
+    const t0 = Date.now();
+    await expect(runVideo({ ...base(dir, src, guard, fetch), deadlineAt: Date.now() + 3_000 })).rejects.toMatchObject({ name: "TimeoutError" });
+    expect(Date.now() - t0).toBeLessThan(10_000);
+    expect(samCalls).toBe(1);
+    // SAM may have processed (and billed) frames before it stalled, so its reserve stays on the ledger.
+    expect(await guard.totalSpentUsd()).toBeCloseTo(0.01, 10);
+  }, 30_000);
+
+  it("skips the second SAM pass when the time left could not cover it", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch, samPrompts } = agentApi({ visible: true, prompt: "cup", reason: "r" });
+    // A second pass over 15 frames takes about 2.6 s; it needs twice that left, and 5 s is less.
+    const report = await runVideo({ ...base(dir, src, guard, fetch), prompt: "tumbler", deadlineAt: Date.now() + 5_000 });
+    expect(samPrompts).toEqual(["tumbler"]);
+    expect(report.terms).toHaveLength(1);
+  }, 30_000);
+
+  it("keeps the report when one object check fails: that object is unclear, and a term only it could meet waits for a person", async () => {
+    const { dir, src, guard } = await setup();
+    const fetch: FetchLike = async (url, init) => (sparkName(url, init) === "product_check" ? apiError(400) : screenTerm(url, init));
+    const report = await runVideo({ ...base(dir, src, guard, fetch), contractTerms: ["On screen at least 0.1 s"] });
+    expect(report.tracks).toEqual([{ objectId: 0, verdict: "unclear", visibility: "partial", reason: CHECK_FAILED }]);
+    expect(report.metrics.secondsOnScreen).toBe(0);
+    expect(report.terms[0].pass).toBeNull();
+    expect(report.terms[0].detail).toMatch(/1 tracked object was not checked; counting it would meet this term\.$/);
+    // The failed call stays on the receipt, charged, and the receipt adds up to the cost.
+    const check = report.receipt!.calls.find((c) => c.purpose.startsWith("Check object"));
+    expect(check?.output).toMatch(/^failed: /);
+    expect(report.receipt!.calls.reduce((n, c) => n + c.usd, 0)).toBeCloseTo(report.cost.usd, 10);
+
+    // Control: the same video with a working check passes the term.
+    const ok = await runVideo({ ...base(dir, src, guard, screenTerm), videoId: "v2", contractTerms: ["On screen at least 0.1 s"] });
+    expect(ok.terms[0].pass).toBe(true);
+  }, 30_000);
+
+  it("says an object check never sent because the deadline passed is out of time, not that Muse Spark did not answer", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = fakeApi("match");
+    const deadlineAt = Date.now() + 60_000;
+    // The clock jumps past the deadline once SAM answers, so every later request is refused before it is sent.
+    const realNow = Date.now.bind(Date);
+    let late = false;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => (late ? deadlineAt + 1 : realNow()));
+    let checks = 0;
+    const fetch: FetchLike = async (url, init) => {
+      if (sparkName(url, init) === "product_check") checks++;
+      const res = await ok(url, init);
+      if (isSam(url, init)) late = true;
+      return res;
+    };
+    try {
+      const report = await runVideo({ ...base(dir, src, guard, fetch), deadlineAt });
+      expect(checks).toBe(0);
+      expect(report.tracks).toEqual([{ objectId: 0, verdict: "unclear", visibility: "partial", reason: CHECK_OUT_OF_TIME }]);
+    } finally {
+      clock.mockRestore();
+    }
+    // Control: a check that was sent and failed keeps CHECK_FAILED (the test above).
+    expect(CHECK_OUT_OF_TIME).not.toBe(CHECK_FAILED);
+  }, 30_000);
+
+  it("keeps the report when the transcription fails, leaving the spoken checks for a person", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: talk } = fakeApi("match");
+    const deaf: FetchLike = async (url, init) => (new URL(url).pathname === "/v1/asr/transcribe" ? apiError(400) : talk(url, init));
+    const report = await runVideo(base(dir, src, guard, deaf));
+    expect(report.metrics.spokenChecked).toBe(false);
+    expect(report.metrics.mentions).toEqual([]);
+    // "Say the brand name": unknown, not failed.
+    expect(report.terms[0]).toMatchObject({ pass: null, detail: "Not checked: the audio could not be transcribed." });
+    const call = report.receipt!.calls.find((c) => c.model === "muse-voice-transcribe-1.0");
+    expect(call).toMatchObject({ usd: 0.01, output: expect.stringMatching(/^failed: /) });
+    expect(report.receipt!.calls.reduce((n, c) => n + c.usd, 0)).toBeCloseTo(report.cost.usd, 10);
+
+    // A disclosure term: nothing shown on screen and nothing heard is unknown too.
+    const disclosed: FetchLike = async (url, init) =>
+      sparkName(url, init) === "contract_rules"
+        ? sparkReply({ rules: [{ index: 0, checkable: true, kind: "disclosed", seconds: 0, withinFirstSec: 0, fraction: 0, forSeconds: 0, minTimes: 0 }] })
+        : sparkName(url, init) === "disclosure_check"
+          ? sparkReply({ disclosed: false, frames: [] })
+          : deaf(url, init);
+    const d = await runVideo({ ...base(dir, src, guard, disclosed), videoId: "v2", contractTerms: ["Disclose it"] });
+    expect(d.disclosure).toEqual({ spoken: [], onScreen: [], onScreenChecked: true, spokenChecked: false });
+    expect(d.terms[0].pass).toBeNull();
+  }, 30_000);
+
+  it("keeps the report when reading the contract fails, leaving every term for a person", async () => {
+    const { dir, src, guard } = await setup();
+    const { fetch: ok } = fakeApi("match");
+    const fetch: FetchLike = async (url, init) => (sparkName(url, init) === "contract_rules" ? apiError(500) : ok(url, init));
+    const report = await runVideo({ ...base(dir, src, guard, fetch), contractTerms: ["Say the brand name", "Show the can for 3 s"] });
+    expect(report.terms.map((t) => [t.term.rule, t.pass])).toEqual([[null, null], [null, null]]);
+    expect(report.terms.every((t) => t.detail === "Not checked: reading the contract terms failed on this run.")).toBe(true);
+    const call = report.receipt!.calls.find((c) => c.purpose === "Turn the contract into checkable rules");
+    expect(call?.output).toMatch(/^failed: /);
+    expect(report.receipt!.calls.reduce((n, c) => n + c.usd, 0)).toBeCloseTo(report.cost.usd, 10);
+  }, 30_000);
+
+  it("checks no more objects than the per-video budget covers, longest on screen first, and still finishes", async () => {
+    const { dir, src } = await setup();
+    const guard = new CostGuard({ maxUsdPerRun: 0.5, maxUsdTotal: 5, ledgerPath: join(dir, "busy.json") });
+    // 25 tracked objects: 0-21 on screen in two frames, 22-24 in one (ties keep SAM's order).
+    const lines: string[] = [];
+    for (let id = 0; id < 25; id++) for (const f of id < 22 ? [0, 1] : [0]) lines.push(`<${f}f>${id}${BOX}${MASK}`);
+    const text = `${lines.join("\n")}\n`;
+    const busy = sse([
+      { type: "response.created" },
+      { type: "response.output_text.delta", ...lane, delta: text },
+      { type: "response.output_text.done", ...lane, text },
+      { type: "response.completed", response: { status: "completed", usage: { video_frames_processed: 15 } } },
+    ] as { type: string }[]);
+    const { fetch: ok } = fakeApi("match");
+    let checks = 0;
+    const fetch: FetchLike = async (url, init) => {
+      if (isSam(url, init)) return new Response(busy, { status: 200 });
+      if (sparkName(url, init) === "product_check") checks++;
+      return ok(url, init);
+    };
+    const report = await runVideo(base(dir, src, guard, fetch));
+    // $0.50 - SAM $0.01 - transcript $0.01 - terms $0.02 leaves $0.46: 23 checks at $0.02.
+    expect(checks).toBe(23);
+    const skipped = report.tracks.filter((t) => t.reason === "Not checked: over the per-video budget.");
+    expect(skipped.map((t) => t.objectId)).toEqual([23, 24]);
+    expect(skipped.every((t) => t.verdict === "unclear")).toBe(true);
+    expect(report.terms[0].pass).toBe(true);
+    expect(report.cost.usd).toBeLessThanOrEqual(0.5);
+  }, 60_000);
 });

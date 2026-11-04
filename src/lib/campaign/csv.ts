@@ -65,7 +65,8 @@ export function videoRow(v: VideoEntry, fees: Fees = {}, latest = true): Cell[] 
     m.firstSeenSec === null ? null : round(m.firstSeenSec, 2),
     round(m.longestRunSec, 2),
     prominenceOf(m),
-    m.mentions.length,
+    // Blank when the audio could not be transcribed: unknown, not 0.
+    m.spokenChecked === false ? null : m.mentions.length,
     count(true),
     count(false),
     count(null),
@@ -81,13 +82,13 @@ export function videoRow(v: VideoEntry, fees: Fees = {}, latest = true): Cell[] 
   ];
 }
 
-/** "yes" / "no" / "not checked" (older reports, a campaign with no disclosure term, or nothing said and the frame
- *  check failed), and where it was disclosed. */
+/** "yes" / "no" / "not checked" (older reports, a campaign with no disclosure term, or nothing found while the frame
+ *  check or the transcription failed), and where it was disclosed. */
 function disclosureCells(r: VideoReport): [Cell, Cell] {
   const d = r.disclosure;
   if (!d) return ["not checked", null];
   if (d.spoken.length || d.onScreen.length) return ["yes", disclosureWhere(d)];
-  return d.onScreenChecked === false ? ["not checked", null] : ["no", null];
+  return d.onScreenChecked === false || d.spokenChecked === false ? ["not checked", null] : ["no", null];
 }
 
 /** One row per video; `fees` (the campaign) adds what each recommendation pays or holds. A take replaced by a newer one

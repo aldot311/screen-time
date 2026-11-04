@@ -44,6 +44,9 @@ export interface TrackVerification {
   reason: string;
   /** The product features Muse Spark looked for in this object and whether it saw each (absent on older reports). */
   checks?: { feature: string; seen: "yes" | "no" | "unclear" }[];
+  /** On campaigns that check objects with open-weight Muse Spark Open: which engine gave this verdict ("hosted" when the
+   *  open host failed and hosted Muse Spark answered instead). Absent elsewhere, and on objects that were not checked. */
+  checkedBy?: "open" | "hosted";
 }
 
 export interface Mention {
@@ -71,6 +74,9 @@ export interface VideoMetrics {
   mentions: Mention[];
   /** Frame indices actually detected on screen (segments also cover bridged gaps). Older reports lack it. */
   visibleFrames?: number[];
+  /** False when the audio could not be transcribed: `mentions` is then empty because nothing is known, not because
+   *  nothing was said. Absent when it was transcribed (or the video has no sound), and on older reports. */
+  spokenChecked?: boolean;
 }
 
 /** A plain-English contract term turned into a typed rule by Muse Spark. */
@@ -93,6 +99,9 @@ export interface Disclosure {
   /** True when the frames were read for on-screen text; false when that check failed (onScreen is then empty and
    *  unknown, not "none"). Absent in reports made before the field existed, which always ran it. */
   onScreenChecked?: boolean;
+  /** False when the audio could not be transcribed (spoken is then empty and unknown, not "none"), as
+   *  VideoMetrics.spokenChecked. Absent otherwise, and on older reports. */
+  spokenChecked?: boolean;
 }
 
 export interface ContractTerm {

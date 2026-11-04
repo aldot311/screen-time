@@ -165,6 +165,13 @@ describe("checkTerm", () => {
     it("passes a zero requirement with no mentions", () => {
       expect(checkTerm(term({ kind: "mentioned", minTimes: 0 }), metrics()).pass).toBe(true);
     });
+
+    it("is not checked when the audio could not be transcribed, instead of failing as never said", () => {
+      const r = checkTerm(term({ kind: "mentioned", minTimes: 1 }), metrics({ spokenChecked: false }));
+      expect(r).toMatchObject({ pass: null, evidence: [], detail: "Not checked: the audio could not be transcribed." });
+      // Control: the same empty transcript, heard, fails.
+      expect(checkTerm(term({ kind: "mentioned", minTimes: 1 }), metrics()).pass).toBe(false);
+    });
   });
 
   describe("first_seen_before", () => {
@@ -285,7 +292,8 @@ describe("disclosed", () => {
     const r = checkTerm(rule, seen, undefined, { spoken: [], onScreen: [{ startSec: 0.5, text: "#sponsored" }] });
     expect(r.pass).toBe(true);
     expect(r.evidence).toEqual([{ startSec: 0.5, endSec: 0.5 + 1 / 15 }]);
-    expect(r.detail).toBe("Disclosed: shown on screen “#sponsored” at 0:00.5");
+    // "by": the time of the first sampled frame that showed it, not of the text's first appearance.
+    expect(r.detail).toBe("Disclosed: on screen “#sponsored” by 0:00.5");
   });
 
   it("names the first of each, and keeps every moment in time order", () => {
@@ -293,7 +301,7 @@ describe("disclosed", () => {
       spoken: [{ startSec: 75.5, endSec: 76, text: "sponsored" }],
       onScreen: [{ startSec: 9, text: "#ad" }, { startSec: 2, text: "#ad" }],
     });
-    expect(r.detail).toBe("Disclosed: said “sponsored” at 1:15.5; shown on screen “#ad” at 0:02.0");
+    expect(r.detail).toBe("Disclosed: said “sponsored” at 1:15.5; on screen “#ad” by 0:02.0");
     expect(r.evidence.map((e) => e.startSec)).toEqual([2, 9, 75.5]);
   });
 
@@ -308,6 +316,19 @@ describe("disclosed", () => {
     const said = { ...failed, spoken: [{ startSec: 1, endSec: 1.2, text: "this is an ad" }] };
     expect(checkTerm(rule, seen, undefined, said).pass).toBe(true);
     expect(checkTerm(rule, seen, undefined, { spoken: [], onScreen: [], onScreenChecked: true }).pass).toBe(false);
+  });
+
+  it("is not checked when the audio could not be transcribed and nothing was shown; on screen still passes", () => {
+    const unheard = { spoken: [], onScreen: [], onScreenChecked: true, spokenChecked: false };
+    expect(checkTerm(rule, seen, undefined, unheard)).toMatchObject({
+      pass: null,
+      detail: "Not checked aloud: the transcription failed; nothing shown on screen",
+    });
+    expect(checkTerm(rule, seen, undefined, { ...unheard, onScreenChecked: false })).toMatchObject({
+      pass: null,
+      detail: "Not checked: the transcription and the frame check failed",
+    });
+    expect(checkTerm(rule, seen, undefined, { ...unheard, onScreen: [{ startSec: 1, text: "#ad" }] }).pass).toBe(true);
   });
 
   it("is not checked without disclosure data (older reports), and checkTerms passes it through", () => {

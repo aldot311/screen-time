@@ -14,11 +14,10 @@ import { isBlobUrl, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, sniffImageType } from "./s
 import { saveVisuals } from "./visuals";
 import { PREVIEW_ID } from "./preview";
 import { getCampaign, getVideo, localFileFromUrl, putVideo, saveVideoFile, updateVideo, withLedgerFile } from "./store";
+import { RUN_DEADLINE_MS, STALE_MS } from "./run-time";
 import type { Campaign, VideoEntry } from "./types";
 
-/** The run route's maxDuration; a "running" entry untouched for longer than this plus a margin was killed mid-run. */
-export const RUN_MAX_SECONDS = 300;
-const STALE_MS = (RUN_MAX_SECONDS + 60) * 1000;
+export { RUN_MAX_SECONDS } from "./run-time";
 
 export function usdFromEnv(value: string | undefined, fallback: number): number {
   const n = value === undefined || value.trim() === "" ? NaN : Number(value);
@@ -80,8 +79,36 @@ export async function startRun(campaignId: string, videoId: string, now = Date.n
   return { ok: true, campaign, video: running };
 }
 
-/** Runs the pipeline for a video startRun accepted. Never throws: failures are written to the entry. */
-export async function executeRun(campaign: Campaign, video: VideoEntry): Promise<VideoEntry> {
+/**
+ * withLedgerFile for one run. When the run finished but adding its spend to the ledger afterwards failed, the run's
+ * result is kept and the failure logged, as run-agent.ts keeps a finished agent run: the report was paid for.
+ */
+export async function withLedgerKept<T>(
+  videoId: string,
+  fn: (ledgerPath: string) => Promise<T>,
+  ledger: (fn: (ledgerPath: string) => Promise<T>) => Promise<T> = withLedgerFile,
+): Promise<T> {
+  const finished: { result?: T } = {};
+  try {
+    return await ledger(async (ledgerPath) => (finished.result = await fn(ledgerPath)));
+  } catch (err) {
+    if (!("result" in finished)) throw err;
+    console.error(`The spend of the run on ${videoId} could not be added to the ledger`, err);
+    return finished.result as T;
+  }
+}
+
+/** When a run starting at `now` must stop: RUN_DEADLINE_MS from now, or the caller's own earlier deadline. */
+export const runDeadline = (now: number, callerDeadlineAt?: number) => Math.min(now + RUN_DEADLINE_MS, callerDeadlineAt ?? Infinity);
+
+/**
+ * Runs the pipeline for a video startRun accepted. Never throws: failures are written to the entry. A caller whose own
+ * function started earlier (the agent) passes the deadline of that function, so the run stops before it is cut off.
+ */
+export async function executeRun(campaign: Campaign, video: VideoEntry, opts: { deadlineAt?: number } = {}): Promise<VideoEntry> {
+  // Meta API calls stop by this time, so a run that runs long still writes its failure and appends the ledger before the
+  // platform stops the function.
+  const deadlineAt = runDeadline(Date.now(), opts.deadlineAt);
   let current = video;
   // Step and progress writes go out one at a time, in order, so a late write never undoes an earlier one.
   let queue = Promise.resolve();
@@ -97,7 +124,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
   try {
     const sourcePath = await localSource(video.sourceUrl ?? video.videoUrl, workDir, campaign.id);
     const productImageUrl = await productPhoto(campaign);
-    const report = await withLedgerFile((ledgerPath) =>
+    const report = await withLedgerKept(video.id, (ledgerPath) =>
       runVideo({
         videoId: video.id,
         sourcePath,
@@ -110,6 +137,7 @@ export async function executeRun(campaign: Campaign, video: VideoEntry): Promise
         productImageSource: productImageUrl ? campaign.productImageUrl : undefined,
         guard: new CostGuard({ ...budget(), ledgerPath }),
         openWeight: campaign.checkEngine === "open" ? (openWeightConfig() ?? undefined) : undefined,
+        deadlineAt,
         onStep: (step) =>
           write(async (v) => {
             // Tracking starts right after normalization, so the normalized copy is complete here.

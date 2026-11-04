@@ -47,12 +47,24 @@ describe("campaignCsv", () => {
       }),
       withReport({ usedProductPhoto: false, disclosure: { spoken: [], onScreen: [], onScreenChecked: true } }),
       withReport({ disclosure: { spoken: [], onScreen: [], onScreenChecked: false } }),
+      // Nothing on screen, and the audio could not be transcribed: unknown, not "no".
+      withReport({ disclosure: { spoken: [], onScreen: [], onScreenChecked: true, spokenChecked: false } }),
     ]);
     const rows = csv.trimEnd().split("\r\n");
     expect(CSV_HEADER.slice(-7)).toEqual(["disclosed", "disclosed_where", "product_photo_used", "recommendation", "fee_usd", "final_decision", "override_reason"]);
-    expect(rows[1].endsWith(",yes,said “ad” at 0:01.2; shown on screen “#ad” at 0:00.5,yes,pay,,pay,")).toBe(true);
+    expect(rows[1].endsWith(",yes,said “ad” at 0:01.2; on screen “#ad” by 0:00.5,yes,pay,,pay,")).toBe(true);
     expect(rows[2].endsWith(",no,,no,pay,,pay,")).toBe(true);
     expect(rows[3].endsWith(",not checked,,no,pay,,pay,")).toBe(true);
+    expect(rows[4].endsWith(",not checked,,no,pay,,pay,")).toBe(true);
+  });
+
+  it("leaves the mention count blank when the audio could not be transcribed", () => {
+    const v = previewVideos()[0];
+    const unheard: VideoEntry = { ...v, report: { ...v.report!, metrics: { ...v.report!.metrics, spokenChecked: false } } };
+    const cells = (entry: VideoEntry) => campaignCsv([entry]).trimEnd().split("\r\n")[1].split(",");
+    const at = CSV_HEADER.indexOf("mentions");
+    expect(cells(unheard)[at]).toBe("");
+    expect(cells(v)[at]).toBe(String(v.report!.metrics.mentions.length));
   });
 
   it("adds the recommendation and the creator's fee", () => {
