@@ -219,7 +219,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
 
               {(ended || video.status === "done") &&
                 (synthetic ? (
-                  <p className="mt-6 text-[14px] text-(--ink-3)">Preview videos cannot be run again: their numbers come from checked labels.</p>
+                  <p className="mt-6 text-[14px] text-(--ink-3)">Preview videos cannot be run again: their numbers come from labelled frames, not a model run.</p>
                 ) : (
                   <div className="mt-6">
                     <RunAgain campaignId={campaign.id} videoId={video.id} />

@@ -444,7 +444,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
         : `${counts.unchecked} of ${plural(n, "term")} could not be checked automatically.`;
   // First use of the model names in words (the player tags its boxes "SAM 3.1" just above): what each one did.
   const modelLine = synthetic
-    ? "Preview: numbers from checked labels, not a live model run."
+    ? "Preview: numbers from labelled frames, not a live model run."
     : modelSentence({
         frames: report.info.frameCount,
         prompt: report.prompt,
@@ -1219,7 +1219,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
           <div className="mt-10 border-t border-(--hair) pt-4 text-[12.5px] leading-[1.6] text-(--ink-3)">
             {synthetic ? (
               <p>
-                Preview: these numbers come from checked labels run through Screen-Time&rsquo;s real metrics and contract code, not from a live
+                Preview: these numbers come from labelled frames run through Screen-Time&rsquo;s real metrics and contract code, not from a live
                 model run.
               </p>
             ) : (
