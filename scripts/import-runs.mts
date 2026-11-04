@@ -29,7 +29,7 @@ const BRANDS: Record<string, string> = {
 };
 
 // Target definitions come from the labels, so prompts and product descriptions match the runs. Label files without a
-// targets list (objects.json, the object-level labels) are skipped.
+// targets list (objects.json and checklist.json) are skipped.
 const targets = new Map<string, Target>();
 for (const f of (await readdir("data/labels", { recursive: true })).filter((f) => f.endsWith(".json"))) {
   const fileTargets: unknown = JSON.parse(await readFile(join("data/labels", f), "utf8")).targets;

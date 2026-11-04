@@ -5,7 +5,8 @@
 import { AREA_SATURATION, PROMINENCE_WEIGHTS, SMALL_AREA } from "@/lib/metrics/compute";
 import type { VerifyVerdict } from "@/lib/types";
 import accuracy from "@/lib/accuracy-data.json";
-import { pct as pct1, summarize } from "./accuracy-summary";
+import { tenths } from "@/components/format";
+import { pct as pct1, rowForRun, summarize, type AccuracyData } from "./accuracy-summary";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -30,22 +31,41 @@ export function receiptUsd(usd: number): string {
   return `$${usd.toFixed(usd > 0 && usd < 0.01 ? 4 : 3)}`;
 }
 
-/** What a report's Meta API cost is made of, in one line. */
-/** Precision and recall in one line each, with the measured figures (src/lib/accuracy-data.json), so the report says
- *  what they mean without a trip to /accuracy. */
-export function accuracyGloss(): string {
-  const v = summarize(accuracy).verified;
+/**
+ * The measured precision and recall (src/lib/accuracy-data.json), what each means, and whose labels they were scored
+ * against, so the report says it without a trip to /accuracy. On a report that is one of the scored runs (the same run
+ * id) whose count differs from its own labels, it also says what this report counted against them: the headline
+ * figures alone would misdescribe George's report, which counted nothing.
+ */
+export function accuracyGloss(report?: { receipt?: { runId: string } }, data: AccuracyData = accuracy): string {
+  const acc = summarize(data);
+  const v = acc.verified;
+  const l = data.labels;
+  const against = !l?.clips
+    ? ""
+    : l.checkedByPerson >= l.clips
+      ? ", against labels a person checked"
+      : `, against labels drafted by two Claude vision passes (a person has checked ${l.checkedByPerson} of the ${l.clips})`;
+  const own = rowForRun(data, report?.receipt?.runId);
+  const ownLine =
+    own && tenths(own.truthSec) !== tenths(own.predictedSec)
+      ? ` This Reel is one of the ${acc.clips}: its labels mark ${tenths(own.truthSec)} s with the product, and this report counted ${tenths(own.predictedSec)} s.`
+      : "";
   return (
-    `Precision ${pct1(v.precision)}: of the seconds Screen-Time counted, the share that really showed the product. ` +
-    `Recall ${pct1(v.recall)}: of the seconds the product really showed, the share it counted. Measured frame by frame on labelled test Reels.`
+    `Measured frame by frame on ${acc.clips} test Reels as delivered${against}: precision ${pct1(v.precision)}, recall ${pct1(v.recall)}. ` +
+    `Precision is the share of the seconds Screen-Time counted that really showed the product; recall is the share of the seconds the ` +
+    `product really showed that it counted.${ownLine}`
   );
 }
 
+/** What a report's Meta API cost is made of, in one line. Only SAM 3.1's amount follows the bill (frames processed,
+ *  from the API's usage); Muse Spark and Voice Transcribe are billed by tokens and audio length, which the receipt does
+ *  not record, so it counts the generous per-call reserve the budget holds for each (lib/pipeline/run.ts). */
 export function costGloss(): string {
   const r = RECEIPT_RATES;
   return (
-    `SAM 3.1 is billed $${r.samPer1000Frames.toFixed(2)} per 1,000 frames; Muse Spark and Voice Transcribe count the ` +
-    `$${r.sparkPerCall.toFixed(2)} and $${r.transcribePerCall.toFixed(2)} reserved per call.`
+    `SAM 3.1 is billed per frame ($${r.samPer1000Frames.toFixed(2)} per 1,000); Muse Spark and Voice Transcribe count the fixed amount the ` +
+    `budget reserves per call ($${r.sparkPerCall.toFixed(2)} / $${r.transcribePerCall.toFixed(2)}), not the billed amount.`
   );
 }
 

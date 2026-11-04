@@ -46,7 +46,7 @@ interface Case {
 async function cases(): Promise<Case[]> {
   const objects = JSON.parse(await readFile(join(LABELS, "objects.json"), "utf8")).objects as { clip: string; target: string; objectId: number; truth: string }[];
   const briefs = new Map<string, { prompt: string; product: string }>();
-  for (const f of (await readdir(LABELS, { recursive: true })).filter((f) => f.endsWith(".json") && !f.endsWith("objects.json"))) {
+  for (const f of (await readdir(LABELS, { recursive: true })).filter((f) => f.endsWith(".json") && !f.endsWith("objects.json") && !f.endsWith("checklist.json"))) {
     for (const t of (JSON.parse(await readFile(join(LABELS, f), "utf8")) as Labels).targets) briefs.set(t.name, { prompt: t.prompt, product: t.product });
   }
   const out: Case[] = [];

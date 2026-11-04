@@ -1,0 +1,907 @@
+{
+  "videoId": "george",
+  "info": {
+    "frameCount": 251
+  },
+  "tracks": [
+    {
+      "objectId": 0,
+      "verdict": "unclear",
+      "visibility": "blurred"
+    }
+  ],
+  "detections": [
+    {
+      "frame": 84,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 85,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 86,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 87,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 88,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 89,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 90,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 91,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 92,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 93,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 94,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 95,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 96,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 97,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 98,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 99,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 100,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 101,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 102,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 103,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 104,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 105,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 106,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 107,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 108,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 109,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 110,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 111,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 112,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 113,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 114,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 115,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 116,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 117,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 118,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 119,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 120,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 121,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 122,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 123,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 124,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 125,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 126,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 127,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 128,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 129,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 130,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 131,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 132,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 133,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 134,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 135,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 136,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 137,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 138,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 139,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 140,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 141,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 142,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 143,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 144,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 145,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 146,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 147,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 148,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 149,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 150,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 151,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 152,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 153,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 154,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 155,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 156,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 157,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 158,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 159,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 160,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 161,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 162,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 163,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 164,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 165,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 166,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 167,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 168,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 169,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 170,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 171,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 172,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 173,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 174,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 175,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 176,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 177,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 178,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 179,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 180,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 181,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 182,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 183,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 184,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 185,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 186,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 187,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 188,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 189,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 190,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 191,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 192,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 193,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 194,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 195,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 196,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 197,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 198,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 199,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 200,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 201,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 202,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 203,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 204,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 205,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 206,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 207,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 208,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 209,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 210,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 211,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 212,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 213,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 214,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 215,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 216,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 217,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 218,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 219,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 220,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 221,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 222,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 223,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 224,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 225,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 226,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 227,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 228,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 229,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 230,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 231,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 232,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 233,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 234,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 235,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 236,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 237,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 238,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 239,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 240,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 241,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 242,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 243,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 245,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 246,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 247,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 248,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 249,
+      "objectId": 0,
+      "verdict": "unclear"
+    },
+    {
+      "frame": 250,
+      "objectId": 0,
+      "verdict": "unclear"
+    }
+  ],
+  "metrics": {
+    "secondsOnScreen": 0,
+    "visibleFrames": [],
+    "segments": [],
+    "mentions": [
+      {
+        "startSec": 4.275172413793103,
+        "endSec": 4.815862068965517,
+        "text": "La Croix"
+      }
+    ]
+  },
+  "terms": [
+    {
+      "term": {
+        "text": "On screen at least 3 seconds in total",
+        "rule": {
+          "kind": "min_seconds_total",
+          "seconds": 3
+        }
+      },
+      "pass": false
+    },
+    {
+      "term": {
+        "text": "Says LaCroix out loud",
+        "rule": {
+          "kind": "mentioned",
+          "minTimes": 1
+        }
+      },
+      "pass": true
+    },
+    {
+      "term": {
+        "text": "Discloses the ad: says it is an ad or sponsored",
+        "rule": {
+          "kind": "disclosed"
+        }
+      },
+      "pass": true
+    }
+  ],
+  "disclosure": {
+    "spoken": [
+      {
+        "startSec": 11.844827586206897,
+        "endSec": 12.926206896551724,
+        "text": "this is an ad"
+      }
+    ],
+    "onScreen": [],
+    "onScreenChecked": true
+  },
+  "cost": {
+    "samFrames": 502,
+    "usd": 0.2304
+  },
+  "receipt": {
+    "runId": "george-2026-11-03T06:20:25.016Z",
+    "startedAt": "2026-11-03T06:20:25.016Z"
+  }
+}

@@ -8,7 +8,7 @@ import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
 import { TopBar } from "@/components/ed/top-bar";
 import { Wordmark } from "@/components/ed/bits";
-import { clipLabel, clipVideoId, pct, pct0, sampleRows, summarize, targetName, type SampleRow } from "@/components/ed/accuracy-summary";
+import { clipLabel, clipVideoId, labelProvenance, pct, pct0, sampleRows, sparkChanges, summarize, targetName, type SampleRow } from "@/components/ed/accuracy-summary";
 import { lookalikeCards, type VerdictCardData } from "@/components/ed/showcase-cards";
 import { demoMedia } from "@/components/ed/demo-media";
 import { CASES, CONTACT_EMAIL, JUDGE_HREF, LACROIX, OWN_VIDEO_HREF, campaignHref, reportHref } from "@/components/ed/judge-path";
@@ -98,6 +98,8 @@ export default async function Landing() {
   // Creators with a checked Reel in the showcase campaign (a re-cut is the same creator), counted, never typed in.
   const checkedCreators = new Set(lacroixVideos.filter((v) => v.status === "done").map((v) => handleKey(v.creator))).size;
   const acc = summarize(data);
+  const unconfirmed = sparkChanges(data).filter((c) => c.kind === "unconfirmed");
+  const labelLine = labelProvenance(data)?.line;
   const heroSec = hero ? Math.round(hero.video.report.info.durationSec) : null;
   const demo = demoMedia(hero?.video.thumbUrl);
   const reportLink = hero?.href ?? campaignHref;
@@ -329,12 +331,13 @@ export default async function Landing() {
 
         <section id="accuracy" className="scroll-mt-20 border-t border-(--hair) bg-(--card)">
           <div className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-            <h2 className="ed-display max-w-[22ch] text-[34px] leading-[1.04] sm:text-[44px]">Measured frame by frame against checked labels.</h2>
+            <h2 className="ed-display max-w-[22ch] text-[34px] leading-[1.04] sm:text-[44px]">Measured frame by frame on {acc.clips} test Reels.</h2>
             <p className="mt-5 max-w-[44ch] text-[21px] leading-[1.4] text-(--ink-2) sm:text-[24px]">
               <span className="ed-num text-(--ink)">{pct(acc.verified.precision)}</span> precision and{" "}
-              <span className="ed-num text-(--ink)">{pct(acc.verified.recall)}</span> recall per frame, over {acc.targets} product checks on{" "}
-              {acc.clips} labelled test videos.
+              <span className="ed-num text-(--ink)">{pct(acc.verified.recall)}</span> recall per frame, on the {acc.clips} Reels as delivered on this
+              site.
             </p>
+            {labelLine && <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-3)">{labelLine}</p>}
             <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-3)">
               {acc.multiProductClips > 0 && `${acc.multiProductClips} of the videos show more than one product, and each product is checked on its own. `}
               SAM 3.1 tracking costs ${(SAM_USD_PER_FRAME * 1000).toFixed(2)} per 1,000 frames
@@ -346,9 +349,10 @@ export default async function Landing() {
               The demo is free. Checking one video costs about $0.10–0.25 in Meta API fees.
             </p>
             <p className="mt-3 max-w-[64ch] text-[15px] leading-[1.6] text-(--ink-2)">
-              Without Muse Spark, SAM 3.1 alone scores {pct(acc.sam.precision)} precision: a look-alike counts as the brand&rsquo;s
-              product. With it, {pct(acc.verified.precision)}, and the average error per check falls from{" "}
-              <span className="tabular">{acc.sam.meanAbsErrorSec.toFixed(2)}</span> s to <span className="tabular">{acc.verified.meanAbsErrorSec.toFixed(2)}</span> s.{" "}
+              Without Muse Spark, SAM 3.1 alone scores {pct(acc.sam.precision)} precision and {pct(acc.sam.recall)} recall: a look-alike counts as
+              the brand&rsquo;s product. With it, {pct(acc.verified.precision)} and {pct(acc.verified.recall)}.
+              {unconfirmed.length > 0 &&
+                ` Recall is lower with it because on ${unconfirmed.map((c) => `${clipLabel(c.clip)}’s Reel`).join(" and ")} Muse Spark could not confirm the product SAM 3.1 tracked, so it was not counted and the report flags it.`}{" "}
               <PendingLink href="/accuracy" className={textLink}>
                 How it was measured, and where it is wrong <ArrowRight className="size-4" strokeWidth={2.25} aria-hidden />
               </PendingLink>

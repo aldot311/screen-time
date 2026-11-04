@@ -9,9 +9,9 @@
           "clip": "lacroix/lc-1-george",
           "target": "lacroix-can",
           "truthSec": 11.2,
-          "predictedSec": 11.266666666666667,
-          "precision": 0.9526627218934911,
-          "recall": 0.9583333333333334
+          "predictedSec": 11.066666666666666,
+          "precision": 0.9578313253012049,
+          "recall": 0.9464285714285714
         },
         {
           "clip": "lacroix/lc-1-michael",
@@ -94,10 +94,10 @@
           "recall": 1
         }
       ],
-      "precision": 0.9500247402276101,
-      "recall": 0.9943034697048162,
-      "f1": 0.9716599190283401,
-      "meanAbsErrorSec": 0.5575757575757575,
+      "precision": 0.9504459861248761,
+      "recall": 0.9932677369238736,
+      "f1": 0.9713851608002027,
+      "meanAbsErrorSec": 0.5636363636363636,
       "falseSecondsOnEmptyClips": 4.266666666666667
     },
     {
@@ -107,9 +107,9 @@
           "clip": "lacroix/lc-1-george",
           "target": "lacroix-can",
           "truthSec": 11.2,
-          "predictedSec": 11.266666666666667,
-          "precision": 0.9526627218934911,
-          "recall": 0.9583333333333334
+          "predictedSec": 0,
+          "precision": null,
+          "recall": 0
         },
         {
           "clip": "lacroix/lc-1-michael",
@@ -192,11 +192,358 @@
           "recall": 1
         }
       ],
-      "precision": 0.9810935104752172,
-      "recall": 0.9943034697048162,
-      "f1": 0.9876543209876544,
-      "meanAbsErrorSec": 0.1696969696969697,
+      "precision": 0.9837807606263982,
+      "recall": 0.9109269808389435,
+      "f1": 0.9459532132293628,
+      "meanAbsErrorSec": 1.1818181818181819,
       "falseSecondsOnEmptyClips": 0
     }
-  ]
+  ],
+  "set": {
+    "clips": 11,
+    "frames": 2800,
+    "positives": 1931,
+    "negatives": 869
+  },
+  "intervals": {
+    "seed": 20261103,
+    "resamples": 100000,
+    "sam": {
+      "precision": {
+        "lo": 0.8601823708206687,
+        "hi": 0.990713587487781
+      },
+      "recall": {
+        "lo": 0.9821882951653944,
+        "hi": 1
+      },
+      "f1": {
+        "lo": 0.9210866752910737,
+        "hi": 0.9935790725326992
+      }
+    },
+    "verified": {
+      "precision": {
+        "lo": 0.9667359667359667,
+        "hi": 0.9964114832535885
+      },
+      "recall": {
+        "lo": 0.7030796048808832,
+        "hi": 1
+      },
+      "f1": {
+        "lo": 0.8194014447884417,
+        "hi": 0.995631370917412
+      }
+    }
+  },
+  "withoutLookalikes": {
+    "clips": [
+      "lacroix/lc-10-aldo"
+    ],
+    "sam": {
+      "precision": 0.9815762538382804,
+      "recall": 0.9932677369238736,
+      "f1": 0.9873873873873873
+    },
+    "verified": {
+      "precision": 0.9837807606263982,
+      "recall": 0.9109269808389435,
+      "f1": 0.9459532132293628
+    }
+  },
+  "payHold": {
+    "agree": 9,
+    "of": 11,
+    "rows": [
+      {
+        "clip": "lacroix/lc-1-george",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 11.2,
+        "countedSec": 0,
+        "labelsPay": true,
+        "appPay": false
+      },
+      {
+        "clip": "lacroix/lc-1-michael",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 2.6,
+        "countedSec": 3.066666666666667,
+        "labelsPay": false,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-10-aldo",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 0,
+        "countedSec": 0,
+        "labelsPay": false,
+        "appPay": false
+      },
+      {
+        "clip": "lacroix/lc-11-jon",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 12,
+        "countedSec": 12,
+        "labelsPay": true,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-12-aldo",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 21.333333333333332,
+        "countedSec": 21.733333333333334,
+        "labelsPay": true,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-2-jamal",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 14,
+        "countedSec": 14.066666666666666,
+        "labelsPay": true,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-4-lana",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 12.133333333333333,
+        "countedSec": 12.133333333333333,
+        "labelsPay": true,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-6-michael",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 13.733333333333333,
+        "countedSec": 14.533333333333333,
+        "labelsPay": true,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-7a-ash",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 11.866666666666667,
+        "countedSec": 11.8,
+        "labelsPay": true,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-7b-ash",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 13.333333333333334,
+        "countedSec": 13.333333333333334,
+        "labelsPay": true,
+        "appPay": true
+      },
+      {
+        "clip": "lacroix/lc-8-peter",
+        "target": "lacroix-can",
+        "needSec": 3,
+        "labelledSec": 16.533333333333335,
+        "countedSec": 16.533333333333335,
+        "labelsPay": true,
+        "appPay": true
+      }
+    ]
+  },
+  "objects": {
+    "judged": 12,
+    "unsure": 0,
+    "hosted": {
+      "correct": 11,
+      "lookalikesCounted": 0,
+      "productsMissed": 1,
+      "unclear": 1,
+      "interval": {
+        "lo": 0.6152038348490558,
+        "hi": 0.9978924067681398
+      }
+    },
+    "samAlone": {
+      "correct": 10,
+      "lookalikesCounted": 2,
+      "productsMissed": 0,
+      "interval": {
+        "lo": 0.515862251314033,
+        "hi": 0.9791374745399075
+      }
+    },
+    "lookalikes": [
+      {
+        "clip": "lacroix/lc-10-aldo",
+        "target": "lacroix-can",
+        "objectId": 1,
+        "note": "LaCroix Pamplemousse, a different flavor (the label reads PAMPLEMOUSSE)",
+        "counted": false
+      },
+      {
+        "clip": "lacroix/lc-12-aldo",
+        "target": "lacroix-can",
+        "objectId": 0,
+        "note": "a Poppi Raspberry Rose can, another brand",
+        "counted": false
+      }
+    ]
+  },
+  "labels": {
+    "clips": 11,
+    "checkedByPerson": 0,
+    "checkedBy": {
+      "lacroix/lc-10-aldo": "Claude, at full resolution, for the look-alike clip (see notes)"
+    }
+  },
+  "reports": [
+    {
+      "clip": "lacroix/lc-1-george",
+      "target": "lacroix-can",
+      "runId": "george-2026-11-03T06:20:25.016Z",
+      "startedAt": "2026-11-03T06:20:25.016Z",
+      "costUsd": 0.2304,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 1
+      },
+      "flags": [
+        "Muse Spark could not tell what one tracked object is, so it was not counted."
+      ]
+    },
+    {
+      "clip": "lacroix/lc-1-michael",
+      "target": "lacroix-can",
+      "runId": "michael-2026-11-03T06:05:41.776Z",
+      "startedAt": "2026-11-03T06:05:41.776Z",
+      "costUsd": 0.1072,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": [
+        "“On screen at least 3 seconds in total”: 3 s on screen in total, against 3 s needed. Close either way."
+      ]
+    },
+    {
+      "clip": "lacroix/lc-10-aldo",
+      "target": "lacroix-can",
+      "runId": "aldo-2026-11-03T06:09:44.011Z",
+      "startedAt": "2026-11-03T06:09:44.011Z",
+      "costUsd": 0.2204,
+      "notCounted": {
+        "lookalikes": 1,
+        "unclear": 0
+      },
+      "flags": []
+    },
+    {
+      "clip": "lacroix/lc-11-jon",
+      "target": "lacroix-can",
+      "runId": "jon-2026-11-03T06:10:53.540Z",
+      "startedAt": "2026-11-03T06:10:53.540Z",
+      "costUsd": 0.106,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": []
+    },
+    {
+      "clip": "lacroix/lc-12-aldo",
+      "target": "lacroix-can",
+      "runId": "aldo-2-2026-11-03T06:21:28.105Z",
+      "startedAt": "2026-11-03T06:21:28.105Z",
+      "costUsd": 0.1552,
+      "notCounted": {
+        "lookalikes": 1,
+        "unclear": 0
+      },
+      "flags": []
+    },
+    {
+      "clip": "lacroix/lc-2-jamal",
+      "target": "lacroix-can",
+      "runId": "jamal-2026-11-03T06:06:22.610Z",
+      "startedAt": "2026-11-03T06:06:22.610Z",
+      "costUsd": 0.172,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": []
+    },
+    {
+      "clip": "lacroix/lc-4-lana",
+      "target": "lacroix-can",
+      "runId": "lana-2026-11-03T06:07:34.634Z",
+      "startedAt": "2026-11-03T06:07:34.634Z",
+      "costUsd": 0.1064,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": [
+        "Muse Spark saw the product blurred, so a frame or two may be missing."
+      ]
+    },
+    {
+      "clip": "lacroix/lc-6-michael",
+      "target": "lacroix-can",
+      "runId": "6-michael-captioned-gk3bzd-2026-11-03T20:33:30.514Z",
+      "startedAt": "2026-11-03T20:33:30.514Z",
+      "costUsd": 0.1136,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": [
+        "Muse Spark saw the product blurred, so a frame or two may be missing."
+      ]
+    },
+    {
+      "clip": "lacroix/lc-7a-ash",
+      "target": "lacroix-can",
+      "runId": "ash-2026-11-03T06:08:13.492Z",
+      "startedAt": "2026-11-03T06:08:13.492Z",
+      "costUsd": 0.1092,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": []
+    },
+    {
+      "clip": "lacroix/lc-7b-ash",
+      "target": "lacroix-can",
+      "runId": "ash-recut-2026-11-03T06:11:40.411Z",
+      "startedAt": "2026-11-03T06:11:40.411Z",
+      "costUsd": 0.1154,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": []
+    },
+    {
+      "clip": "lacroix/lc-8-peter",
+      "target": "lacroix-can",
+      "runId": "peter-2026-11-03T06:08:57.373Z",
+      "startedAt": "2026-11-03T06:08:57.373Z",
+      "costUsd": 0.1196,
+      "notCounted": {
+        "lookalikes": 0,
+        "unclear": 0
+      },
+      "flags": []
+    }
+  ],
+  "spoken": null
 }

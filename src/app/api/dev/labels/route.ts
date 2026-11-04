@@ -18,6 +18,13 @@ const Labels = z.object({
   id: z.string(),
   method: z.string().default(""),
   checkedBy: z.string().default(""),
+  // The spoken terms as a person heard them, to check Voice Transcribe and the #ad reader against (optional: files
+  // without them stay valid). saidBrand: the brand name is said out loud; saidBrandAtSec: when it is first heard;
+  // disclosure: "shown" is on-screen text that states it is an ad, "implied" only something like "even if it wasn't an
+  // ad", which is not a disclosure.
+  saidBrand: z.boolean().optional(),
+  saidBrandAtSec: z.number().min(0).nullable().optional(),
+  disclosure: z.enum(["said", "shown", "both", "implied", "none"]).optional(),
   targets: z.array(Target),
 });
 

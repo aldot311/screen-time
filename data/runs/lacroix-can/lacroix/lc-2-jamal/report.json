@@ -1,0 +1,1357 @@
+{
+  "videoId": "jamal",
+  "info": {
+    "frameCount": 510
+  },
+  "tracks": [
+    {
+      "objectId": 0,
+      "verdict": "match",
+      "visibility": "clear"
+    }
+  ],
+  "detections": [
+    {
+      "frame": 217,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 218,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 219,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 220,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 221,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 222,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 223,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 224,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 225,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 226,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 227,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 228,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 229,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 230,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 231,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 232,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 233,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 234,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 235,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 236,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 237,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 238,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 239,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 240,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 241,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 242,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 243,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 244,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 245,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 246,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 247,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 248,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 249,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 250,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 251,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 252,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 253,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 254,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 255,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 256,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 257,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 258,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 259,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 260,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 261,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 262,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 263,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 264,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 265,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 266,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 267,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 268,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 269,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 270,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 271,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 272,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 273,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 274,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 275,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 276,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 277,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 278,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 279,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 280,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 281,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 282,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 283,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 284,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 285,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 286,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 287,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 288,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 289,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 290,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 291,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 292,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 293,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 294,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 295,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 296,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 297,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 298,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 299,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 300,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 301,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 302,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 303,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 304,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 305,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 306,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 307,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 308,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 309,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 310,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 311,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 312,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 313,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 314,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 315,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 316,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 317,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 318,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 319,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 386,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 387,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 388,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 389,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 390,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 391,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 392,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 393,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 394,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 395,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 396,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 397,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 398,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 399,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 400,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 401,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 402,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 403,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 404,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 405,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 406,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 407,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 408,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 409,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 410,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 411,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 412,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 413,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 414,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 415,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 416,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 417,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 418,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 419,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 420,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 421,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 422,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 423,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 424,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 425,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 426,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 427,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 428,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 429,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 430,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 431,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 432,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 433,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 434,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 435,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 436,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 437,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 438,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 439,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 440,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 441,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 442,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 443,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 444,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 445,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 446,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 447,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 448,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 449,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 450,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 451,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 452,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 459,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 460,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 461,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 462,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 463,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 464,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 465,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 466,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 467,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 468,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 469,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 470,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 471,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 472,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 473,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 474,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 475,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 476,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 477,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 478,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 479,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 480,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 481,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 482,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 483,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 484,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 485,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 486,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 487,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 488,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 489,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 490,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 491,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 492,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 493,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 494,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 495,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 496,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 497,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 498,
+      "objectId": 0,
+      "verdict": "match"
+    },
+    {
+      "frame": 499,
+      "objectId": 0,
+      "verdict": "match"
+    }
+  ],
+  "metrics": {
+    "secondsOnScreen": 14.066666666666666,
+    "visibleFrames": [
+      217,
+      218,
+      219,
+      220,
+      221,
+      222,
+      223,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271,
+      272,
+      273,
+      274,
+      275,
+      276,
+      277,
+      278,
+      279,
+      280,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287,
+      288,
+      289,
+      290,
+      291,
+      292,
+      293,
+      294,
+      295,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      386,
+      387,
+      388,
+      389,
+      390,
+      391,
+      392,
+      393,
+      394,
+      395,
+      396,
+      397,
+      398,
+      399,
+      400,
+      401,
+      402,
+      403,
+      404,
+      405,
+      406,
+      407,
+      408,
+      409,
+      410,
+      411,
+      412,
+      413,
+      414,
+      415,
+      416,
+      417,
+      418,
+      419,
+      420,
+      421,
+      422,
+      423,
+      424,
+      425,
+      426,
+      427,
+      428,
+      429,
+      430,
+      431,
+      432,
+      433,
+      434,
+      435,
+      436,
+      437,
+      438,
+      439,
+      440,
+      441,
+      442,
+      443,
+      444,
+      445,
+      446,
+      447,
+      448,
+      449,
+      450,
+      451,
+      452,
+      459,
+      460,
+      461,
+      462,
+      463,
+      464,
+      465,
+      466,
+      467,
+      468,
+      469,
+      470,
+      471,
+      472,
+      473,
+      474,
+      475,
+      476,
+      477,
+      478,
+      479,
+      480,
+      481,
+      482,
+      483,
+      484,
+      485,
+      486,
+      487,
+      488,
+      489,
+      490,
+      491,
+      492,
+      493,
+      494,
+      495,
+      496,
+      497,
+      498,
+      499
+    ],
+    "segments": [
+      {
+        "startSec": 14.466666666666667,
+        "endSec": 21.333333333333332
+      },
+      {
+        "startSec": 25.733333333333334,
+        "endSec": 30.2
+      },
+      {
+        "startSec": 30.6,
+        "endSec": 33.333333333333336
+      }
+    ],
+    "mentions": [
+      {
+        "startSec": 19.056521739130435,
+        "endSec": 19.531304347826087,
+        "text": "LaCroix"
+      }
+    ]
+  },
+  "terms": [
+    {
+      "term": {
+        "text": "On screen at least 3 seconds in total",
+        "rule": {
+          "kind": "min_seconds_total",
+          "seconds": 3
+        }
+      },
+      "pass": true
+    },
+    {
+      "term": {
+        "text": "Says LaCroix out loud",
+        "rule": {
+          "kind": "mentioned",
+          "minTimes": 1
+        }
+      },
+      "pass": true
+    },
+    {
+      "term": {
+        "text": "Discloses the ad: says it is an ad or sponsored",
+        "rule": {
+          "kind": "disclosed"
+        }
+      },
+      "pass": true
+    }
+  ],
+  "disclosure": {
+    "spoken": [
+      {
+        "startSec": 23.28,
+        "endSec": 24.37333333333333,
+        "text": "this is an ad"
+      }
+    ],
+    "onScreen": [],
+    "onScreenChecked": true
+  },
+  "cost": {
+    "samFrames": 510,
+    "usd": 0.172
+  },
+  "receipt": {
+    "runId": "jamal-2026-11-03T06:06:22.610Z",
+    "startedAt": "2026-11-03T06:06:22.610Z"
+  }
+}
