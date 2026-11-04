@@ -1,6 +1,6 @@
 // Builds the LaCroix campaign from friends' captioned Reels: one product photo, three plain-English terms, a fee, and
-// each video run through the full pipeline. The Reels are not in this repo (they are people's faces); pass the
-// folder that holds them.
+// each video run through the full pipeline. The Reels are not in this repo; pass the folder that holds them. The
+// friends agreed to be shown, outside the app, so these uploads carry no consent record (README, Rights).
 //
 // Usage (writes to the store the env points at; needs META_MODEL_API_KEY):
 //   ~/ai/bin/with-secrets.sh sh -c 'set -a; . ./.env.vercel; set +a; pnpm tsx --tsconfig tsconfig.json scripts/build-lacroix.mts ~/Movies/screen-time-work'
