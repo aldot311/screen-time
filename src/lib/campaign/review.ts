@@ -48,10 +48,17 @@ function measured(rule: ContractRule, r: VideoReport): { got: number; needed: nu
   }
 }
 
-/** On-screen text that says the video is an ad by itself: a one-word label ("#ad", "Sponsored") or words the spoken
- *  check counts as a disclosure ("THIS IS AN AD"). A caption fragment such as "AN AD" or "NOT AN AD" does not. */
+/** Words that make on-screen text deny or only suppose a disclosure ("NOT AN AD", "IF IT WAS AN AD"). */
+const NOT_STATED = new Set(["not", "no", "isnt", "wasnt", "arent", "werent", "never", "if", "even"]);
+
+/** On-screen text that says the video is an ad by itself: a label ("#ad", "Sponsored post", "Ad | LaCroix") or words the
+ *  spoken check counts as a disclosure ("THIS IS AN AD"). Two kinds do not: a caption fragment led by an article ("AN
+ *  AD", cut from "even if it wasn't an ad") and text that denies or supposes it ("NOT AN AD"). */
 function statesDisclosure(text: string): boolean {
-  return tokenize(text).length <= 1 || findDisclosures([{ startMs: 0, endMs: 0, transcript: text }]).length > 0;
+  if (findDisclosures([{ startMs: 0, endMs: 0, transcript: text }]).length > 0) return true;
+  const words = tokenize(text).map((t) => t.norm);
+  if (words.some((w) => NOT_STATED.has(w))) return false;
+  return !((words[0] === "an" || words[0] === "a") && (words[1] === "ad" || words[1] === "ads"));
 }
 
 /**

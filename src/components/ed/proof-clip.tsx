@@ -2,8 +2,8 @@
 
 // The report's proof clip tile. The clip is rendered on the first request (which takes a while) and kept, so the tile
 // asks first and shows what is happening on the page: a spinner while it renders, a retry while another request is
-// rendering it (202), and the reason when it fails, instead of opening raw JSON in a new tab. Once the route answers
-// with its redirect to the stored MP4, the clip opens in the tab opened on the tap (so no popup blocker stops it).
+// rendering it (202), and the reason when it fails, instead of opening raw JSON in a new tab. Nothing opens until the
+// clip exists: then the tile becomes a link to it, and that tap (a fresh one, so no popup blocker stops it) opens it.
 import { useEffect, useRef, useState } from "react";
 import { Clapperboard } from "lucide-react";
 import { ACTION_TILE } from "./action-style";
@@ -28,7 +28,7 @@ export async function readProofAnswer(res: Pick<Response, "type" | "status" | "h
   return { kind: "failed", message: error ?? `Could not make the proof clip (${res.status}).` };
 }
 
-type State = { kind: "idle" } | { kind: "making" } | { kind: "rendering" } | { kind: "failed"; message: string };
+type State = { kind: "idle" } | { kind: "making" } | { kind: "rendering" } | { kind: "ready" } | { kind: "failed"; message: string };
 
 export function ProofClipTile({ href }: { href: string }) {
   const [state, setState] = useState<State>({ kind: "idle" });
@@ -43,9 +43,6 @@ export function ProofClipTile({ href }: { href: string }) {
 
   async function make() {
     if (busy) return;
-    // Opened on the tap itself, so the browser allows it; it is pointed at the clip once the clip exists.
-    const tab = window.open("", "_blank");
-    if (tab) tab.opener = null;
     setState({ kind: "making" });
     for (let i = 0; i < MAX_TRIES && alive.current; i++) {
       let answer: ProofAnswer;
@@ -55,36 +52,37 @@ export function ProofClipTile({ href }: { href: string }) {
         answer = { kind: "failed", message: "Could not reach the server. Check the connection and try again." };
       }
       if (!alive.current) break;
-      if (answer.kind === "ready") {
-        // The route redirects to the stored MP4 straight away now.
-        if (tab) tab.location.href = href;
-        else window.location.assign(href);
-        setState({ kind: "idle" });
-        return;
-      }
-      if (answer.kind === "failed") {
-        tab?.close();
+      if (answer.kind === "ready" || answer.kind === "failed") {
+        // Ready: the route now redirects to the stored MP4 straight away, so the link below opens it.
         setState(answer);
         return;
       }
       setState({ kind: "rendering" });
       await new Promise((r) => setTimeout(r, answer.retryMs));
     }
-    tab?.close();
     if (alive.current) setState({ kind: "failed", message: "The proof clip is taking longer than usual. Try again in a minute." });
   }
 
   return (
     <>
-      <button type="button" onClick={() => void make()} aria-busy={busy} className={`${ACTION_TILE} disabled:cursor-wait`} disabled={busy}>
-        {busy ? <Spinner /> : <Clapperboard className="size-4" aria-hidden />}
-        <span className="sm:hidden">Proof clip</span>
-        <span className="hidden sm:inline">Proof clip (MP4)</span>
-      </button>
+      {state.kind === "ready" ? (
+        <a href={href} target="_blank" rel="noopener" className={ACTION_TILE}>
+          <Clapperboard className="size-4" aria-hidden />
+          <span className="sm:hidden">Open clip</span>
+          <span className="hidden sm:inline">Open proof clip</span>
+        </a>
+      ) : (
+        <button type="button" onClick={() => void make()} aria-busy={busy} className={`${ACTION_TILE} disabled:cursor-wait`} disabled={busy}>
+          {busy ? <Spinner /> : <Clapperboard className="size-4" aria-hidden />}
+          <span className="sm:hidden">Proof clip</span>
+          <span className="hidden sm:inline">Proof clip (MP4)</span>
+        </button>
+      )}
       {/* Spans the whole row of tiles on a phone. */}
       <p role="status" className="col-span-3 text-[13px] leading-snug empty:hidden sm:basis-full">
         {state.kind === "making" && <span className="text-(--ink-3)">Making the proof clip…</span>}
         {state.kind === "rendering" && <span className="text-(--ink-3)">Rendering the clip, a few seconds…</span>}
+        {state.kind === "ready" && <span className="text-(--ink-3)">The proof clip is ready to open.</span>}
         {state.kind === "failed" && <span className="font-medium text-(--short)">{state.message}</span>}
       </p>
     </>

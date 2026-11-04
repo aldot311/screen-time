@@ -135,12 +135,13 @@ describe("a disclosure met only by on-screen text that does not say it is an ad"
     // Said aloud, with the fragment on screen: the spoken check settles it.
     expect(reviewFlags(withDisclosure({ spoken: said, onScreen: [{ startSec: 11, text: "AN AD" }] }))).toEqual([]);
     // On screen only, as a full sentence or a one-word label.
-    for (const text of ["THIS IS AN AD", "#ad", "Sponsored", "#ad #lacroix", "Paid partnership"])
+    for (const text of ["THIS IS AN AD", "#ad", "Sponsored", "#ad #lacroix", "Paid partnership", "Sponsored post", "Ad | LaCroix", "AD - LaCroix", "A sponsored post"])
       expect(reviewFlags(withDisclosure({ spoken: [], onScreen: [{ startSec: 1, text }] })), text).toEqual([]);
   });
 
   it("flags a denial read on screen, and leaves a term that was not met to its verdict", () => {
-    expect(reviewFlags(withDisclosure({ spoken: [], onScreen: [{ startSec: 2, text: "NOT AN AD" }] }))).toHaveLength(1);
+    for (const text of ["NOT AN AD", "AN AD", "A AD", "IF IT WAS AN AD"])
+      expect(reviewFlags(withDisclosure({ spoken: [], onScreen: [{ startSec: 2, text }] })), text).toHaveLength(1);
     expect(reviewFlags(withDisclosure({ spoken: [], onScreen: [{ startSec: 2, text: "AN AD" }] }, false))).toEqual([]);
     expect(reviewFlags(report({ terms: [disclose] }))).toEqual([]);
   });
