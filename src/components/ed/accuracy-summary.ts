@@ -454,7 +454,11 @@ export function payHoldSummary(d: AccuracyData): { line: string; differ: string[
 export interface WrongCard {
   key: "precision" | "recall";
   title: string;
+  /** The Reel as people know it: "George · LaCroix can". */
   clip: string;
+  /** The measured clip and target this card is about, so the page can show and play that Reel. */
+  clipId: string;
+  target: string;
   what: string;
   why: string;
 }
@@ -481,6 +485,8 @@ export function whereWrong(d: AccuracyData): WrongCard[] {
   const cards: (WrongCard | undefined)[] = [
     weak.precision && {
       key: "precision",
+      clipId: weak.precision.clip,
+      target: weak.precision.target,
       title: weak.precision.precision === 0 ? "Counted only what was not there" : "Counted more than was there",
       clip: name(weak.precision),
       what: `Precision ${pct(weak.precision.precision)}: ${tenths(missSeconds(weak.precision).extraSec)} s counted that the labels mark as not on screen (${counts(weak.precision)}).`,
@@ -488,6 +494,8 @@ export function whereWrong(d: AccuracyData): WrongCard[] {
     },
     weak.recall && {
       key: "recall",
+      clipId: weak.recall.clip,
+      target: weak.recall.target,
       title: weak.recall.recall === 0 ? "Missed all of it" : "Missed some of it",
       clip: name(weak.recall),
       what: `Recall ${pct(weak.recall.recall)}: ${tenths(missSeconds(weak.recall).missedSec)} s of real screen time not counted (${counts(weak.recall)}).`,

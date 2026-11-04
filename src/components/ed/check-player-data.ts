@@ -176,3 +176,41 @@ export function packBoxes(detections: StoredDetection[] | undefined): PackedBox[
       : [],
   );
 }
+
+/** A stored campaign video as far as the player needs it (VideoEntry in lib/campaign/types.ts). */
+export interface StoredReelVideo {
+  status: string;
+  videoUrl?: string;
+  thumbUrl?: string;
+  report?: {
+    info: { width?: number; height?: number };
+    receipt?: { runId?: string };
+    detections?: StoredDetection[];
+  } | null;
+}
+
+/** What the player shows for one labelled Reel: its frames, plus the stored video and still when the store has them.
+ *  SAM's boxes are drawn only when the stored report is the very run that was scored, so a box never comes from a
+ *  different run than the strips. */
+export function reelView(reel: CheckReel, video: StoredReelVideo | null | undefined) {
+  const ready = video?.status === "done" && video.videoUrl ? video : null;
+  const sameRun = !!ready?.report && !!reel.runId && ready.report.receipt?.runId === reel.runId;
+  return {
+    clip: reel.clip,
+    target: reel.target,
+    marks: reel.marks,
+    precision: reel.precision,
+    recall: reel.recall,
+    videoUrl: ready?.videoUrl,
+    poster: video?.thumbUrl,
+    width: ready?.report?.info.width ?? 540,
+    height: ready?.report?.info.height ?? 960,
+    boxes: sameRun ? packBoxes(ready!.report!.detections) : [],
+  };
+}
+
+/** The window event that asks the check player on the page to load a Reel and scroll to it ("Watch it" buttons). */
+export const CHECK_SELECT_EVENT = "screen-time:check-select";
+export interface CheckSelectDetail {
+  clip: string;
+}

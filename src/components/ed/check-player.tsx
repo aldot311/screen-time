@@ -14,7 +14,7 @@ import { ChevronRight, Play } from "lucide-react";
 import { FPS } from "@/lib/types";
 import { tenths, timecode } from "@/components/format";
 import { clipLabel, pct, pct0, targetName, type SampleRow } from "./accuracy-summary";
-import { firstDisagreement, markSegments, soFar, type PackedBox } from "./check-player-data";
+import { CHECK_SELECT_EVENT, firstDisagreement, markSegments, soFar, type CheckSelectDetail, type PackedBox } from "./check-player-data";
 import { Player, type OverlayBox, type PlayerHandle } from "./player";
 import { PendingLink } from "./pending-link";
 import { Figure } from "./bits";
@@ -60,20 +60,35 @@ export function CheckAccuracy({ reels, rows, initialClip }: Props) {
   const reel = reels.find((r) => r.clip === clip);
   const card = useRef<HTMLDivElement>(null);
 
-  const choose = (next: string) => {
-    if (next === clip) return;
+  const choose = (next: string, always = false) => {
+    if (next === clip && !always) return;
     setClip(next);
-    // Bring the player into view if the row picked it from below.
+    // Bring the player into view if the row picked it from below (or, from a "Watch it" button, wherever it is).
     const el = card.current;
     if (!el) return;
     const box = el.getBoundingClientRect();
-    if (box.top < 64 || box.top > innerHeight * 0.5) {
-      el.scrollIntoView({
+    if (always || box.top < 64 || box.top > innerHeight * 0.5) {
+      // From a "Watch it" button, land on the section so its heading shows above the player.
+      (always ? (el.closest("section") ?? el) : el).scrollIntoView({
         block: "start",
         behavior: matchMedia(REDUCED).matches ? "auto" : "smooth",
       });
     }
   };
+
+  // A "Watch it" button elsewhere on the page asks for a Reel by name; only Reels this player has are taken.
+  const chooseRef = useRef(choose);
+  useEffect(() => {
+    chooseRef.current = choose;
+  });
+  useEffect(() => {
+    const onSelect = (e: Event) => {
+      const next = (e as CustomEvent<CheckSelectDetail>).detail?.clip;
+      if (next && reels.some((r) => r.clip === next)) chooseRef.current(next, true);
+    };
+    window.addEventListener(CHECK_SELECT_EVENT, onSelect);
+    return () => window.removeEventListener(CHECK_SELECT_EVENT, onSelect);
+  }, [reels]);
 
   return (
     <>
@@ -519,5 +534,19 @@ function WeakTag({ label }: { label: string }) {
     <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-(--paper) px-2.5 text-[12px] font-semibold whitespace-nowrap text-(--ink) ring-1 ring-(--ink) ring-inset">
       {label}
     </span>
+  );
+}
+
+/** Loads a Reel into the check player on the same page and scrolls to it. */
+export function WatchReelButton({ clip, name, className = "" }: { clip: string; name: string; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new CustomEvent<CheckSelectDetail>(CHECK_SELECT_EVENT, { detail: { clip } }))}
+      className={`ed-press inline-flex h-11 items-center gap-2 rounded-full bg-(--ink) pr-5 pl-4 text-[14px] font-semibold text-white shadow-(--sh-1) hover:bg-black active:bg-black/80 ${className}`}
+    >
+      <Play className="size-3.5" fill="currentColor" strokeWidth={0} aria-hidden />
+      Watch it<span className="sr-only"> in the player: {name}&rsquo;s Reel</span>
+    </button>
   );
 }

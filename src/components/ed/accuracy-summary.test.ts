@@ -223,6 +223,9 @@ describe("the measured set, in the page's words", () => {
   it("finds where it is wrong in the data, with what the report did about it", () => {
     const [over, under] = whereWrong(site);
     expect(over.clip).toBe("Michael (not Michael K) · LaCroix can");
+    // The card names the exact clip and target, so the page can show that Reel's still and play it.
+    expect(over).toMatchObject({ clipId: "lacroix/lc-1-michael", target: "lacroix-can" });
+    expect(under).toMatchObject({ clipId: "lacroix/lc-1-george", target: "lacroix-can" });
     expect(over.what).toContain("(labelled 2.6 s, counted 3.0 s)");
     expect(under.clip).toBe("George · LaCroix can");
     expect(under.what).toContain("(labelled 11.2 s, counted 0.0 s)");
