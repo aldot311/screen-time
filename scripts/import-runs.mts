@@ -28,14 +28,27 @@ const BRANDS: Record<string, string> = {
   "water-bottle": "Water bottle",
 };
 
-// Target definitions come from the labels, so prompts and product descriptions match the runs.
+// Target definitions come from the labels, so prompts and product descriptions match the runs. Label files without a
+// targets list (objects.json, the object-level labels) are skipped.
 const targets = new Map<string, Target>();
 for (const f of (await readdir("data/labels", { recursive: true })).filter((f) => f.endsWith(".json"))) {
-  for (const t of JSON.parse(await readFile(join("data/labels", f), "utf8")).targets as Target[]) targets.set(t.name, t);
+  const fileTargets: unknown = JSON.parse(await readFile(join("data/labels", f), "utf8")).targets;
+  if (!Array.isArray(fileTargets)) continue;
+  for (const t of fileTargets as Target[]) targets.set(t.name, t);
+}
+
+// Run outputs are gitignored, so a fresh clone has none until pnpm run-clip writes them.
+const runNames = await readdir(outDir).catch((err: NodeJS.ErrnoException) => {
+  if (err.code === "ENOENT") return null;
+  throw err;
+});
+if (!runNames) {
+  console.log(`No runs in ${outDir} yet: run pnpm run-clip first.`);
+  process.exit(0);
 }
 
 const now = new Date().toISOString();
-for (const name of await readdir(outDir)) {
+for (const name of runNames) {
   const target = targets.get(name);
   if (!target) continue;
   const reports = (await readdir(join(outDir, name), { recursive: true })).filter((f) => f.endsWith("report.json"));
