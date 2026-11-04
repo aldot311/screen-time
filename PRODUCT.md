@@ -17,20 +17,26 @@ show the creator or their boss.
 Screen-Time measures how long a brand's product is actually on screen in creator video and checks it against the
 sponsorship contract. A brand describes its product in plain words, adds the creator videos and the contract terms, and
 gets a per-video and per-campaign report: seconds on screen, how big and central it was, spoken mentions, and pass/fail
-on each contract term with a jump to the exact second as proof. Success: a manager can decide "pay / don't pay / ask for
+on each contract term with a jump to the moment that proves it. Success: a manager can decide "pay / don't pay / ask for
 a fix" from one page in under a minute, and trust it.
 
 ## Positioning
 
-Proof, not views: "Type what your product looks like; get second-by-second proof it was seen, checked against your
-contract." Competitors (Blinkfire, Relo Metrics, Zoomph, Talkwalker) detect logos from fixed libraries, mostly in sports
-broadcasts, or report engagement. Screen-Time tracks any product from a text prompt (Meta SAM 3.1, no training), rejects
-look-alikes with a second model (Muse Spark), listens for the brand name (Muse Voice Transcribe), and turns contract
-terms into checkable rules with timestamped evidence.
+Proof, not views: "Type what your product looks like; get frame-by-frame proof it was on screen, checked against
+your contract." Sponsorship-analytics vendors (Blinkfire, Relo Metrics, Zoomph, Talkwalker) detect logos from fixed
+libraries, mostly in sports broadcasts, or report engagement; Blinkfire also breaks down a brand's time on screen in
+social video. Creator-video checkers exist too (README, "Who else checks creator videos", read 2026-11-03): OnBriefing
+checks published videos against a pasted brief, Cohley's AI Asset Analysis checks submitted UGC against brief rules,
+Keepface and Omnicom's Creo run AI reviews of deliverables, CreatorIQ's SafeIQ flags brand-safety issues with
+timestamps, and Vidmob scores ads on brand-early and brand-share criteria. Screen-Time's difference is narrower: it
+tracks one product from a text prompt (Meta SAM 3.1, no training) and counts its seconds on screen, rejects same-brand
+look-alikes against a product photo (Muse Spark), listens for the brand name (Muse Voice Transcribe), and turns
+contract terms into checkable rules with timestamped evidence. Never call it the first or the only one.
 
 ## Operating Context
 
-- Built for the Meta Global AI Developer Hackathon, startup track (Aetrai), Oct 28 – Nov 4, 2026. Judged on impact,
+- Built Oct 28 – Nov 4, 2026 by Aldo Tile (Aetrai), with Claude Code as the coding assistant, for the Meta Global AI
+  Developer Hackathon (Oct 26 – Nov 4), startup track, problem statement "Build for Your World". Judged on impact,
   creative use of Meta models, technical depth, and a working demo plus a 3-minute video. Judges must see an agent
   working over video, not a "simple image analyzer".
 - A manager reviews a campaign: several creators, each with one or more short vertical videos (Reels/TikTok style,
@@ -55,14 +61,16 @@ Product name "Screen-Time", by Aetrai (aetrai.com). No other binding brand asset
 
 ## Evidence on Hand
 
-- The friends' LaCroix Reels: 11 vertical Reels that 9 creators filmed for a LaCroix Strawberry Peach test campaign.
-  They are the live site's main content (campaign `lacroix-strawberry-peach`) and the accuracy set. They are not in
-  this repo, since they show people's faces.
+- The LaCroix Reels: 11 vertical Reels for a LaCroix Strawberry Peach test campaign run by Aetrai. 8 friends filmed 9
+  of them and the builder filmed the 2 look-alike clips; we burned in the captions from each Reel's own speech. Every
+  friend shown agreed to be shown publicly. LaCroix and Poppi are not involved (src/lib/campaign/demo-note.ts). They
+  are the live site's main content (campaign `lacroix-strawberry-peach`) and the accuracy set. They are not in this
+  repo; the demo video (public/demo.mp4) and its poster show some of the friends.
 - Aldo's own 15 test clips (Alani Nu can, Stanley tumbler, New Balance sneaker, a coconut-water look-alike, a no-product
   clip) and 6 Pexels stock clips: the earlier test set. Their campaigns are archived: kept in the store but hidden from
   the live site (`src/lib/campaign/visibility.ts`). Their scores stay in `docs/ACCURACY.md`.
 - Answer-key labels: the LaCroix Reels in `data/labels/lacroix/` (two independent vision passes, kept where both
-  agree); the earlier 23 clip/product targets in `data/labels/` (two passes, human spot-check).
+  agree); the earlier 23 clip/product targets in `data/labels/` (two passes; no person's check is recorded in them).
 - No customers, testimonials or pricing yet: never invent them. Accuracy numbers come only from `pnpm accuracy` on
   real runs (`src/lib/accuracy-data.json`).
 

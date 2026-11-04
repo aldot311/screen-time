@@ -8,6 +8,7 @@ import { PendingLink } from "@/components/ed/pending-link";
 import { TrySample } from "@/components/ed/try-sample";
 import { TopBar } from "@/components/ed/top-bar";
 import { Wordmark } from "@/components/ed/bits";
+import { DemoNote } from "@/components/ed/demo-note";
 import { clipLabel, clipVideoId, labelProvenance, pct, pct0, sampleRows, sparkChanges, summarize, targetName, type SampleRow } from "@/components/ed/accuracy-summary";
 import { lookalikeCards, type VerdictCardData } from "@/components/ed/showcase-cards";
 import { demoMedia } from "@/components/ed/demo-media";
@@ -44,29 +45,30 @@ const STEPS = [
     model: "Muse Voice Transcribe",
     title: "Listen",
     role: "hears the brand name and the ad disclosure",
-    text: "Marks the second the creator says your brand name out loud, and whether they said it’s an ad.",
+    // Voice Transcribe times whole turns and a brand name is placed by its word position, so spoken times are approximate.
+    text: "Hears when the creator says your brand name, and whether they say it’s an ad.",
   },
   {
     icon: FileCheck2,
     model: "Muse Spark + rules",
     title: "Check",
-    role: "checks each contract term to the frame",
-    text: "Turns contract terms written in plain English into rules, and checks each one to the frame.",
+    role: "checks each contract term",
+    text: "Turns contract terms written in plain English into rules, and checks screen-time terms to the frame.",
   },
 ];
 
 /** The demo video's script, step by step, each linked to the live page it shows (docs/DEMO.md has the full script). */
 const DEMO_SCRIPT: { title: string; text: string; href?: string }[] = [
-  { title: "The problem", text: "Brands pay creators for screen time they cannot check." },
-  { title: "A creator sends his Reel", text: "Michael K uploads through his request link, with no account and no password. The brand runs the check.", href: campaignHref },
+  { title: "The problem", text: "Brands pay creators for screen time. Screen-Time measures it against the contract." },
+  { title: "The creator link", text: "Michael K’s Reel comes in through his request link (uploaded on his behalf for the recording).", href: campaignHref },
   {
     title: "The live run",
-    text: "SAM 3.1 tracks the can, Muse Spark checks each find against the product photo, Voice Transcribe listens, and every term of the contract is checked. Tap a term to play the second that proves it.",
+    text: "SAM 3.1 tracks the can, Muse Spark checks each find against the product photo, Voice Transcribe listens, and every term of the contract is checked. Tap a term to play the moment that proves it.",
     href: reportHref(CASES.live),
   },
-  { title: "Look-alikes", text: "Aldo’s can is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },
+  { title: "Look-alikes", text: "Aldo’s can (the builder’s own clip) is the wrong flavor: Muse Spark rejects it, nothing counts, and the fee is held.", href: reportHref(CASES.hold) },
   { title: "The follow-up agent", text: "Muse Spark drafts the note and a re-cut request; nothing is sent until you approve.", href: reportHref(CASES.agent) },
-  { title: "The re-cut", text: "Ash’s first take never says LaCroix; her re-cut replaces it and pays.", href: reportHref(CASES.firstTake) },
+  { title: "The re-cut", text: "Ash’s first upload never says LaCroix; her other take, sent after it, replaces it and pays.", href: reportHref(CASES.firstTake) },
   { title: "The campaign", text: "Pay or hold for every creator, with dollar totals and a CSV for finance. Screen-Time never moves money.", href: campaignHref },
   { title: "Accuracy, in one line", text: "Precision with and without Muse Spark, measured frame by frame.", href: "/accuracy" },
   { title: "Built during the hackathon", text: "The pipeline, the contract checker, the follow-up agent and the accuracy harness, all open source." },
@@ -150,9 +152,9 @@ export default async function Landing() {
               className="ed-rise mt-4 max-w-[48ch] text-[16px] leading-[1.55] text-(--ink-2) sm:mt-6 sm:text-[19px] sm:leading-[1.6]"
               style={{ "--d": "90ms" } as CSSProperties}
             >
-              <span className="hidden sm:inline">Brands pay creators for screen time they cannot check. </span>
-              Screen-Time watches every frame of a sponsored video with Meta SAM 3.1, rejects look-alikes with Muse Spark,
-              hears your brand with Muse Voice Transcribe, and checks the contract to the second.
+              <span className="hidden sm:inline">Brands pay creators for screen time. Screen-Time measures it against the contract. </span>
+              Meta SAM 3.1 tracks your product in every frame of a sponsored video, Muse Spark rejects look-alikes, Muse Voice
+              Transcribe hears your brand, and Screen-Time checks each on-screen term frame by frame.
             </p>
           </div>
 
@@ -218,7 +220,7 @@ export default async function Landing() {
               </h2>
               <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.6] text-(--ink-2)">
                 {demo
-                  ? "One LaCroix campaign, start to finish. Every step below is live on this site."
+                  ? "One LaCroix test campaign, start to finish. Every step below is live on this site."
                   : "The recorded demo is not up yet. It follows the steps below, and each one is live on this site now."}
               </p>
             </div>
@@ -276,10 +278,10 @@ export default async function Landing() {
                 Three Meta models, four checks, one verdict per creator.
               </h2>
               <div className="space-y-3 text-[16px] leading-[1.6] text-(--ink-2) lg:pt-1.5">
-                <p>Add a creator&rsquo;s video and say what your product looks like. Every number in the report links to the second that proves it.</p>
+                <p>Add a creator&rsquo;s video and say what your product looks like. Every number in the report links to the moment that proves it.</p>
                 <p className="text-[14.5px] text-(--ink-3)">
-                  Brands upload the file the creator delivered, or ask the creator to send it. Platforms don&rsquo;t let
-                  third parties download creator videos.
+                  Brands upload the file the creator delivered, or ask the creator to send it. Platform terms bar downloading
+                  other people&rsquo;s videos without permission, so the brand checks the file the creator delivers.
                 </p>
               </div>
             </div>
@@ -407,7 +409,7 @@ export default async function Landing() {
             </h2>
             {lacroix && (
               <p className="mt-3 max-w-[52ch] text-[16px] leading-[1.6] text-white/70">
-                One {lacroix.brand} campaign{lacroix.fee ? ` with a $${lacroix.fee.toLocaleString("en-US")} fee` : ""}
+                One {lacroix.brand} test campaign{lacroix.fee ? ` with a $${lacroix.fee.toLocaleString("en-US")} fee` : ""}
                 {lacroix.productImageUrl ? " and the product photo" : ""}: every Reel with its verdict, what it pays or holds, its
                 seconds on screen and the moment that proves every term.
               </p>
@@ -446,12 +448,12 @@ export default async function Landing() {
             A campaign can run Verify on Muse Spark Open, Meta&rsquo;s open-weight model, served by Fireworks.
           </p>
         </section>
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-8 text-[14px] text-(--ink-3) sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 pt-8 pb-4 text-[14px] text-(--ink-3) sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="text-(--ink)">
               <Wordmark />
             </span>
-            <span>Screen-Time by Aetrai · Meta Global AI Developer Hackathon 2026</span>
+            <span>Screen-Time by Aetrai · built Oct 28 – Nov 4, 2026 for the Meta Global AI Developer Hackathon</span>
           </span>
           <span className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
             <PendingLink href={JUDGE_HREF} className={footLink}>
@@ -464,6 +466,9 @@ export default async function Landing() {
               Source on GitHub <ArrowUpRight className="size-4" strokeWidth={2.25} aria-hidden />
             </a>
           </span>
+        </div>
+        <div className="mx-auto w-full max-w-[1200px] px-4 pb-8 sm:px-6 lg:px-8">
+          <DemoNote />
         </div>
       </footer>
     </>
@@ -483,7 +488,7 @@ function heroCaption(hero: Showcased, brand: string | undefined): string {
   const reel = `${possessive(hero.video.creator)} ${Math.round(report.info.durationSec)}-second ${brand ? `${brand} ` : ""}Reel`;
   const parts = [
     `Lime fills only while ${product ? `the ${product}` : brand ? `the ${brand} product` : "the product"} is on screen`,
-    report.metrics.mentions.length && brand ? `violet marks the second “${brand}” is said out loud` : null,
+    report.metrics.mentions.length && brand ? `violet marks roughly when “${brand}” is said out loud` : null,
     rejected ? `the ${rejected} beside it is boxed, dashed and never counted` : null,
   ].filter(Boolean);
   return `A real run on Meta’s API, replayed: ${reel}. ${parts.join("; ")}.`;

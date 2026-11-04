@@ -7,7 +7,23 @@ import { requestFilePrefix, requestNonce, safeUploadName } from "@/lib/campaign/
 
 type State = { kind: "idle" } | { kind: "sending"; name: string; pct: number | null } | { kind: "sent"; name: string } | { kind: "error"; message: string };
 
-export function SubmitForm({ token, consent, mode, campaignId }: { token: string; consent: string; mode: "blob" | "direct"; campaignId: string }) {
+export function SubmitForm({
+  token,
+  consent,
+  recipient,
+  note,
+  mode,
+  campaignId,
+}: {
+  token: string;
+  consent: string;
+  /** Who gets the video: the brand, or Aetrai on a test campaign (requester()). */
+  recipient: string;
+  /** The line under the button: who gets it and who can see it (uploadNote()). */
+  note: string;
+  mode: "blob" | "direct";
+  campaignId: string;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [agreed, setAgreed] = useState(false);
   const [state, setState] = useState<State>({ kind: "idle" });
@@ -49,7 +65,9 @@ export function SubmitForm({ token, consent, mode, campaignId }: { token: string
           <Check className="size-6" strokeWidth={3} aria-hidden />
         </span>
         <h2 className="ed-display mt-4 text-[24px]">Sent. Thank you.</h2>
-        <p className="mt-1 text-(--ink-2)">{state.name} is with the brand. You can close this page.</p>
+        <p className="mt-1 text-(--ink-2)">
+          {state.name} is with {recipient}. You can close this page.
+        </p>
       </div>
     );
   }
@@ -95,7 +113,7 @@ export function SubmitForm({ token, consent, mode, campaignId }: { token: string
           {state.message}
         </p>
       )}
-      <p className="text-[13px] text-(--ink-3)">MP4 or MOV, up to 200 MB. It goes to the brand that sent this link, for this check.</p>
+      <p className="text-[13px] text-(--ink-3)">{note}</p>
     </div>
   );
 }

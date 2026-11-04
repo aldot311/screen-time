@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Clock, ScanSearch, ShieldCheck } from "lucide-react";
 import { getCampaign, requestUsed, usingBlob } from "@/lib/campaign/store";
-import { consentText, linkSecret, verifyRequestToken } from "@/lib/campaign/requests";
+import { consentText, linkSecret, requester, uploadNote, verifyRequestToken } from "@/lib/campaign/requests";
+import { isDemoCampaign } from "@/lib/campaign/demo-note";
 import { Wordmark } from "@/components/ed/bits";
+import { DemoNote } from "@/components/ed/demo-note";
 import { SubmitForm } from "./submit-form";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,9 @@ export default async function SubmitPage({ params }: { params: Promise<{ token: 
   const claims = await verifyRequestToken(token, linkSecret());
   const campaign = claims ? await getCampaign(claims.campaignId) : null;
   const used = claims ? await requestUsed(claims.nonce) : false;
+  // On the site's own test campaign Aetrai asks, not the brand on the can.
+  const demo = campaign ? isDemoCampaign(campaign.id) : false;
+  const who = campaign ? requester(campaign) : "";
 
   return (
     <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-[max(16px,env(safe-area-inset-left))] pt-[calc(env(safe-area-inset-top)+20px)] pb-[calc(env(safe-area-inset-bottom)+32px)]">
@@ -29,17 +34,24 @@ export default async function SubmitPage({ params }: { params: Promise<{ token: 
         <section className="mt-16 text-center">
           <h1 className="ed-display text-[32px] leading-[1.05]">Your video was sent</h1>
           <p className="mx-auto mt-3 max-w-[38ch] text-(--ink-2)">
-            {campaign.brand} has it. Each link sends one video; to send another, ask {campaign.brand} for a new link.
+            {who} has it. Each link sends one video; to send another, ask {who} for a new link.
           </p>
         </section>
       ) : (
         <>
           <h1 className="ed-display mt-10 text-[34px] leading-[1.04] sm:text-[42px]">
-            {campaign.brand} asked for your video, {claims.creator}
+            {who} asked for your video, {claims.creator}
           </h1>
           <p className="mt-3 text-[16px] text-(--ink-2)">
-            Send the final cut you posted or will post. {campaign.brand} uses it to confirm the sponsorship was delivered.
+            Send the final cut you posted or will post.{" "}
+            {demo ? `${who} checks it for its ${campaign.brand} test campaign.` : `${who} uses it to confirm the sponsorship was delivered.`}
           </p>
+          {demo && (
+            <DemoNote
+              className="mt-3"
+              lead={`${who}, not ${campaign.brand}, sent this link. Your Reel will be shown on the Screen-Time demo site, in its demo video and in its hackathon submission.`}
+            />
+          )}
 
           <ul className="mt-7 grid gap-3 rounded-(--r-card) bg-(--card) p-5 text-[15px] shadow-(--sh-1) ring-1 ring-(--hair)">
             <li className="grid grid-cols-[24px_1fr] gap-3">
@@ -71,7 +83,14 @@ export default async function SubmitPage({ params }: { params: Promise<{ token: 
             </li>
           </ul>
 
-          <SubmitForm token={token} consent={consentText(campaign.brand)} mode={usingBlob() ? "blob" : "direct"} campaignId={campaign.id} />
+          <SubmitForm
+            token={token}
+            consent={consentText(campaign)}
+            recipient={who}
+            note={uploadNote(campaign)}
+            mode={usingBlob() ? "blob" : "direct"}
+            campaignId={campaign.id}
+          />
         </>
       )}
     </main>

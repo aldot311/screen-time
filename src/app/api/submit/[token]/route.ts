@@ -30,7 +30,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   };
   const used = () => fail(409, "A video was already sent with this link. Ask the brand for a new link to send another.");
   if (await requestUsed(claims.nonce)) return used();
-  const consent = { at: new Date().toISOString(), text: consentText(campaign.brand) };
+  // The same words the request page showed beside the box, so the record matches what was agreed.
+  const consent = { at: new Date().toISOString(), text: consentText(campaign) };
 
   if ((req.headers.get("content-type") ?? "").includes("application/json")) {
     const parsed = Register.safeParse(await req.json().catch(() => undefined));
