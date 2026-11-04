@@ -26,7 +26,7 @@ Voiceover: ElevenLabs Eleven v4 (voice Bill) via fal.ai; its word timings drive 
 extended by two bars. Footage: scripted Chrome recordings of a local build of main against the live store, at 2880×1620,
 edited in Remotion (~/Movies/screen-time-work/remotion/src/v5). Aldo sent his own Reel through his creator link and it was
 run on 2026-11-03 (ET); every number is read from the live reports. Sped-up waits carry a speed badge. Ash's reports open on
-frames she chose (openAt). The homepage poster is the end card.
+frames she chose (openAt). The homepage poster is the YouTube thumbnail (Ash at her opening frame, PAY $300).
 
 **0:00–0:12 · The hook.** Ash's re-cut; SAM 3.1's real box locks onto the can; the counter runs to 13.3 s; both spoken checks tick; PAY $300 lands on the music's drop.
 > You paid a creator three hundred dollars to show your can. Did she?
