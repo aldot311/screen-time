@@ -11,7 +11,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Check, CircleHelp, Play, X } from "lucide-react";
 import { FPS, type Mention, type TermResult, type VideoMetrics, type VideoReport } from "@/lib/types";
-import { countedBefore, framesToSegments, tenths, timecode, verdictOf } from "@/components/format";
+import { MAX_GAP_FRAMES } from "@/lib/metrics/compute";
+import { countedBefore, framesToSegments, spokenTime, tenths, verdictOf } from "@/components/format";
 import { Player, type PlayerHandle } from "./player";
 import { LandingLanes } from "./landing-lanes";
 import { Figure, VerdictPill } from "./bits";
@@ -171,7 +172,7 @@ export function LiveReplay({ report, videoUrl, poster, cropUrls = {}, names = {}
                 <span className="mt-[3px] inline-block h-3.5 w-[3px] shrink-0 rounded-sm bg-(--voice)" aria-hidden />
                 <span>
                   <span className="font-medium text-(--ink)">Voice Transcribe</span> heard &ldquo;{heard.at(-1)!.text}&rdquo; at{" "}
-                  <span className="ed-tc">{timecode(heard.at(-1)!.startSec)}</span>
+                  <span className="ed-tc">{spokenTime(heard.at(-1)!.startSec)}</span>
                 </span>
               </span>
             )}
@@ -238,7 +239,7 @@ export function LiveReplay({ report, videoUrl, poster, cropUrls = {}, names = {}
  * The moment the replay has shown enough to settle a term: the frame on which its threshold is crossed. Terms that
  * fail or cannot be checked only settle at the end, since the whole video has to play before a miss is certain.
  */
-function settlesAt(t: TermResult, metrics: VideoMetrics, durationSec: number): number {
+export function settlesAt(t: TermResult, metrics: VideoMetrics, durationSec: number): number {
   const end = durationSec - 0.2;
   const rule = t.term.rule;
   if (t.pass !== true || !rule) return end;
@@ -259,10 +260,12 @@ function settlesAt(t: TermResult, metrics: VideoMetrics, durationSec: number): n
     case "first_seen_before":
       return frames.length ? (frames[0] + 1) / FPS : end;
     case "min_continuous": {
-      let run = 0;
+      // A run bridges gaps of up to MAX_GAP_FRAMES missing frames and lasts from its first frame to the end of its
+      // latest one, as the metrics measure the longest run (computeMetrics).
+      let start = 0;
       for (let i = 0; i < frames.length; i++) {
-        run = i > 0 && frames[i] === frames[i - 1] + 1 ? run + 1 : 1;
-        if (run >= need(rule.seconds)) return (frames[i] + 1) / FPS;
+        if (i === 0 || frames[i] - frames[i - 1] - 1 > MAX_GAP_FRAMES) start = frames[i];
+        if (frames[i] + 1 - start >= need(rule.seconds)) return (frames[i] + 1) / FPS;
       }
       return end;
     }
