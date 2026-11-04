@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { Info } from "lucide-react";
+import { Info, LockKeyhole } from "lucide-react";
 import { getCampaign, listVideos } from "@/lib/campaign/store";
 import { featuredFirst } from "@/lib/campaign/showcase";
+import { isDemoCampaign } from "@/lib/campaign/demo-note";
+import { ACCESS_COOKIE, decideAccess } from "@/lib/access";
+import { DemoNote } from "@/components/ed/demo-note";
+import { PendingLink } from "@/components/ed/pending-link";
 import { STEPS } from "@/lib/campaign/types";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { framesToSegments, friendlyError, tenths, verdictOf } from "@/components/format";
@@ -27,9 +32,11 @@ import { maxVideoSeconds } from "@/lib/pipeline/run";
 
 export const dynamic = "force-dynamic";
 
+// Campaign and report pages show creators' names and faces, so they stay out of search results. A noindex, not a
+// robots.txt Disallow: a crawler kept off the page would never see the noindex, and could still list the bare URL.
 export async function generateMetadata({ params }: PageProps<"/campaigns/[id]">): Promise<Metadata> {
   const c = await getCampaign((await params).id);
-  return { title: c?.name ?? "Campaign" };
+  return { title: c?.name ?? "Campaign", robots: { index: false } };
 }
 
 const floor10 = (s: number) => Math.floor(s * 10 + 1e-6) / 10;
@@ -101,7 +108,11 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
   const lookalikes = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict === "lookalike").length ?? 0), 0);
   const unclear = videos.reduce((s, v) => s + (v.report?.tracks.filter((t) => t.verdict === "unclear").length ?? 0), 0);
   const csv = `/api/campaigns/${campaign.id}/export.csv`;
-  const canUpload = !campaign.synthetic;
+  // The owner's controls (fees, links, removing a creator, the photo, the engine, uploads) show only once the demo
+  // password is entered, read from the cookie as the report page does; visitors get one way to unlock. The API checks
+  // the password again on every write. A synthetic preview is never editable.
+  const access = campaign.synthetic ? null : await decideAccess((await cookies()).get(ACCESS_COOKIE)?.value);
+  const canUpload = access === "allow";
   // Only the host's name reaches the page; the key stays on the server.
   const openHost = openWeightConfig();
   const countLine =
@@ -160,9 +171,20 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
       <TopBar
         back={{ href: "/campaigns", label: "Campaigns" }}
         right={
-          <span className="hidden lg:block">
-            <ExportButton href={csv} filename={`${campaign.id}.csv`} variant="quiet" className="h-11" />
-          </span>
+          <>
+            {access === "locked" && (
+              <PendingLink
+                href={`/unlock?next=${encodeURIComponent(`/campaigns/${campaign.id}`)}`}
+                className="inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold text-(--ink-2) active:bg-(--hair) [@media(hover:hover)]:hover:bg-(--wash) [@media(hover:hover)]:hover:text-(--ink)"
+              >
+                <LockKeyhole className="size-4" strokeWidth={2.25} aria-hidden />
+                Unlock to edit
+              </PendingLink>
+            )}
+            <span className="hidden lg:block">
+              <ExportButton href={csv} filename={`${campaign.id}.csv`} variant="quiet" className="h-11" />
+            </span>
+          </>
         }
       />
       <main className="mx-auto w-full max-w-[1200px] px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+96px)] sm:px-6 lg:px-8 lg:pt-10 lg:pb-24">
@@ -182,6 +204,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                   {shortName(campaign)} · {countLine}
                 </p>
               </CampaignCover>
+              {isDemoCampaign(campaign.id) && <DemoNote className="mt-3" />}
 
               {(canUpload || campaign.fee !== undefined) && (
                 <div className="mt-3 flex min-h-11 flex-wrap items-center gap-x-1 text-[14px] text-(--ink-2)">
@@ -271,7 +294,7 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
                 <p className="mt-4 flex max-w-[70ch] gap-2.5 rounded-(--r-inner) bg-(--paper) px-3.5 py-2.5 text-[13.5px] leading-snug text-(--ink-2) ring-1 ring-(--hair-2)">
                   <Info className="mt-px size-[17px] shrink-0 text-(--ink)" strokeWidth={2.25} aria-hidden />
                   <span>
-                  <span className="font-semibold text-(--ink)">Preview data.</span> These reports come from checked labels run through the
+                  <span className="font-semibold text-(--ink)">Preview data.</span> These reports come from answer-key labels run through the
                   real metrics and contract code, so you can see a report before any live model run. New campaigns run the full
                   Meta pipeline.
                   </span>

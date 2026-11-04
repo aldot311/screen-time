@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { getCampaign, getVideo, listCampaigns, listVideos } from "@/lib/campaign/store";
 import { loadShowcase } from "@/lib/campaign/showcase";
+import { isDemoCampaign } from "@/lib/campaign/demo-note";
+import { DemoNote } from "@/components/ed/demo-note";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { friendlyError, verdictOf } from "@/components/format";
 import { TopBar } from "@/components/ed/top-bar";
@@ -28,7 +30,8 @@ const humanTitle = (title: string) => title.replace(/\s*\(synthetic preview\)$/i
 export async function generateMetadata({ params }: PageProps<"/campaigns/[id]/videos/[videoId]">): Promise<Metadata> {
   const { id, videoId } = await params;
   const v = await getVideo(id, videoId);
-  return { title: v ? `${humanTitle(v.title)} · ${v.creator}` : "Video" };
+  // Kept out of search results like the campaign page: a report shows the creator's name and face.
+  return { title: v ? `${humanTitle(v.title)} · ${v.creator}` : "Video", robots: { index: false } };
 }
 
 export default async function VideoPage({ params, searchParams }: PageProps<"/campaigns/[id]/videos/[videoId]">) {
@@ -216,6 +219,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
             </section>
           </div>
         )}
+        {isDemoCampaign(campaign.id) && <DemoNote className="mt-10" />}
       </main>
     </>
   );
