@@ -13,7 +13,7 @@ import { CampaignList, type Row } from "@/components/ed/campaign-list";
 import { CampaignRail } from "@/components/ed/campaign-rail";
 import { CampaignActions } from "@/components/ed/campaign-actions";
 import { CampaignBriefCard, CampaignBriefDisclosure } from "@/components/ed/campaign-brief";
-import { creatorEntry, DISPLAY, LiveDot, plural, shortName, videoPhase } from "@/components/ed/campaign-ui";
+import { creatorEntry, DISPLAY, LiveDot, plural, shortName, STOPPED_TEXT, videoPhase } from "@/components/ed/campaign-ui";
 import { UploadVideos } from "@/components/ed/upload-videos";
 import { CampaignCover } from "@/components/ed/product-photo";
 import { CampaignCreators } from "@/components/ed/campaign-creators";
@@ -66,9 +66,10 @@ export default async function CampaignPage({ params, searchParams }: PageProps<"
       creator: v.creator,
       thumbUrl: v.thumbUrl,
       verdict: verdictOf(r),
-      status: phase,
+      // A run the platform cut off shows as stopped, like a failed one.
+      status: phase === "stopped" ? "failed" : phase,
       stepLabel: STEPS.find((s) => s.id === v.step)?.label,
-      error: v.status === "failed" ? friendlyError(v.error) : undefined,
+      error: phase === "stopped" ? STOPPED_TEXT : v.status === "failed" ? friendlyError(v.error) : undefined,
       seconds: r ? r.metrics.secondsOnScreen : null,
       durationSec: r ? r.info.durationSec : null,
       firstSeenSec: r ? r.metrics.firstSeenSec : null,

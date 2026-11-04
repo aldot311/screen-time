@@ -18,7 +18,7 @@ import { PendingLink } from "@/components/ed/pending-link";
 import { TRY_ID, TRY_LIMIT_TEXT, tryLimits } from "@/lib/campaign/try";
 import { RunStepsEd } from "@/components/ed/run-steps";
 import { RunAgain } from "@/components/ed/run-again";
-import { videoPhase } from "@/components/ed/campaign-ui";
+import { STOPPED_TEXT, videoPhase } from "@/components/ed/campaign-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +59,9 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
   const waiting = phase === "waiting";
   const stalled = phase === "uploaded";
   const running = phase === "running" || phase === "starting";
+  // A run the platform cut off before it could write its failure: shown like a failed run, with Run again.
+  const stopped = phase === "stopped";
+  const ended = video.status === "failed" || stopped;
   // The follow-up agent writes its steps to the video as it works: refresh while it does.
   const agentWorking = agentRunning(video.agent);
   // Who may run it here: the owner anywhere; a visitor on the example reports only (the routes check this again).
@@ -163,11 +166,13 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
               ) : (
                 <p className="inline-flex h-8 items-center gap-1.5 rounded-full bg-(--short) px-3 text-[13px] font-semibold text-white">
                   <TriangleAlert className="size-4" strokeWidth={2.5} aria-hidden />
-                  {video.status === "failed" ? "Stopped" : "No report"}
+                  {ended ? "Stopped" : "No report"}
                 </p>
               )}
               <h1 id="run-h" className="ed-display mt-4 text-[32px] leading-[1.08] sm:text-[40px]">
-                {video.status === "failed"
+                {stopped
+                  ? STOPPED_TEXT
+                  : video.status === "failed"
                   ? "The analysis stopped before it finished."
                   : waiting
                     ? "Ready to analyze."
@@ -184,13 +189,15 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
                   ? `Sent by ${video.creator} through a request link on ${new Date(video.consent.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · consent recorded. Start the analysis when you are ready; it takes about a minute.`
                   : stalled
                     ? "The analysis did not start after the upload, so nothing is counted yet. Start it when you are ready; the video does not need to be uploaded again."
-                    : video.status === "failed" || video.status === "done"
+                    : stopped
+                    ? "Nothing from this video is counted yet: the run did not finish within its time limit. Run it again; the video does not need to be uploaded again."
+                    : ended || video.status === "done"
                     ? "Nothing from this video is counted yet. The reason is shown under the step that stopped. Once it is fixed, run it again; the video does not need to be uploaded again."
                     : `Looking for “${campaign.prompt}”, checking each find against ${campaign.productDescription}, then measuring and checking the contract.`}
               </p>
 
               <div className="mt-6 rounded-(--r-card) bg-(--wash)/60 p-2 ring-1 ring-(--hair)">
-                <RunStepsEd status={video.status} step={video.step} error={video.error} live={video.live} videoUrl={video.videoUrl} brand={campaign.brand} />
+                <RunStepsEd status={stopped ? "failed" : video.status} step={video.step} error={stopped ? undefined : video.error} live={video.live} videoUrl={video.videoUrl} brand={campaign.brand} />
               </div>
 
               {video.status === "failed" && !video.step && video.error && (
@@ -205,7 +212,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/ca
                 </div>
               )}
 
-              {(video.status === "failed" || video.status === "done") &&
+              {(ended || video.status === "done") &&
                 (synthetic ? (
                   <p className="mt-6 text-[14px] text-(--ink-3)">Preview videos cannot be run again: their numbers come from checked labels.</p>
                 ) : (
