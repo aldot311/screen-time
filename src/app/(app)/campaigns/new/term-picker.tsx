@@ -6,14 +6,17 @@
 import { useId, type ReactNode } from "react";
 import { Check, CircleAlert } from "lucide-react";
 
-export type TermId = "total" | "within" | "mention" | "continuous" | "area" | "disclose";
+export type TermId = "total" | "within" | "early" | "mention" | "continuous" | "area" | "disclose";
 
 export interface TermState {
   on: Record<TermId, boolean>;
   total: string;
   withinSec: string;
   withinFirst: string;
+  early: string;
   mention: string;
+  /** The opening window the brand name must be said in; empty means anywhere in the video. */
+  mentionWithin: string;
   continuous: string;
   areaPct: string;
   areaSec: string;
@@ -23,11 +26,13 @@ export interface TermState {
 
 /** Pre-selected: 3 s in total, 2 s in the first 5 s, say the brand once, disclose. */
 export const DEFAULT_TERMS: TermState = {
-  on: { total: true, within: true, mention: true, continuous: false, area: false, disclose: true },
+  on: { total: true, within: true, early: false, mention: true, continuous: false, area: false, disclose: true },
   total: "3",
   withinSec: "2",
   withinFirst: "5",
+  early: "3",
   mention: "1",
+  mentionWithin: "",
   continuous: "2",
   areaPct: "10",
   areaSec: "2",
@@ -81,9 +86,18 @@ export function termsFrom(s: TermState): { terms: string[]; problems: Partial<Re
       else terms.push(`On screen at least ${secs(a)} within the first ${secs(b)}`);
     }
   }
+  // The parser's own wording for a first sighting, so it reads as "first seen before", never as seconds on screen.
+  if (s.on.early) {
+    const n = read("early", s.early, "seconds");
+    if (n !== null) terms.push(`Product first appears before ${secs(n)}`);
+  }
   if (s.on.mention) {
     const n = read("mention", s.mention, "count");
-    if (n !== null) terms.push(`Say the brand name at least ${n === 1 ? "once" : `${n} times`}`);
+    const w = s.mentionWithin.trim() === "" ? undefined : readNumber(s.mentionWithin, "seconds");
+    if (w === null) problems.mention ??= "Leave the window empty for anywhere in the video, or use seconds from 0.1, in steps of 0.1.";
+    if (n !== null && w !== null) {
+      terms.push(`Say the brand name at least ${n === 1 ? "once" : `${n} times`}${w === undefined ? "" : ` within the first ${secs(w)}`}`);
+    }
   }
   if (s.on.continuous) {
     const n = read("continuous", s.continuous, "seconds");
@@ -134,10 +148,29 @@ export function TermPicker({
           On screen at least <Num label="Seconds on screen early" value={value.withinSec} onChange={(v) => edit("within", { withinSec: v })} unit=" s" />{" "}
           within the first <Num label="Opening window in seconds" value={value.withinFirst} onChange={(v) => edit("within", { withinFirst: v })} unit=" s" />
         </Card>
-        <Card id="mention" on={value.on.mention} onToggle={toggle} problem={shown("mention")} hint="Voice Transcribe listens for it">
+        <Card id="early" on={value.on.early} onToggle={toggle} problem={shown("early")}>
+          Product appears within the first <Num label="Seconds until the product must appear" value={value.early} onChange={(v) => edit("early", { early: v })} unit=" s" />
+        </Card>
+        <Card
+          id="mention"
+          on={value.on.mention}
+          onToggle={toggle}
+          problem={shown("mention")}
+          hint="Voice Transcribe listens for it. Leave the window empty to count it anywhere in the video."
+          // Read from the sentence, an empty window field would be named by its own label mid-sentence.
+          label={`Say the brand name at least ${value.mention} ${num(value.mention) === 1 ? "time" : "times"}${
+            value.mentionWithin.trim() ? ` within the first ${value.mentionWithin.trim()} s` : ", anywhere in the video"
+          }`}
+        >
           Say the brand name at least{" "}
           <Num label="Times the brand name is said" value={value.mention} integer onChange={(v) => edit("mention", { mention: v })} />{" "}
-          {num(value.mention) === 1 ? "time" : "times"}
+          {num(value.mention) === 1 ? "time" : "times"} within the first{" "}
+          <Num
+            label="Seconds the brand name must be said within, empty for anywhere"
+            value={value.mentionWithin}
+            onChange={(v) => edit("mention", { mentionWithin: v })}
+            unit=" s"
+          />
         </Card>
         <Card id="continuous" on={value.on.continuous} onToggle={toggle} problem={shown("continuous")}>
           One continuous shot of <Num label="Seconds in one continuous shot" value={value.continuous} onChange={(v) => edit("continuous", { continuous: v })} unit=" s" />
@@ -159,7 +192,7 @@ export function TermPicker({
             <span className="font-semibold text-(--ink-2) tabular">
               {terms.length} term{terms.length === 1 ? "" : "s"}
             </span>{" "}
-            will be checked. Muse Spark turns each into a rule, checked to the frame.
+            will be checked. Muse Spark turns each into a rule, checked against the video.
           </>
         )}
       </p>
@@ -176,7 +209,7 @@ const CARD = (on: boolean) =>
   ].join(" ");
 
 /** The tick: a real checkbox (keyboard, screen readers) drawn as an ink box, with a 44px hit area around it. */
-function Tick({ on, id, onChange, labelledBy }: { on: boolean; id: string; onChange: (on: boolean) => void; labelledBy?: string }) {
+function Tick({ on, id, onChange, labelledBy, label }: { on: boolean; id: string; onChange: (on: boolean) => void; labelledBy?: string; label?: string }) {
   return (
     <span className="-m-2.5 grid size-11 shrink-0 place-items-center">
       <input
@@ -184,7 +217,8 @@ function Tick({ on, id, onChange, labelledBy }: { on: boolean; id: string; onCha
         type="checkbox"
         checked={on}
         onChange={(e) => onChange(e.target.checked)}
-        aria-labelledby={labelledBy}
+        aria-labelledby={label ? undefined : labelledBy}
+        aria-label={label}
         className="peer sr-only"
       />
       <span
@@ -206,6 +240,7 @@ function Card({
   onToggle,
   problem,
   hint,
+  label,
   children,
 }: {
   id: TermId;
@@ -213,6 +248,8 @@ function Card({
   onToggle: (id: TermId, on: boolean) => void;
   problem?: string;
   hint?: string;
+  /** The tick's name, where the sentence cannot give a clean one. */
+  label?: string;
   children: ReactNode;
 }) {
   const uid = useId();
@@ -229,7 +266,7 @@ function Card({
         className={`${CARD(on)} items-center!`}
       >
         <span className="flex">
-          <Tick id={`${uid}-t`} on={on} onChange={(v) => onToggle(id, v)} labelledBy={`${uid}-s`} />
+          <Tick id={`${uid}-t`} on={on} onChange={(v) => onToggle(id, v)} labelledBy={`${uid}-s`} label={label} />
         </span>
         <span className="min-w-0 flex-1 py-1">
           {/* Lines that hold a number field grow to its 44px; plain lines keep a normal measure. */}
@@ -305,7 +342,7 @@ function OwnCard({ value, set, problem }: { value: TermState; set: (p: Partial<T
             rows={2}
             aria-label="Your own contract terms, one per line"
             aria-describedby={`${uid}-h`}
-            placeholder="e.g. On screen within the first 3 seconds"
+            placeholder="One requirement per line, with its numbers"
             className="block min-h-[76px] w-full resize-none rounded-(--r-ctl) bg-(--paper) px-3 py-2.5 text-[16px] leading-snug ring-1 ring-(--hair-2) outline-none field-sizing-content placeholder:text-(--ink-3) focus:bg-(--card) focus:ring-2 focus:ring-(--ink)"
           />
           <p id={`${uid}-h`} className="mt-1.5 text-[12.5px] leading-snug text-(--ink-3)">
