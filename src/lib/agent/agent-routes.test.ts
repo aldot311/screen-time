@@ -179,6 +179,15 @@ describe("POST agent without the demo password", () => {
     expect(v.visitorAgent).toMatchObject({ status: "done", origin: "public", summary: "Peter missed the disclosure." });
   });
 
+  it("gives back the brand's run that a visitor's run from before visitorAgent set aside, once that run died", async () => {
+    const died: AgentRun = { status: "running", startedAt: new Date(Date.now() - 7 * 60_000).toISOString(), steps: [], usd: 0, origin: "public", prior: brandRun };
+    await updateVideo(ID, "peter", (v) => ({ ...v, agent: died }));
+    expect((await startAgent("peter")).status).toBe(202);
+    const v = (await getVideo(ID, "peter"))!;
+    expect(v.agent).toEqual(brandRun);
+    expect(v.visitorAgent).toMatchObject({ status: "running", origin: "public" });
+  });
+
   it("joins a run already in progress instead of starting a second one", async () => {
     await updateVideo(ID, "george", (v) => ({ ...v, agent: brandRun }));
     const [a, b] = await Promise.all([startAgent("george"), startAgent("george")]);
