@@ -17,7 +17,7 @@ const AGENT = "/api/campaigns/lacroix-strawberry-peach/videos";
 
 describe("proxy", () => {
   it("lets a visitor start the agent on a listed example report", async () => {
-    for (const id of ["ash", "ash-recut", "george", "peter", "aldo", "aldo-2", "michael", "jamal", "lana", "jon"]) {
+    for (const id of ["ash", "ash-recut", "george", "peter", "aldo", "aldo-2", "michael", "jamal", "lana", "jon", "6-michael-captioned-gk3bzd"]) {
       expect(await proxy(req(`${AGENT}/${id}/agent`)), id).toBeUndefined();
     }
   });

@@ -1,14 +1,16 @@
 // Fences for a visitor's run of the follow-up agent (no demo password, on the example reports in ./public.ts), in the
 // pattern of the sample run (lib/campaign/try.ts): a visitor (hashed address) gets a few runs a day, everyone together
-// gets a daily cap, and while a run is in progress on a video a new visitor joins it. Past a limit, the video's newest
-// finished run is shown instead. Each run's own budget is capped at the turn cap (run-agent.ts), so a day costs at
-// most perDay x AGENT_MAX_USD, inside the total budget cap every run shares.
+// gets a daily cap, while a run is in progress on a video a new visitor joins it, and no run starts into the budget
+// kept for the demo password (runner.ts ownerReserveUsd). Past a limit, the brand's run (VideoEntry.agent) is shown
+// instead. A visitor's run is stored beside it (VideoEntry.visitorAgent), never over it. Each run's own budget is
+// capped at the turn cap (run-agent.ts), so a day costs at most perDay x AGENT_MAX_USD, inside the total budget cap
+// every run shares.
 import { linkSecret } from "@/lib/campaign/requests";
-import { usdFromEnv } from "@/lib/campaign/runner";
-import { createDoc, readDoc, takeSlot, updateVideo } from "@/lib/campaign/store";
+import { openRunFits, usdFromEnv } from "@/lib/campaign/runner";
+import { createDoc, ledgerSpentUsd, readDoc, takeSlot, updateVideo } from "@/lib/campaign/store";
 import type { VideoEntry } from "@/lib/campaign/types";
 import { clientKey } from "@/lib/client-ip";
-import { agentRunning } from "./state";
+import { AGENT_MAX_USD, agentRunning } from "./state";
 import { PUBLIC_AGENT_LIMIT_TEXT, type PublicAgentLimit } from "./public";
 
 export const publicAgentLimits = (env: Record<string, string | undefined> = process.env) => ({
@@ -32,9 +34,10 @@ async function visitorKey(ip: string): Promise<string> {
  * when the mode is "started"; the entry is stored "running" here, inside one atomic update.
  */
 export async function startPublicAgent(ip: string, video: VideoEntry, now = new Date()): Promise<PublicAgentResult> {
-  if (agentRunning(video.agent, now.getTime())) return { mode: "joined", video };
+  if (agentRunning(video.visitorAgent, now.getTime())) return { mode: "joined", video };
   const limits = publicAgentLimits();
-  // A visitor's run that died (stale "running") gives the finished run it set aside back before anything else.
+  // A visitor's run from before visitorAgent (stored in agent, with the finished run it set aside in prior) that died
+  // (stale "running") gives that run back before anything else.
   if (video.agent?.status === "running" && video.agent.prior) {
     const prior = video.agent.prior;
     video = (await updateVideo(video.campaignId, video.id, (v) => (v.agent?.status === "running" && !agentRunning(v.agent, now.getTime()) && v.agent.prior ? { ...v, agent: prior } : v))) ?? video;
@@ -43,23 +46,24 @@ export async function startPublicAgent(ip: string, video: VideoEntry, now = new 
     const reason = PUBLIC_AGENT_LIMIT_TEXT[limit](limit === "visitor" ? limits.perVisitor : limits.perDay);
     return video.agent?.status === "done"
       ? { mode: "replay", video, limit, reason }
-      : { mode: "unavailable", status: 429, error: `${reason} Try again tomorrow, or enter the demo password to run it.` };
+      : { mode: "unavailable", status: 429, error: `${reason} ${limit === "budget" ? "Enter" : "Try again tomorrow, or enter"} the demo password to run it.` };
   };
   const day = now.toISOString().slice(0, 10);
   // Once the day is full, one read answers every later request: no slot writes to spam.
   if (await readDoc(`agent-public/${day}/full.json`)) return replay("day");
+  // The budget the demo password needs is never spent here: checked before any slot is taken.
+  if (!openRunFits(AGENT_MAX_USD, await ledgerSpentUsd())) return replay("budget");
   if (!(await takeSlot(`agent-public/${day}/visitor-${await visitorKey(ip)}`, limits.perVisitor))) return replay("visitor");
   if (!(await takeSlot(`agent-public/${day}/run`, limits.perDay))) {
     await createDoc(`agent-public/${day}/full.json`, { at: now.toISOString() });
     return replay("day");
   }
-  // Checked inside the atomic update, so two visitors arriving together start one run and the other joins it.
+  // Checked inside the atomic update, so two visitors arriving together start one run and the other joins it. A
+  // visitor's run goes in its own field: the brand's run (agent) stays what everyone else sees.
   let busy = false;
   const started = await updateVideo(video.campaignId, video.id, (v) => {
-    busy = agentRunning(v.agent);
-    // The last finished run is kept aside (see AgentRun.prior) until this one finishes.
-    const prior = v.agent?.status === "done" ? v.agent : v.agent?.prior;
-    return busy ? v : { ...v, agent: { status: "running", startedAt: now.toISOString(), steps: [], usd: 0, origin: "public", ...(prior ? { prior } : {}) } };
+    busy = agentRunning(v.visitorAgent);
+    return busy ? v : { ...v, visitorAgent: { status: "running", startedAt: now.toISOString(), steps: [], usd: 0, origin: "public" } };
   });
   if (!started) return { mode: "unavailable", status: 404, error: "Video not found" };
   return { mode: busy ? "joined" : "started", video: started };

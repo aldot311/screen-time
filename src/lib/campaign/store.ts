@@ -507,6 +507,13 @@ async function saveFile(campaignId: string, videoId: string, name: string, ext: 
 
 const LEDGER_KEY = "ledger.json";
 
+/** The ledger's total as stored now. On Blob a run's entries are appended when it ends, so runs still going are not in
+ *  it yet. An entry without an amount makes the total NaN, which fits under no cap. */
+export async function ledgerSpentUsd(): Promise<number> {
+  const entries = ((await backend().readJson(LEDGER_KEY)) as LedgerEntry[] | null) ?? [];
+  return entries.reduce((sum, e) => sum + Math.round(e.usd * 1e6), 0) / 1e6;
+}
+
 /**
  * Runs `fn` with a ledger file path for a CostGuard. Locally that is data/store/ledger.json, shared by every run in
  * this process (the guard serializes writes per file). On Blob the ledger is copied to a temp file, the run spends

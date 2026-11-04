@@ -9,23 +9,23 @@ import { AGENT_MAX_USD, runAgent, type AgentRun } from "./campaign-agent";
 
 /**
  * Runs the agent the route stored as "running" on `video` (its startedAt names the run in every write). With `public`
- * (a visitor without the demo password, on an example report) it cannot re-check a re-cut, and its own budget is the
- * turn cap's at most.
+ * (a visitor without the demo password, on an example report) the run is the video's visitorAgent, it cannot re-check
+ * a re-cut, and its own budget is the turn cap's at most.
  */
 export async function executeAgent(campaign: Campaign, video: VideoEntry, opts: { public?: boolean } = {}): Promise<AgentRun> {
-  const startedAt = video.agent?.startedAt ?? new Date().toISOString();
+  // A visitor's run lives in its own field (VideoEntry.visitorAgent), so the brand's run on an example report is never
+  // replaced by one; a visitor's run that fails stays there too, so the visitor who started it sees why.
+  const runOf = (v: VideoEntry) => (opts.public ? v.visitorAgent : v.agent);
+  const withRun = (v: VideoEntry, run: AgentRun): VideoEntry => (opts.public ? { ...v, visitorAgent: run } : { ...v, agent: run });
+  const startedAt = runOf(video)?.startedAt ?? new Date().toISOString();
   const origin = opts.public ? ("public" as const) : video.agent?.origin;
-  // Writes land only on this run: never over a newer one, and an approval given once it finished stays. A visitor's
-  // run carries the finished run it set aside (AgentRun.prior) while it works; when it ends without finishing, that
-  // run comes back instead of the failure.
+  // Writes land only on this run: never over a newer one, and an approval given once it finished stays.
   const write = (agent: AgentRun) =>
     updateVideo(campaign.id, video.id, (v) => {
-      if (v.agent?.startedAt !== agent.startedAt) return v;
-      const prior = v.agent.prior;
-      if (agent.status === "failed" && prior) return { ...v, agent: prior };
-      const approvedAt = v.agent.recut?.approvedAt;
-      const next = approvedAt && agent.recut ? { ...agent, recut: { ...agent.recut, approvedAt } } : agent;
-      return { ...v, agent: agent.status === "running" && prior ? { ...next, prior } : next };
+      const current = runOf(v);
+      if (current?.startedAt !== agent.startedAt) return v;
+      const approvedAt = current.recut?.approvedAt;
+      return withRun(v, approvedAt && agent.recut ? { ...agent, recut: { ...agent.recut, approvedAt } } : agent);
     });
   // Step writes go out one at a time, in order; a failed write never blocks the next.
   let queue = Promise.resolve();

@@ -30,6 +30,18 @@ export const budget = () => ({
   maxUsdTotal: usdFromEnv(process.env.SCREEN_TIME_MAX_USD_TOTAL, 20),
 });
 
+/** The part of the total cap kept for the demo password: open runs (the sample, a visitor's agent run) never start
+ *  into it. Separate from budget(), which a run's own CostGuard is built from. */
+export const ownerReserveUsd = () => usdFromEnv(process.env.SCREEN_TIME_OWNER_RESERVE_USD, 5);
+
+/** True while an open run of at most `runMaxUsd` still fits under the total cap less the owner's reserve, with the
+ *  ledger at `spentUsd` (store.ts ledgerSpentUsd). Checked before an open run takes any slot; the run's own guard still
+ *  checks the total. */
+export function openRunFits(runMaxUsd: number, spentUsd: number): boolean {
+  const room = budget().maxUsdTotal - ownerReserveUsd();
+  return Math.round((spentUsd + runMaxUsd) * 1e6) <= Math.round(room * 1e6);
+}
+
 export type StartResult =
   | { ok: true; campaign: Campaign; video: VideoEntry }
   | { ok: false; status: number; error: string };
@@ -62,6 +74,7 @@ export async function startRun(campaignId: string, videoId: string, now = Date.n
     live: undefined,
     override: undefined,
     agent: undefined,
+    visitorAgent: undefined,
     proofUrl: undefined,
   });
   return { ok: true, campaign, video: running };
