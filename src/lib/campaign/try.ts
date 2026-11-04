@@ -1,7 +1,8 @@
 // "Try a sample video": anyone can run the real pipeline on one fixed sample Reel, without the demo password. It
-// spends real Meta credits, so it is fenced three ways: a visitor (hashed IP) gets a few runs a day, everyone together
-// gets a daily cap, and while a sample run is in progress new visitors join it instead of starting another. The
-// per-video and total budget caps of every run still apply. Past a limit, the newest finished run is shown instead.
+// spends real Meta credits, so it is fenced three ways: a visitor (hashed IP; an IPv6 address by its /64) gets a few
+// runs a day, everyone together gets a daily cap, and while a sample run is in progress new visitors join it instead
+// of starting another. The per-video and total budget caps of every run still apply. Past a limit, the newest finished
+// run is shown instead.
 import { readFile } from "node:fs/promises";
 import { linkSecret } from "./requests";
 import { newVideoId } from "./add-video";
@@ -21,6 +22,7 @@ import {
   takeSlot,
 } from "./store";
 import { usdFromEnv } from "./runner";
+import { clientKey } from "@/lib/client-ip";
 import type { Campaign, VideoEntry } from "./types";
 
 // A new id and cache key for each new sample: an existing try campaign and its cached copy are reused as they are, so
@@ -52,7 +54,7 @@ export type TryResult =
 
 async function visitorKey(ip: string): Promise<string> {
   const salt = linkSecret() ?? "screen-time-try";
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`try-v1:${salt}:${ip}`));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`try-v1:${salt}:${clientKey(ip)}`));
   return Buffer.from(digest).toString("hex").slice(0, 24);
 }
 
