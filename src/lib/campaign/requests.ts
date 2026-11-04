@@ -2,8 +2,10 @@
 // to the analysis and uploads the delivered video. The link is the creator's only credential, so it is an HMAC over
 // what it allows (campaign, creator, expiry, a one-time id). Uploads through it are stored but never run: running
 // spends Meta credits and stays behind the brand's password.
+import { DEMO_RUN_BY, isDemoCampaign } from "./demo-note";
 import { Creator } from "./schema";
 import { isValidId } from "./store";
+import type { Campaign } from "./types";
 
 export const REQUEST_TTL_DAYS = 14;
 
@@ -14,9 +16,30 @@ export interface RequestClaims {
   nonce: string; // one video per link
 }
 
-/** The words the creator agrees to; stored with the video so the consent is on record. */
-export function consentText(brand: string): string {
-  return `I agree that ${brand} may analyze this video with AI (Meta SAM 3.1, Muse Spark and Muse Voice Transcribe) to check the sponsorship terms.`;
+type Asker = Pick<Campaign, "id" | "brand">;
+
+/** Who asks for the video and gets it: the brand, or Aetrai on the site's own test campaigns (the brand there is not
+ *  a party). */
+export function requester(campaign: Asker): string {
+  return isDemoCampaign(campaign.id) ? DEMO_RUN_BY : campaign.brand;
+}
+
+const MODELS = "with AI (Meta SAM 3.1, Muse Spark and Muse Voice Transcribe)";
+
+/** The words the creator agrees to; stored with the video so the consent is on record. They cover where the video is
+ *  shown too: reports open by link, and a test campaign is shown publicly. */
+export function consentText(campaign: Asker): string {
+  return isDemoCampaign(campaign.id)
+    ? `I agree that ${DEMO_RUN_BY} may analyze this video ${MODELS} for its ${campaign.brand} test campaign, and show it on the Screen-Time demo site, in its demo video and in its Meta hackathon submission.`
+    : `I agree that ${campaign.brand} may analyze this video ${MODELS} to check the sponsorship terms, and show it in a report they can share by link.`;
+}
+
+/** The line under the upload button. Uploaded files are public and reports open by link, so it promises no more
+ *  privacy than that. */
+export function uploadNote(campaign: Asker): string {
+  return isDemoCampaign(campaign.id)
+    ? `MP4 or MOV, up to 200 MB. It goes to ${DEMO_RUN_BY}, which shows it on the public Screen-Time demo site.`
+    : `MP4 or MOV, up to 200 MB. It goes to ${campaign.brand}; their report shows your video to anyone they share its link with.`;
 }
 
 /**
