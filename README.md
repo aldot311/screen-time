@@ -21,28 +21,31 @@ the accuracy page and the follow-up agent.
 
 ## What it measures
 
-Measured 2026-11-03 on 11 vertical Reels that 9 creators filmed for the LaCroix test campaign, the Reels the site
-shows. Every run is the full pipeline, scored frame by frame at 15 fps against checked labels
-([docs/ACCURACY.md](docs/ACCURACY.md)):
+Measured on the 11 LaCroix test Reels as delivered on the site (9 people; 1,931 frames with the can in 2,800), scored
+from the site's own run reports (data/runs) frame by frame at 15 fps against labels drafted by two independent Claude
+vision passes. No person has checked the labels yet (0 of 11 clips; /label records a check). Details, intervals and
+the reproduce command (`pnpm accuracy --labels data/labels/lacroix`) are in [docs/ACCURACY.md](docs/ACCURACY.md):
 
 | | SAM 3.1 alone | SAM 3.1 + Muse Spark (what the app reports) |
 |---|---|---|
-| Precision | 95.0% | **98.1%**: when it says the can is on screen, it is |
-| Recall | 99.4% | **99.4%** of the frames the can was really there |
-| F1 | 97.2% | **98.8%** |
-| Average error per Reel | 0.56 s | 0.17 s |
-| Seconds counted on the look-alike clip | 4.3 s | **0.0 s** |
+| Precision | 95.0% | **98.4%** (95% interval 96.7–99.6%) |
+| Recall | 99.3% | **91.1%** (70.3–100.0%) |
+| F1 | 97.1% | **94.6%** |
+| Seconds counted on the look-alike Reel | 4.27 s | **0.0 s** |
 
-- Look-alikes: one Reel shows only a LaCroix Pamplemousse can, a different flavor. Another has a Poppi can on the
-  table beside the LaCroix. Object by object, hosted Muse Spark called 12 of 12 labelled objects correctly. Meta's
-  open-weight Muse Spark Open called 10 of 12. It counted no look-alike; it called 2 real cans "unclear", which the
-  app does not count and flags for a look.
-- Where it is wrong: on Michael's Reel the app counted 3.1 s where the labels say 2.6 s. The contract asks for 3 s,
-  so it said pay where the labels say hold. It did flag the report as near a threshold. Small, blurred cans can flip
-  between runs: George's can was matched in the measured run, and came back "unclear" (not counted, flagged for a
-  look) in the run on the site.
-- Cost: $0.106–0.220 of Meta API per Reel on these runs ($1.54 for all 11), with the product photo and
-  transcription. SAM 3.1 is $0.20 per 1,000 frames.
+- What Muse Spark adds: it rejected both look-alikes SAM alone counts (a LaCroix Pamplemousse can, a different flavor,
+  and a Poppi can). Per frame, nearly all of the precision gain is the one look-alike Reel, which the builder filmed.
+  It costs recall on George's Reel: Muse Spark could not confirm his small can, so it counted 0 s against 11.2 s
+  labelled, held the fee and flagged the report. Object by object, hosted Muse Spark is right on 11 of 12 objects,
+  SAM alone on 10 of 12.
+- Where it is wrong: George's Reel (above); and Michael's Reel (not Michael K's), counted 3.0 s where the labels say
+  2.6 s, so it said pay against a 3 s term where the labels say hold (it flagged the report as close). Pay or hold
+  agrees with the labels on 9 of 11 Reels.
+- Until Nov 4 the published figures scored a zoomed edit of George's Reel that we made (2.3x, following the can); they
+  now score the Reel as delivered.
+- Cost: $0.106–0.230 of Meta API per Reel on these runs ($1.56 for all 11), with the product photo and
+  transcription. SAM 3.1 is $0.20 per 1,000 frames; Muse Spark and Voice Transcribe are counted at a fixed per-call
+  reserve above what they cost, so this is an upper bound.
 - An earlier test set of 20 clips the builder filmed himself or took from Pexels (2026-10-28: precision 97.7%,
   recall 95.6%) is kept in [docs/ACCURACY.md](docs/ACCURACY.md); its campaigns are archived and hidden from the site.
 

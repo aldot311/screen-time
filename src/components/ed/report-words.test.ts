@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { tenths } from "@/components/format";
 import { describe, expect, it } from "vitest";
 import { SAM_USD_PER_FRAME } from "@/lib/meta/cost-guard";
 import { campaignCsv, CSV_HEADER } from "@/lib/campaign/csv";
@@ -29,7 +30,9 @@ describe("receipt cost words", () => {
   });
 
   it("says it in one line", () => {
-    expect(costGloss()).toBe("SAM 3.1 is billed $0.20 per 1,000 frames; Muse Spark and Voice Transcribe count the $0.02 and $0.01 reserved per call.");
+    expect(costGloss()).toBe(
+      "SAM 3.1 is billed per frame ($0.20 per 1,000); Muse Spark and Voice Transcribe count a fixed reserve per call ($0.02 / $0.01), above what they cost, so the total is an upper bound.",
+    );
   });
 
   it("writes every amount to the tenth of a cent, so the report and its receipt agree", () => {
@@ -137,10 +140,34 @@ describe("phoneChip", () => {
 });
 
 describe("accuracyGloss", () => {
-  it("says what precision and recall mean, with the measured figures", async () => {
+  it("gives the measured figures, on the Reels as delivered, and whose labels they were scored against", async () => {
     const { accuracyGloss } = await import("./report-words");
     const text = accuracyGloss();
-    expect(text).toMatch(/^Precision \d+\.\d%: of the seconds Screen-Time counted/);
-    expect(text).toMatch(/Recall \d+\.\d%: of the seconds the product really showed/);
+    expect(text).toMatch(/^Measured frame by frame on 11 test Reels as delivered, against labels drafted by two Claude vision passes \(a person has checked \d+ of the 11\): precision \d+\.\d%, recall \d+\.\d%\./);
+    expect(text).toMatch(/Precision is the share of the seconds Screen-Time counted that really showed the product/);
+    expect(text).not.toMatch(/This Reel is one of/);
+    expect(text).not.toMatch(/checked labels/);
+  });
+
+  it("says what a scored report counted against its own labels when that differs (George), and nothing extra when it does not", async () => {
+    const { accuracyGloss } = await import("./report-words");
+    const data = (await import("@/lib/accuracy-data.json")).default as import("./accuracy-summary").AccuracyData;
+    const george = data.reports!.find((r) => r.clip === "lacroix/lc-1-george")!;
+    const row = data.scores.find((s) => s.mode === "verified")!.rows.find((r) => r.clip === george.clip)!;
+    const text = accuracyGloss({ receipt: { runId: george.runId! } });
+    expect(text).toContain(`This Reel is one of the 11: its labels mark ${tenths(row.truthSec)} s with the product, and this report counted ${tenths(row.predictedSec)} s.`);
+    const lana = data.reports!.find((r) => r.clip === "lacroix/lc-4-lana")!;
+    expect(accuracyGloss({ receipt: { runId: lana.runId! } })).not.toMatch(/This Reel is one of/);
+    // Another run of the same Reel is not the scored run: it gets the headline only.
+    expect(accuracyGloss({ receipt: { runId: "george-2026-11-05T00:00:00.000Z" } })).not.toMatch(/This Reel is one of/);
+  });
+
+  it("says the labels were checked by a person only when every clip was", async () => {
+    const { accuracyGloss } = await import("./report-words");
+    const data = (await import("@/lib/accuracy-data.json")).default as import("./accuracy-summary").AccuracyData;
+    const all = { ...data, labels: { clips: 11, checkedByPerson: 11, checkedBy: {} } };
+    expect(accuracyGloss(undefined, all)).toMatch(/as delivered, against labels a person checked: precision/);
+    const some = { ...data, labels: { clips: 11, checkedByPerson: 4, checkedBy: {} } };
+    expect(accuracyGloss(undefined, some)).toMatch(/a person has checked 4 of the 11/);
   });
 });

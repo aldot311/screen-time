@@ -1181,7 +1181,7 @@ export function ReportClient({ report, videoUrl, cropUrls, names, creator, title
                   </a>
                 </p>
                 <p>{costGloss()}</p>
-                <p>{accuracyGloss()}</p>
+                <p>{accuracyGloss(report)}</p>
               </>
             )}
           </div>
