@@ -6,7 +6,7 @@
 const DEMO_CAMPAIGNS: ReadonlySet<string> = new Set(["lacroix-strawberry-peach", "try-lacroix"]);
 
 /** Who runs the test campaigns, and so who asks for and receives a creator's Reel there. */
-export const DEMO_RUN_BY = "Aetrai";
+export const DEMO_RUN_BY = "Screen-Time";
 
 export const DEMO_NOTE = `A test campaign run by ${DEMO_RUN_BY} with friends, who agreed to be shown. Not affiliated with, sponsored or endorsed by LaCroix or Poppi; their names and cans belong to their owners.`;
 

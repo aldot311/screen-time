@@ -58,15 +58,15 @@ describe("what the creator is told and agrees to", () => {
     expect(uploadNote(fall)).toBe("MP4 or MOV, up to 200 MB. It goes to Alani Nu; their report, with your video, can be opened by anyone visiting this site.");
   });
 
-  it("names Aetrai, never the brand on the can, and the public demo uses on the site's test campaigns", () => {
+  it("names Screen-Time, never the brand on the can, and the public demo uses on the site's test campaigns", () => {
     for (const id of [SHOWCASE_CAMPAIGN, TRY_ID]) {
       const demo = { id, brand: "LaCroix" };
-      expect(requester(demo)).toBe("Aetrai");
+      expect(requester(demo)).toBe("Screen-Time");
       expect(consentText(demo)).toBe(
-        `I agree that Aetrai may analyze this video ${MODELS} for its LaCroix test campaign, and show it on the Screen-Time demo site, in its demo video and in its Meta hackathon submission.`,
+        `I agree that Screen-Time may analyze this video ${MODELS} for its LaCroix test campaign, and show it on the Screen-Time demo site, in its demo video and in its Meta hackathon submission.`,
       );
       expect(consentText(demo)).not.toContain("LaCroix may");
-      expect(uploadNote(demo)).toBe("MP4 or MOV, up to 200 MB. It goes to Aetrai, which shows it on the public Screen-Time demo site.");
+      expect(uploadNote(demo)).toBe("MP4 or MOV, up to 200 MB. It goes to Screen-Time, which shows it on the public Screen-Time demo site.");
     }
   });
 });
@@ -132,7 +132,7 @@ describe("creator submissions", () => {
     expect((await submit.POST(fileForm(true), params({ token: `${token}x` }))).status).toBe(403);
   });
 
-  it("records Aetrai and the demo uses as the consent on the site's own test campaign", async () => {
+  it("records Screen-Time and the demo uses as the consent on the site's own test campaign", async () => {
     const campaign = await putCampaign({
       id: SHOWCASE_CAMPAIGN,
       name: "LaCroix: Strawberry Peach",
@@ -150,7 +150,7 @@ describe("creator submissions", () => {
     expect(ok.status).toBe(201);
     const video = await getVideo(campaign.id, ((await ok.json()) as { id: string }).id);
     expect(video?.consent?.text).toBe(consentText(campaign));
-    expect(video?.consent?.text).toMatch(/^I agree that Aetrai may analyze this video/);
+    expect(video?.consent?.text).toMatch(/^I agree that Screen-Time may analyze this video/);
     expect(video?.consent?.text).toContain("in its Meta hackathon submission");
   });
 

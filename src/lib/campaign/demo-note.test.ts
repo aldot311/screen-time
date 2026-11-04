@@ -19,7 +19,7 @@ describe("isDemoCampaign", () => {
 describe("DEMO_NOTE", () => {
   it("says who runs the test campaign and that the brands shown are not involved", () => {
     expect(DEMO_NOTE).toBe(
-      "A test campaign run by Aetrai with friends, who agreed to be shown. Not affiliated with, sponsored or endorsed by LaCroix or Poppi; their names and cans belong to their owners.",
+      "A test campaign run by Screen-Time with friends, who agreed to be shown. Not affiliated with, sponsored or endorsed by LaCroix or Poppi; their names and cans belong to their owners.",
     );
   });
 });
