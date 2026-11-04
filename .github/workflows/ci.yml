@@ -1,0 +1,36 @@
+# Every push and pull request to main: install from the lockfile, then typecheck, test, lint, build and audit.
+# No secrets: the tests and the build run without keys.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Nothing here pushes, so the token is not left in the git config for later steps.
+          persist-credentials: false
+      # No version input: it installs the pnpm that package.json's packageManager field names.
+      - uses: pnpm/action-setup@v6
+      # Node 22: Vitest 5 does not support Node 20.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm lint
+      - run: pnpm build
+      # Production dependencies only: what the deployed app runs.
+      - run: pnpm audit --prod
